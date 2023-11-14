@@ -9,7 +9,6 @@ built-in system stats of your canister, and statistics output as `Text` in prome
 ## Links
 
 The package is published on [MOPS](https://mops.one/promtracker) and [GitHub](https://github.com/research-ag/promtracker).
-Please refer to the README on GitHub where it renders properly with formulas and tables.
 
 The API documentation can be found [here](https://mops.one/promtracker/docs/lib) on Mops.
 
