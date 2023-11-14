@@ -75,7 +75,7 @@ let storageSize = tracker.addPullValue("storage_size", func() = storage.size());
 ```
 
 ### Counter value
-An accumulating counter value interface. Second argument is a flag whether you want to save this value
+An accumulating counter value interface. Second argument is a flag whether you want to save the state of this value
 to stable data using share/unshare api
 ```motoko
     let requestsAmount = tracker.addCounter("requests_amount", false);
@@ -91,7 +91,8 @@ to stable data using share/unshare api
 ### Gauge value
 A gauge value interface for ever-changing value, with ability to catch the highest and lowest value during interval, 
 set on tracker instance. Outputs 4 stats at once: sum of all pushed values, amount of pushes, lowest value during 
-interval, highest value during interval.
+interval, highest value during interval. Second argument is a flag whether you want to save the state of this value
+to stable data using share/unshare api
 ```motoko
     let requestDuration = tracker.addGauge("request_duration", true);
     requestDuration.update(123);
