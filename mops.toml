@@ -1,0 +1,10 @@
+[package]
+name = "promtracker"
+version = "0.0.1"
+description = "Motoko value tracker for prometheus"
+repository = "https://github.com/research-ag/promtracker"
+keywords = [ "prometheus", "stats" ]
+license = "Apache-2.0"
+
+[dependencies]
+vector = "0.2.0"
