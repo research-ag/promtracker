@@ -254,11 +254,9 @@ module {
       var lastWatermarkTimestamp : Time.Time = 0;
       public var value : T = default;
       public func update(current : T) {
-        if (condition(value, current)) {
+        if (condition(value, current) or now() > lastWatermarkTimestamp + resetIntervalSeconds * 1_000_000_000) {
           value := current;
           lastWatermarkTimestamp := now();
-        } else if (now() > lastWatermarkTimestamp + resetIntervalSeconds * 1_000_000_000) {
-          value := current;
         };
       };
     };
