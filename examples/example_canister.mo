@@ -32,7 +32,7 @@ module TinyHttp {
 actor {
   // define a gauge
   let pt = PT.PromTracker(65);
-  let my_gauge = pt.addGauge("time", false);
+  let my_gauge = pt.addGauge("time", null, false);
 
   // update gauge in heartbeat
   // gauge value = time delta between last two heartbeats
