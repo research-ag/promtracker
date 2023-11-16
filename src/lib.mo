@@ -1,6 +1,7 @@
 import Array "mo:base/Array";
 import AssocList "mo:base/AssocList";
 import Cycles "mo:base/ExperimentalCycles";
+import Debug "mo:base/Debug";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
@@ -69,9 +70,9 @@ module {
   /// heartbeat_duration_high_watermark{} 18 1698842860811
   /// heartbeat_duration_low_watermark{} 10 1698842860811
   /// ```
-  public class PromTracker(watermarkResetIntervalSeconds : Nat) {
+  public class PromTracker(watermarkResetIntervalSeconds : Nat64) {
 
-    public var now : () -> Int = func() = Time.now();
+    public var now : () -> Nat64 = func() = Nat64.fromIntWrap(Time.now());
 
     type IValue = {
       prefix : Text;
@@ -139,11 +140,15 @@ module {
     /// ```
     public func addGauge(prefix : Text, buckets : ?[Nat]) : GaugeInterface {
       let id = values.size();
-      let value = GaugeValue(prefix, buckets, now, watermarkResetIntervalSeconds);
+      switch (buckets) {
+        case (?b) ignore Array.foldLeft<Nat, Nat>(b, 0, func(prev, new) = if (prev <= new) { new } else { Debug.trap("Buckets have to be ordered") });
+        case (null) {};
+      };
+      let value = GaugeValue(prefix, buckets, watermarkResetIntervalSeconds);
       values.add(?value);
       {
         value = func() = value.lastValue;
-        update = value.update;
+        update = func(x) = value.update(x, now());
         remove = func() = removeValue(id);
       };
     };
@@ -182,7 +187,7 @@ module {
 
     /// Render all current stats to prometheus format
     public func renderExposition() : Text {
-      let timestamp = Int.toText(now() / 1000000);
+      let timestamp = Int.toText(Nat64.toNat(now()) / 1000000);
       var res = "";
       for ((name, value) in dump().vals()) {
         res #= renderSingle(name, Nat.toText(value), timestamp);
@@ -251,21 +256,17 @@ module {
     };
   };
 
-  class GaugeValue(prefix_ : Text, buckets_ : ?[Nat], now : () -> Int, watermarkResetIntervalSeconds : Nat) {
+  class GaugeValue(prefix_ : Text, buckets : ?[Nat], watermarkResetIntervalSeconds : Nat64) {
     public let prefix = prefix_;
-    public let buckets : ?[Nat] = switch (buckets_) {
-      case (null) null;
-      case (?b) ?Array.sort(b, Nat.compare);
-    };
 
-    class WatermarkTracker<T>(default : T, condition : (old : T, new : T) -> Bool, resetIntervalSeconds : Nat) {
+    class WatermarkTracker<T>(default : T, condition : (old : T, new : T) -> Bool, resetIntervalSeconds : Nat64) {
       let resetInterval = resetIntervalSeconds * 1_000_000_000;
-      var lastWatermarkTimestamp : Time.Time = 0;
+      var lastWatermarkTimestamp : Nat64 = 0;
       public var value : T = default;
-      public func update(current : T) {
-        if (condition(value, current) or now() > lastWatermarkTimestamp + resetInterval) {
+      public func update(current : T, currentTime : Nat64) {
+        if (condition(value, current) or currentTime > lastWatermarkTimestamp + resetInterval) {
           value := current;
-          lastWatermarkTimestamp := now();
+          lastWatermarkTimestamp := currentTime;
         };
       };
     };
@@ -280,11 +281,11 @@ module {
       func(n) = 0,
     );
 
-    public func update(current : Nat) {
+    public func update(current : Nat, currentTime : Nat64) {
       count += 1;
       sum += current;
-      highWatermark.update(current);
-      lowWatermark.update(current);
+      highWatermark.update(current, currentTime);
+      lowWatermark.update(current, currentTime);
       switch (buckets) {
         case (null) {};
         case (?b) {

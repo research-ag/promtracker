@@ -6,8 +6,9 @@ import M "mo:matchers/Matchers";
 
 let { run; test; suite } = Suite;
 
-var tracker = PT.PromTracker(0);
-tracker.now := func() = 123000000000000;
+var tracker = PT.PromTracker(5);
+var mockedTime : Nat64 = 123_000_000_000_000;
+tracker.now := func() = mockedTime;
 
 /* --------------------------------------- */
 let testValue = tracker.addPullValue("test_val_0", func() = 150);
@@ -143,26 +144,34 @@ buckets_gauge_bucket{le=\"+Inf\"} 6 123000000\n")),
 gaugeWithBuckets.remove();
 
 /* --------------------------------------- */
-let gaugeWithBucketsOutOfOrder = tracker.addGauge("buckets_gauge", ?[50, 10, 160, 30]);
-gaugeWithBucketsOutOfOrder.update(10);
-gaugeWithBucketsOutOfOrder.update(900);
-gaugeWithBucketsOutOfOrder.update(25);
-gaugeWithBucketsOutOfOrder.update(65);
-
+let gauge2 = tracker.addGauge("buckets_gauge", null);
+gauge2.update(10);
+gauge2.update(900);
+gauge2.update(90);
 run(
   test(
     "gauge state",
     tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_sum{} 1000 123000000
-buckets_gauge_count{} 4 123000000
+buckets_gauge_count{} 3 123000000
 buckets_gauge_high_watermark{} 900 123000000
-buckets_gauge_low_watermark{} 10 123000000
-buckets_gauge_bucket{le=\"10\"} 1 123000000
-buckets_gauge_bucket{le=\"30\"} 2 123000000
-buckets_gauge_bucket{le=\"50\"} 2 123000000
-buckets_gauge_bucket{le=\"160\"} 3 123000000
-buckets_gauge_bucket{le=\"+Inf\"} 4 123000000\n")),
+buckets_gauge_low_watermark{} 10 123000000\n")),
+  )
+);
+// emulate that 6 seconds passed and watermarks invalidated (in tracker we set 5 seconds as TTL for watermarks)
+mockedTime += 6_000_000_000;
+gauge2.update(20);
+gauge2.update(800);
+gauge2.update(180);
+run(
+  test(
+    "gauge state",
+    tracker.renderExposition(),
+    M.equals(T.text("buckets_gauge_sum{} 2000 123006000
+buckets_gauge_count{} 6 123006000
+buckets_gauge_high_watermark{} 800 123006000
+buckets_gauge_low_watermark{} 20 123006000\n")),
   )
 );
 
-gaugeWithBucketsOutOfOrder.remove();
+gauge2.remove();
