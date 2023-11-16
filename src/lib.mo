@@ -276,49 +276,72 @@ module {
     public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new > old, watermarkResetIntervalSeconds);
     public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new < old, watermarkResetIntervalSeconds);
     public var lastValue : Nat = 0;
-    public let bucketValues : [var Nat] = Array.tabulateVar<Nat>(
-      switch (buckets) { case (?b) { b.size() + 1 }; case (null) { 0 } },
-      func(n) = 0,
-    );
+    public var bucketsValue : ?BucketsValue = Option.map<[Nat], BucketsValue>(buckets, func(b) = BucketsValue(prefix # "_bucket", b));
 
     public func update(current : Nat, currentTime : Nat64) {
       count += 1;
       sum += current;
       highWatermark.update(current, currentTime);
       lowWatermark.update(current, currentTime);
-      switch (buckets) {
+      switch (bucketsValue) {
         case (null) {};
-        case (?b) {
-          var skip : Nat = 0;
-          label l for (bucketValue in b.vals()) {
-            if (current <= bucketValue) {
-              break l;
-            } else {
-              skip += 1;
-            };
-          };
-          for (i in Iter.range(skip, bucketValues.size() - 1)) {
-            bucketValues[i] += 1;
-          };
+        case (?bv) bv.update(current);
+      };
+    };
+
+    public func dump() : [(Text, Nat)] {
+      let entries = [
+        (prefix # "_sum{}", sum),
+        (prefix # "_count{}", count),
+        (prefix # "_high_watermark{}", highWatermark.value),
+        (prefix # "_low_watermark{}", lowWatermark.value),
+      ];
+      switch (bucketsValue) {
+        case (null) entries;
+        case (?bv) {
+          let bucketEntries = bv.dump();
+          Array.tabulate<(Text, Nat)>(
+            4 + bucketEntries.size(),
+            func(n) {
+              if (n < 4) {
+                entries[n];
+              } else {
+                bucketEntries[n - 4];
+              };
+            },
+          );
         };
       };
     };
 
+    public func share() : ?StableDataItem = null;
+    public func unshare(data : StableDataItem) = ();
+  };
+
+  class BucketsValue(prefix_ : Text, buckets : [Nat]) {
+    public let prefix = prefix_;
+    public let bucketValues : [var Nat] = Array.init<Nat>(buckets.size() + 1, 0);
+
+    public func update(current : Nat) {
+      var skip : Nat = 0;
+      label l for (bucketValue in buckets.vals()) {
+        if (current <= bucketValue) {
+          break l;
+        } else {
+          skip += 1;
+        };
+      };
+      for (i in Iter.range(skip, bucketValues.size() - 1)) {
+        bucketValues[i] += 1;
+      };
+    };
+
     public func dump() : [(Text, Nat)] = Array.tabulate<(Text, Nat)>(
-      4 + bucketValues.size(),
-      func(n) = switch (n) {
-        case (0)(prefix # "_sum{}", sum);
-        case (1)(prefix # "_count{}", count);
-        case (2)(prefix # "_high_watermark{}", highWatermark.value);
-        case (3)(prefix # "_low_watermark{}", lowWatermark.value);
-        case (_)(
-          prefix
-          # "_bucket{le=\""
-          # (if (n < bucketValues.size() + 3) { Nat.toText(Option.get(buckets, [])[n - 4]) } else { "+Inf" })
-          # "\"}",
-          bucketValues[n - 4],
-        );
-      },
+      bucketValues.size(),
+      func(n) = (
+        prefix # "{le=\"" # (if (n < buckets.size()) { Nat.toText(buckets[n]) } else { "+Inf" }) # "\"}",
+        bucketValues[n],
+      ),
     );
 
     public func share() : ?StableDataItem = null;
