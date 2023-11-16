@@ -141,17 +141,17 @@ module {
     ///     // request_duration_bucket{le="110"}: 1
     ///     // request_duration_bucket{le="+Inf"} 2
     /// ```
-    public func addBuckets(prefix : Text, buckets : [Nat]) : BucketsInterface {
+    public func addBuckets(prefix : Text, limits : [Nat]) : BucketsInterface {
       // check order
           var i = 1;
-          while (i < buckets.size()) {
-            if (buckets[i - 1] >= buckets[i]) {
+          while (i < limits.size()) {
+            if (limits[i - 1] >= limits[i]) {
               Prim.trap("Buckets have to be ordered and non-empty");
             };
             i += 1;
           }; 
       // create value
-      let bv = BucketsValue(prefix # "_bucket", buckets);
+      let bv = BucketsValue(prefix # "_bucket", limits);
       let id = values.size();
       values.add(?bv);
       {
@@ -334,25 +334,25 @@ module {
     public func unshare(data : StableDataItem) = ();
   };
 
-  class BucketsValue(prefix_ : Text, buckets : [Nat]) {
+  class BucketsValue(prefix_ : Text, limits : [Nat]) {
     public let prefix = prefix_;
-    public let bucketValues : [var Nat] = Array.init<Nat>(buckets.size() + 1, 0);
+    public let counters : [var Nat] = Array.init<Nat>(limits.size() + 1, 0);
 
     public func update(current : Nat) {
-      var n = buckets.size();
-      bucketValues[n] += 1;
+      var n = limits.size();
+      counters[n] += 1;
       while (n > 0) {
         n -= 1;
-        if (current > buckets[n]) return;
-        bucketValues[n] += 1;
+        if (current > limits[n]) return;
+        counters[n] += 1;
       };
     };
 
     public func dump() : [(Text, Nat)] = Array.tabulate<(Text, Nat)>(
-      bucketValues.size(),
+      counters.size(),
       func(n) = (
-        prefix # "{le=\"" # (if (n < buckets.size()) { Nat.toText(buckets[n]) } else { "+Inf" }) # "\"}",
-        bucketValues[n],
+        prefix # "{le=\"" # (if (n < limits.size()) { Nat.toText(limits[n]) } else { "+Inf" }) # "\"}",
+        counters[n],
       ),
     );
 
