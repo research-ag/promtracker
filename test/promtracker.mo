@@ -158,8 +158,8 @@ buckets_gauge_high_watermark{} 900 123000000
 buckets_gauge_low_watermark{} 10 123000000\n")),
   )
 );
-// emulate that 6 seconds passed and watermarks invalidated (in tracker we set 5 seconds as TTL for watermarks)
-mockedTime += 6_000_000_000;
+// emulate that 1 second passed. Watermarks should remain the same
+mockedTime += 1_000_000_000;
 gauge2.update(20);
 gauge2.update(800);
 gauge2.update(180);
@@ -167,8 +167,23 @@ run(
   test(
     "gauge state",
     tracker.renderExposition(),
-    M.equals(T.text("buckets_gauge_sum{} 2000 123006000
-buckets_gauge_count{} 6 123006000
+    M.equals(T.text("buckets_gauge_sum{} 2000 123001000
+buckets_gauge_count{} 6 123001000
+buckets_gauge_high_watermark{} 900 123001000
+buckets_gauge_low_watermark{} 10 123001000\n")),
+  )
+);
+// emulate that 5 more seconds passed and watermarks invalidated (in tracker we set 5 seconds as TTL for watermarks)
+mockedTime += 5_000_000_000;
+gauge2.update(20);
+gauge2.update(800);
+gauge2.update(180);
+run(
+  test(
+    "gauge state",
+    tracker.renderExposition(),
+    M.equals(T.text("buckets_gauge_sum{} 3000 123006000
+buckets_gauge_count{} 9 123006000
 buckets_gauge_high_watermark{} 800 123006000
 buckets_gauge_low_watermark{} 20 123006000\n")),
   )

@@ -2,11 +2,9 @@ import Array "mo:base/Array";
 import AssocList "mo:base/AssocList";
 import Cycles "mo:base/ExperimentalCycles";
 import Debug "mo:base/Debug";
-import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
-import Option "mo:base/Option";
 import Prim "mo:prim";
 import StableMemory "mo:base/ExperimentalStableMemory";
 import Time "mo:base/Time";
@@ -70,7 +68,8 @@ module {
   /// heartbeat_duration_high_watermark{} 18 1698842860811
   /// heartbeat_duration_low_watermark{} 10 1698842860811
   /// ```
-  public class PromTracker(watermarkResetIntervalSeconds : Nat64) {
+  public class PromTracker(watermarkResetIntervalSeconds : Nat) {
+    let watermarkResetInterval : Nat64 = Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000;
 
     public var now : () -> Nat64 = func() = Nat64.fromIntWrap(Time.now());
 
@@ -139,17 +138,32 @@ module {
     ///     // request_duration_bucket{le="+Inf"} 2
     /// ```
     public func addGauge(prefix : Text, buckets : ?[Nat]) : GaugeInterface {
-      let id = values.size();
+      let gaugeId = values.size();
+      let gaugeValue = GaugeValue(prefix, watermarkResetInterval);
+      values.add(?gaugeValue);
       switch (buckets) {
-        case (?b) ignore Array.foldLeft<Nat, Nat>(b, 0, func(prev, new) = if (prev <= new) { new } else { Debug.trap("Buckets have to be ordered") });
-        case (null) {};
-      };
-      let value = GaugeValue(prefix, buckets, watermarkResetIntervalSeconds);
-      values.add(?value);
-      {
-        value = func() = value.lastValue;
-        update = func(x) = value.update(x, now());
-        remove = func() = removeValue(id);
+        case (?b) {
+          ignore Array.foldLeft<Nat, Nat>(b, 0, func(prev, new) = if (prev < new) { new } else { Debug.trap("Buckets have to be ordered") });
+          let bucketsValue = BucketsValue(prefix # "_bucket", b);
+          let bucketsId = values.size();
+          values.add(?bucketsValue);
+          {
+            value = func() = gaugeValue.lastValue;
+            update = func(x) {
+              gaugeValue.update(x, now());
+              bucketsValue.update(x);
+            };
+            remove = func() {
+              removeValue(gaugeId);
+              removeValue(bucketsId);
+            };
+          };
+        };
+        case (null)({
+          value = func() = gaugeValue.lastValue;
+          update = func(x) = gaugeValue.update(x, now());
+          remove = func() = removeValue(gaugeId);
+        });
       };
     };
 
@@ -187,7 +201,7 @@ module {
 
     /// Render all current stats to prometheus format
     public func renderExposition() : Text {
-      let timestamp = Int.toText(Nat64.toNat(now()) / 1000000);
+      let timestamp = Nat64.toText(now() / 1_000_000);
       var res = "";
       for ((name, value) in dump().vals()) {
         res #= renderSingle(name, Nat.toText(value), timestamp);
@@ -256,11 +270,10 @@ module {
     };
   };
 
-  class GaugeValue(prefix_ : Text, buckets : ?[Nat], watermarkResetIntervalSeconds : Nat64) {
+  class GaugeValue(prefix_ : Text, watermarkResetInterval : Nat64) {
     public let prefix = prefix_;
 
-    class WatermarkTracker<T>(default : T, condition : (old : T, new : T) -> Bool, resetIntervalSeconds : Nat64) {
-      let resetInterval = resetIntervalSeconds * 1_000_000_000;
+    class WatermarkTracker<T>(default : T, condition : (old : T, new : T) -> Bool, resetInterval : Nat64) {
       var lastWatermarkTimestamp : Nat64 = 0;
       public var value : T = default;
       public func update(current : T, currentTime : Nat64) {
@@ -273,46 +286,23 @@ module {
 
     public var count : Nat = 0;
     public var sum : Nat = 0;
-    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new > old, watermarkResetIntervalSeconds);
-    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new < old, watermarkResetIntervalSeconds);
+    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new > old, watermarkResetInterval);
+    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new < old, watermarkResetInterval);
     public var lastValue : Nat = 0;
-    public var bucketsValue : ?BucketsValue = Option.map<[Nat], BucketsValue>(buckets, func(b) = BucketsValue(prefix # "_bucket", b));
 
     public func update(current : Nat, currentTime : Nat64) {
       count += 1;
       sum += current;
       highWatermark.update(current, currentTime);
       lowWatermark.update(current, currentTime);
-      switch (bucketsValue) {
-        case (null) {};
-        case (?bv) bv.update(current);
-      };
     };
 
-    public func dump() : [(Text, Nat)] {
-      let entries = [
-        (prefix # "_sum{}", sum),
-        (prefix # "_count{}", count),
-        (prefix # "_high_watermark{}", highWatermark.value),
-        (prefix # "_low_watermark{}", lowWatermark.value),
-      ];
-      switch (bucketsValue) {
-        case (null) entries;
-        case (?bv) {
-          let bucketEntries = bv.dump();
-          Array.tabulate<(Text, Nat)>(
-            4 + bucketEntries.size(),
-            func(n) {
-              if (n < 4) {
-                entries[n];
-              } else {
-                bucketEntries[n - 4];
-              };
-            },
-          );
-        };
-      };
-    };
+    public func dump() : [(Text, Nat)] = [
+      (prefix # "_sum{}", sum),
+      (prefix # "_count{}", count),
+      (prefix # "_high_watermark{}", highWatermark.value),
+      (prefix # "_low_watermark{}", lowWatermark.value),
+    ];
 
     public func share() : ?StableDataItem = null;
     public func unshare(data : StableDataItem) = ();
