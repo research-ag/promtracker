@@ -15,7 +15,7 @@ import Vector "mo:vector/Class";
 
 module {
 
-  type StableDataItem = { #counter : Nat; #gauge : (Nat, Nat) };
+  type StableDataItem = { #counter : Nat };
   public type StableData = AssocList.AssocList<Text, StableDataItem>;
 
   /// An access interface for pull value
@@ -46,7 +46,7 @@ module {
   /// let successfulHeartbeats = tracker.addCounter("successful_heartbeats", true);
   /// let failedHeartbeats = tracker.addCounter("failed_heartbeats", true);
   /// let heartbeats = tracker.addPullValue("heartbeats", func() = successfulHeartbeats.value() + failedHeartbeats.value());
-  /// let heartbeatDuration = tracker.addGauge("heartbeat_duration", true);
+  /// let heartbeatDuration = tracker.addGauge("heartbeat_duration", null);
   /// ....
   /// // update values from your code
   /// successfulHeartbeats.add(2);
@@ -119,19 +119,27 @@ module {
       };
     };
 
-    /// Add a gauge value for ever changing value, with ability to catch the highest and lowest value during interval, set on tracker instance.
-    /// outputs stats: sum of all pushed values, amount of pushes, lowest value during interval, highest value during interval
-    ///
-    /// Example:
+    /// Add a gauge value interface for ever-changing value, with ability to catch the highest and lowest value during interval,
+    /// set on tracker instance and ability to bucket the values for histogram output. Outputs few stats at once: sum of all
+    /// pushed values, amount of pushes, lowest value during interval, highest value during interval, histogram buckets. Second
+    /// argument accepts edge values for buckets
     /// ```motoko
-    /// let requestDuration = tracker.addGauge("request_duration", true);
-    /// ....
-    /// requestDuration.update(123);
-    /// requestDuration.update(101);
+    ///     let requestDuration = tracker.addGauge("request_duration", ?[50, 110]);
+    ///     requestDuration.update(123);
+    ///     requestDuration.update(101);
+    ///     // now it will output stats:
+    ///     // request_duration_sum: 224
+    ///     // request_duration_count: 2
+    ///     // request_duration_high_watermark: 123
+    ///     // request_duration_low_watermark: 101
+    ///     // request_duration_low_watermark: 101
+    ///     // request_duration_bucket{le="50"}: 0
+    ///     // request_duration_bucket{le="110"}: 1
+    ///     // request_duration_bucket{le="+Inf"} 2
     /// ```
-    public func addGauge(prefix : Text, buckets : ?[Nat], isStable : Bool) : GaugeInterface {
+    public func addGauge(prefix : Text, buckets : ?[Nat]) : GaugeInterface {
       let id = values.size();
-      let value = GaugeValue(prefix, buckets, now, watermarkResetIntervalSeconds, isStable);
+      let value = GaugeValue(prefix, buckets, now, watermarkResetIntervalSeconds);
       values.add(?value);
       {
         value = func() = value.lastValue;
@@ -243,7 +251,7 @@ module {
     };
   };
 
-  class GaugeValue(prefix_ : Text, buckets_ : ?[Nat], now : () -> Int, watermarkResetIntervalSeconds : Nat, isStable : Bool) {
+  class GaugeValue(prefix_ : Text, buckets_ : ?[Nat], now : () -> Int, watermarkResetIntervalSeconds : Nat) {
     public let prefix = prefix_;
     public let buckets : ?[Nat] = switch (buckets_) {
       case (null) null;
@@ -251,10 +259,11 @@ module {
     };
 
     class WatermarkTracker<T>(default : T, condition : (old : T, new : T) -> Bool, resetIntervalSeconds : Nat) {
+      let resetInterval = resetIntervalSeconds * 1_000_000_000;
       var lastWatermarkTimestamp : Time.Time = 0;
       public var value : T = default;
       public func update(current : T) {
-        if (condition(value, current) or now() > lastWatermarkTimestamp + resetIntervalSeconds * 1_000_000_000) {
+        if (condition(value, current) or now() > lastWatermarkTimestamp + resetInterval) {
           value := current;
           lastWatermarkTimestamp := now();
         };
@@ -311,17 +320,8 @@ module {
       },
     );
 
-    public func share() : ?StableDataItem {
-      if (not isStable) return null;
-      ? #gauge(count, sum);
-    };
-    public func unshare(data : StableDataItem) = switch (data, isStable) {
-      case (#gauge(c, s), true) {
-        count := c;
-        sum := s;
-      };
-      case (_) {};
-    };
+    public func share() : ?StableDataItem = null;
+    public func unshare(data : StableDataItem) = ();
   };
 
 };

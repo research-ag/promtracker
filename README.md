@@ -35,7 +35,7 @@ Add some values:
 let successfulHeartbeats = tracker.addCounter("successful_heartbeats", true);
 let failedHeartbeats = tracker.addCounter("failed_heartbeats", true);
 let heartbeats = tracker.addPullValue("heartbeats", func() = successfulHeartbeats.value() + failedHeartbeats.value());
-let heartbeatDuration = tracker.addGauge("heartbeat_duration", true);
+let heartbeatDuration = tracker.addGauge("heartbeat_duration", null);
 ```
 
 Update values:
@@ -90,11 +90,11 @@ to stable data using share/unshare api
 
 ### Gauge value
 A gauge value interface for ever-changing value, with ability to catch the highest and lowest value during interval, 
-set on tracker instance. Outputs 4 stats at once: sum of all pushed values, amount of pushes, lowest value during 
-interval, highest value during interval. Second argument is a flag whether you want to save the state of this value
-to stable data using share/unshare api
+set on tracker instance and ability to bucket the values for histogram output. Outputs few stats at once: sum of all 
+pushed values, amount of pushes, lowest value during interval, highest value during interval, histogram buckets. 
+Second argument accepts edge values for buckets
 ```motoko
-    let requestDuration = tracker.addGauge("request_duration", true);
+    let requestDuration = tracker.addGauge("request_duration", ?[50, 110]);
     requestDuration.update(123);
     requestDuration.update(101);
     // now it will output stats: 
@@ -102,6 +102,10 @@ to stable data using share/unshare api
     // request_duration_count: 2
     // request_duration_high_watermark: 123
     // request_duration_low_watermark: 101
+    // request_duration_low_watermark: 101
+    // request_duration_bucket{le="50"}: 0
+    // request_duration_bucket{le="110"}: 1
+    // request_duration_bucket{le="+Inf"} 2
 ```
 
 ## Canister system stats
@@ -130,7 +134,7 @@ MR Research AG, 2023
 
 ## Authors
 
-Andy Gura with contributions from Timo Hanke.
+AndyGura with contributions from timohanke
 
 ## License
 

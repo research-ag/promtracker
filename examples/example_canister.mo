@@ -3,36 +3,13 @@ import Time "mo:base/Time";
 import Int "mo:base/Int";
 import Text "mo:base/Text";
 
-module TinyHttp {
-  public type Request = {
-    method : Text;
-    url : Text;
-    headers : [(Text, Text)];
-    body : Blob;
-  };
-  public type Response = {
-    status_code : Nat16;
-    headers : [(Text, Text)];
-    body : Blob;
-  };
-
-  public func render400() : Response = {
-    status_code : Nat16 = 400;
-    headers : [(Text, Text)] = [];
-    body : Blob = "Invalid request";
-  };
-  public func renderPlainText(text : Text) : Response = {
-    status_code = 200;
-    headers = [("content-type", "text/plain")];
-    body = Text.encodeUtf8(text);
-  };
-};
+import TinyHttp "./tiny_http";
 
 /// A canister, which answers by HTTP at route /metrics with statistics of interval between heartbeats in prometheus format
 actor {
   // define a gauge
   let pt = PT.PromTracker(65);
-  let my_gauge = pt.addGauge("time", null, false);
+  let my_gauge = pt.addGauge("time", null);
 
   // update gauge in heartbeat
   // gauge value = time delta between last two heartbeats
