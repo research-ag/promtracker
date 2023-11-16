@@ -1,7 +1,6 @@
 import Array "mo:base/Array";
 import AssocList "mo:base/AssocList";
 import Cycles "mo:base/ExperimentalCycles";
-import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
@@ -147,7 +146,7 @@ module {
           var i = 1;
           while (i < buckets.size()) {
             if (buckets[i - 1] >= buckets[i]) {
-              Debug.trap("Buckets have to be ordered and non-empty");
+              Prim.trap("Buckets have to be ordered and non-empty");
             };
             i += 1;
           }; 
@@ -340,16 +339,12 @@ module {
     public let bucketValues : [var Nat] = Array.init<Nat>(buckets.size() + 1, 0);
 
     public func update(current : Nat) {
-      var skip : Nat = 0;
-      label l for (bucketValue in buckets.vals()) {
-        if (current <= bucketValue) {
-          break l;
-        } else {
-          skip += 1;
-        };
-      };
-      for (i in Iter.range(skip, bucketValues.size() - 1)) {
-        bucketValues[i] += 1;
+      var n = buckets.size();
+      bucketValues[n] += 1;
+      while (n > 0) {
+        n -= 1;
+        if (current > buckets[n]) return;
+        bucketValues[n] += 1;
       };
     };
 
