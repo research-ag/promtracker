@@ -17,6 +17,8 @@ module {
   type StableDataItem = { #counter : Nat };
   public type StableData = AssocList.AssocList<Text, StableDataItem>;
 
+  let now_ : () -> Nat64 = func() = Nat64.fromIntWrap(Time.now());
+
   /// An access interface for pull value
   public type PullValueInterface = {
     value : () -> Nat;
@@ -32,6 +34,11 @@ module {
   /// An access interface for gauge value
   public type GaugeInterface = {
     value : () -> Nat;
+    update : (x : Nat) -> ();
+    remove : () -> ();
+  };
+  /// An access interface for buckets value
+  public type BucketsInterface = {
     update : (x : Nat) -> ();
     remove : () -> ();
   };
@@ -68,10 +75,8 @@ module {
   /// heartbeat_duration_high_watermark{} 18 1698842860811
   /// heartbeat_duration_low_watermark{} 10 1698842860811
   /// ```
-  public class PromTracker(watermarkResetIntervalSeconds : Nat) {
+  public class PromTrackerTestable(watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
     let watermarkResetInterval : Nat64 = Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000;
-
-    public var now : () -> Nat64 = func() = Nat64.fromIntWrap(Time.now());
 
     type IValue = {
       prefix : Text;
@@ -137,31 +142,46 @@ module {
     ///     // request_duration_bucket{le="110"}: 1
     ///     // request_duration_bucket{le="+Inf"} 2
     /// ```
+    public func addBuckets(prefix : Text, buckets : [Nat]) : BucketsInterface {
+      // check order
+          var i = 1;
+          while (i < buckets.size()) {
+            if (buckets[i - 1] >= buckets[i]) {
+              Debug.trap("Buckets have to be ordered and non-empty");
+            };
+            i += 1;
+          }; 
+      // create value
+      let bv = BucketsValue(prefix # "_bucket", buckets);
+      let id = values.size();
+      values.add(?bv);
+      {
+        update = bv.update;
+        remove = func() { removeValue(id) };
+      };
+    };
     public func addGauge(prefix : Text, buckets : ?[Nat]) : GaugeInterface {
       let gaugeId = values.size();
-      let gaugeValue = GaugeValue(prefix, watermarkResetInterval);
+      let gaugeValue = GaugeValue(prefix, watermarkResetInterval, now);
       values.add(?gaugeValue);
       switch (buckets) {
         case (?b) {
-          ignore Array.foldLeft<Nat, Nat>(b, 0, func(prev, new) = if (prev < new) { new } else { Debug.trap("Buckets have to be ordered") });
-          let bucketsValue = BucketsValue(prefix # "_bucket", b);
-          let bucketsId = values.size();
-          values.add(?bucketsValue);
+          let bi = addBuckets(prefix, b);
           {
             value = func() = gaugeValue.lastValue;
             update = func(x) {
-              gaugeValue.update(x, now());
-              bucketsValue.update(x);
+              gaugeValue.update(x);
+              bi.update(x);
             };
             remove = func() {
               removeValue(gaugeId);
-              removeValue(bucketsId);
+              bi.remove();
             };
           };
         };
         case (null)({
           value = func() = gaugeValue.lastValue;
-          update = func(x) = gaugeValue.update(x, now());
+          update = gaugeValue.update;
           remove = func() = removeValue(gaugeId);
         });
       };
@@ -241,6 +261,12 @@ module {
 
   };
 
+  type PromTracker = PromTrackerTestable;
+  public func PromTracker(watermarkResetIntervalSeconds : Nat) : PromTracker {
+    PromTrackerTestable(watermarkResetIntervalSeconds, now_);
+  };
+
+
   class PullValue(prefix_ : Text, pull : () -> Nat) {
     public let prefix = prefix_;
 
@@ -270,7 +296,7 @@ module {
     };
   };
 
-  class GaugeValue(prefix_ : Text, watermarkResetInterval : Nat64) {
+  class GaugeValue(prefix_ : Text, watermarkResetInterval : Nat64, now : () -> Nat64) {
     public let prefix = prefix_;
 
     class WatermarkTracker<T>(default : T, condition : (old : T, new : T) -> Bool, resetInterval : Nat64) {
@@ -290,11 +316,12 @@ module {
     public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new < old, watermarkResetInterval);
     public var lastValue : Nat = 0;
 
-    public func update(current : Nat, currentTime : Nat64) {
+    public func update(current : Nat) {
       count += 1;
       sum += current;
-      highWatermark.update(current, currentTime);
-      lowWatermark.update(current, currentTime);
+      let t = now();
+      highWatermark.update(current, t);
+      lowWatermark.update(current, t);
     };
 
     public func dump() : [(Text, Nat)] = [
