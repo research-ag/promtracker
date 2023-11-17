@@ -3,7 +3,7 @@ name = "promtracker"
 version = "0.1.0"
 description = "Motoko value tracker for prometheus"
 repository = "https://github.com/research-ag/promtracker"
-keywords = [ "prometheus", "stats" ]
+keywords = [ "prometheus", "stats", "http", "metrics", "monitoring" ]
 license = "Apache-2.0"
 
 [dependencies]
