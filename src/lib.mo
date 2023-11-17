@@ -146,7 +146,7 @@ module {
       };
       // create value
       let gaugeId = values.size();
-      let gaugeValue = GaugeValue(prefix, watermarkResetInterval, bucketLimits, now);
+      let gaugeValue = GaugeValue(prefix, bucketLimits, (watermarkResetInterval, now));
       values.add(?gaugeValue);
       // return interface
       {
@@ -264,7 +264,7 @@ module {
     };
   };
 
-  class GaugeValue(prefix_ : Text, watermarkResetInterval : Nat64, limits : [Nat], now : () -> Nat64) {
+  class GaugeValue(prefix_ : Text, limits : [Nat], watermarkEnv : (Nat64, () -> Nat64)) {
     public let prefix = prefix_;
 
     func metric(name : Text, labels : Text, value : Nat) : (Text, Nat) {
@@ -285,17 +285,17 @@ module {
     public var count : Nat = 0;
     public var sum : Nat = 0;
     public let counters : [var Nat] = Array.init<Nat>(limits.size(), 0);
-    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new > old, watermarkResetInterval);
-    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new < old, watermarkResetInterval);
+    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new > old, watermarkEnv.0);
+    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new < old, watermarkEnv.0);
     public var lastValue : Nat = 0;
 
     public func update(current : Nat) {
       count += 1;
       sum += current;
-      let t = now();
+      let now = watermarkEnv.1();
       // update watermarks
-      highWatermark.update(current, t);
-      lowWatermark.update(current, t);
+      highWatermark.update(current, now);
+      lowWatermark.update(current, now);
       // update bucket counters
       var n = limits.size();
       while (n > 0) {
