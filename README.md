@@ -1,5 +1,5 @@
-[![mops](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/mops/vector)](https://mops.one/vector)
-[![documentation](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/documentation/vector)](https://mops.one/vector/docs)
+[![mops](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/mops/promtracker)](https://mops.one/promtracker)
+[![documentation](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/documentation/promtracker)](https://mops.one/promtracker/docs)
 
 # Motoko value tracker for prometheus
 
