@@ -66,7 +66,7 @@ run(
 counter.remove();
 
 /* --------------------------------------- */
-let gauge = tracker.addGauge("test_gauge", null);
+let gauge = tracker.addGauge("test_gauge", []);
 run(
   test(
     "initial gauge state",
@@ -99,7 +99,7 @@ test_gauge_low_watermark{} 120 123000000\n")),
 gauge.remove();
 
 /* --------------------------------------- */
-let gaugeWithBuckets = tracker.addGauge("buckets_gauge", ?[10, 20, 50, 120, 180]);
+let gaugeWithBuckets = tracker.addGauge("buckets_gauge", [10, 20, 50, 120, 180]);
 run(
   test(
     "initial gauge state",
@@ -144,7 +144,7 @@ buckets_gauge_bucket{le=\"+Inf\"} 6 123000000\n")),
 gaugeWithBuckets.remove();
 
 /* --------------------------------------- */
-let gauge2 = tracker.addGauge("buckets_gauge", null);
+let gauge2 = tracker.addGauge("buckets_gauge", []);
 gauge2.update(10);
 gauge2.update(900);
 gauge2.update(90);

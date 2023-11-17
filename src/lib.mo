@@ -141,48 +141,23 @@ module {
     ///     // request_duration_bucket{le="110"}: 1
     ///     // request_duration_bucket{le="+Inf"} 2
     /// ```
-    public func addBuckets(prefix : Text, limits : [Nat]) : BucketsInterface {
-      // check order
-          var i = 1;
-          while (i < limits.size()) {
-            if (limits[i - 1] >= limits[i]) {
-              Prim.trap("Buckets have to be ordered and non-empty");
-            };
-            i += 1;
-          }; 
-      // create value
-      let bv = BucketsValue(prefix # "_bucket", limits);
-      let id = values.size();
-      values.add(?bv);
-      {
-        update = bv.update;
-        remove = func() { removeValue(id) };
+    public func addGauge(prefix : Text, bucketLimits : [Nat]) : GaugeInterface {
+      // check order of buckets
+      let l = bucketLimits;
+      var i = 1;
+      while (i < l.size()) {
+        if (l[i - 1] >= l[i]) Prim.trap("Buckets have to be ordered and non-empty");
+        i += 1;
       };
-    };
-    public func addGauge(prefix : Text, buckets : ?[Nat]) : GaugeInterface {
+      // create value
       let gaugeId = values.size();
-      let gaugeValue = GaugeValue(prefix, watermarkResetInterval, now);
+      let gaugeValue = GaugeValue(prefix, watermarkResetInterval, bucketLimits, now);
       values.add(?gaugeValue);
-      switch (buckets) {
-        case (?b) {
-          let bi = addBuckets(prefix, b);
-          {
-            value = func() = gaugeValue.lastValue;
-            update = func(x) {
-              gaugeValue.update(x);
-              bi.update(x);
-            };
-            remove = func() {
-              removeValue(gaugeId);
-              bi.remove();
-            };
-          };
-        };
-        case (null)({
-          value = func() = gaugeValue.lastValue;
-          update = gaugeValue.update;
-          remove = func() = removeValue(gaugeId);
-        });
+      // return interface
+      {
+        value = func() = gaugeValue.lastValue;
+        update = gaugeValue.update;
+        remove = func() = removeValue(gaugeId);
       };
     };
 
@@ -265,7 +240,6 @@ module {
     PromTrackerTestable(watermarkResetIntervalSeconds, now_);
   };
 
-
   class PullValue(prefix_ : Text, pull : () -> Nat) {
     public let prefix = prefix_;
 
@@ -295,7 +269,7 @@ module {
     };
   };
 
-  class GaugeValue(prefix_ : Text, watermarkResetInterval : Nat64, now : () -> Nat64) {
+  class GaugeValue(prefix_ : Text, watermarkResetInterval : Nat64, limits : [Nat], now : () -> Nat64) {
     public let prefix = prefix_;
 
     class WatermarkTracker<T>(default : T, condition : (old : T, new : T) -> Bool, resetInterval : Nat64) {
@@ -311,6 +285,7 @@ module {
 
     public var count : Nat = 0;
     public var sum : Nat = 0;
+    public let counters : [var Nat] = Array.init<Nat>(limits.size(), 0);
     public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new > old, watermarkResetInterval);
     public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new < old, watermarkResetInterval);
     public var lastValue : Nat = 0;
@@ -319,28 +294,11 @@ module {
       count += 1;
       sum += current;
       let t = now();
+      // update watermarks
       highWatermark.update(current, t);
       lowWatermark.update(current, t);
-    };
-
-    public func dump() : [(Text, Nat)] = [
-      (prefix # "_sum{}", sum),
-      (prefix # "_count{}", count),
-      (prefix # "_high_watermark{}", highWatermark.value),
-      (prefix # "_low_watermark{}", lowWatermark.value),
-    ];
-
-    public func share() : ?StableDataItem = null;
-    public func unshare(data : StableDataItem) = ();
-  };
-
-  class BucketsValue(prefix_ : Text, limits : [Nat]) {
-    public let prefix = prefix_;
-    public let counters : [var Nat] = Array.init<Nat>(limits.size() + 1, 0);
-
-    public func update(current : Nat) {
+      // update bucket counters
       var n = limits.size();
-      counters[n] += 1;
       while (n > 0) {
         n -= 1;
         if (current > limits[n]) return;
@@ -348,13 +306,20 @@ module {
       };
     };
 
-    public func dump() : [(Text, Nat)] = Array.tabulate<(Text, Nat)>(
-      counters.size(),
-      func(n) = (
-        prefix # "{le=\"" # (if (n < limits.size()) { Nat.toText(limits[n]) } else { "+Inf" }) # "\"}",
-        counters[n],
-      ),
-    );
+    public func dump() : [(Text, Nat)] {
+      let all = Vector.Vector<(Text, Nat)>();
+      all.add((prefix # "_sum{}", sum));
+      all.add((prefix # "_count{}", count));
+      all.add((prefix # "_high_watermark{}", highWatermark.value));
+      all.add((prefix # "_low_watermark{}", lowWatermark.value));
+      for (i in counters.keys()) {
+        all.add((prefix # "_bucket{le=\"" # Nat.toText(limits[i]) # "\"}", counters[i]));
+      };
+      if (counters.size() > 0) {
+        all.add((prefix # "_bucket{le=\"+Inf\"}", count));
+      };
+      Vector.toArray(all);
+    };
 
     public func share() : ?StableDataItem = null;
     public func unshare(data : StableDataItem) = ();
