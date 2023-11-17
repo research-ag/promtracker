@@ -272,6 +272,10 @@ module {
   class GaugeValue(prefix_ : Text, watermarkResetInterval : Nat64, limits : [Nat], now : () -> Nat64) {
     public let prefix = prefix_;
 
+    func metric(name : Text, labels : Text, value : Nat) : (Text, Nat) {
+      (prefix # "_" # name # "{" # labels # "}", value);
+    };
+
     class WatermarkTracker<T>(default : T, condition : (old : T, new : T) -> Bool, resetInterval : Nat64) {
       var lastWatermarkTimestamp : Nat64 = 0;
       public var value : T = default;
@@ -307,20 +311,22 @@ module {
     };
 
     public func dump() : [(Text, Nat)] {
-      let all = Vector.Vector<(Text, Nat)>();
-      all.add((prefix # "_sum{}", sum));
-      all.add((prefix # "_count{}", count));
-      all.add((prefix # "_high_watermark{}", highWatermark.value));
-      all.add((prefix # "_low_watermark{}", lowWatermark.value));
+      let all = Vector.fromArray<(Text, Nat)>([
+        metric("sum", "", sum),
+        metric("count", "", count),
+        metric("high_watermark", "", highWatermark.value),
+        metric("low_watermark", "", lowWatermark.value),
+      ]);
       for (i in counters.keys()) {
-        all.add((prefix # "_bucket{le=\"" # Nat.toText(limits[i]) # "\"}", counters[i]));
+        all.add(metric("bucket", "le=\"" # Nat.toText(limits[i]) # "\"", counters[i]));
       };
       if (counters.size() > 0) {
-        all.add((prefix # "_bucket{le=\"+Inf\"}", count));
+        all.add(metric("bucket", "le=\"+Inf\"", count));
       };
       Vector.toArray(all);
     };
 
+    // sharing is disabled for GaugeValue
     public func share() : ?StableDataItem = null;
     public func unshare(data : StableDataItem) = ();
   };
