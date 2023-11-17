@@ -88,9 +88,11 @@ module {
     /// let storageSize = tracker.addPullValue("storage_size", func() = storage.size());
     /// ```
     public func addPullValue(prefix : Text, pull : () -> Nat) : PullValueInterface {
+      // create and register value tracker
       let id = values.size();
       let value = PullValue(prefix, pull);
       values.add(?value);
+      // return interface
       {
         value = pull;
         remove = func() = removeValue(id);
@@ -107,9 +109,11 @@ module {
     /// requestsAmount.add(1);
     /// ```
     public func addCounter(prefix : Text, isStable : Bool) : CounterInterface {
+      // create and register value tracker
       let id = values.size();
       let value = CounterValue(prefix, isStable);
       values.add(?value);
+      // return interface
       {
         value = func() = value.value;
         set = value.set;
@@ -144,7 +148,7 @@ module {
         if (l[i - 1] >= l[i]) Prim.trap("Buckets have to be ordered and non-empty");
         i += 1;
       };
-      // create value
+      // create and register value tracker
       let gaugeId = values.size();
       let gaugeValue = GaugeValue(prefix, bucketLimits, (watermarkResetInterval, now));
       values.add(?gaugeValue);
@@ -264,39 +268,40 @@ module {
     };
   };
 
+  class WatermarkTracker<T>(initialMark : T, isHigher : (new : T, old : T) -> Bool, resetInterval : Nat64) {
+    var lastMarkTime : Nat64 = 0;
+    public var mark : T = initialMark;
+    public func update(value : T, time : Nat64) {
+      if (isHigher(value, mark) or time > lastMarkTime + resetInterval) {
+        mark := value;
+        lastMarkTime := time;
+      };
+    };
+  };
   class GaugeValue(prefix_ : Text, limits : [Nat], watermarkEnv : (Nat64, () -> Nat64)) {
     public let prefix = prefix_;
+    let (resetInterval, now) = watermarkEnv;
 
     func metric(name : Text, labels : Text, value : Nat) : (Text, Nat) {
       (prefix # "_" # name # "{" # labels # "}", value);
     };
 
-    class WatermarkTracker<T>(default : T, condition : (old : T, new : T) -> Bool, resetInterval : Nat64) {
-      var lastWatermarkTimestamp : Nat64 = 0;
-      public var value : T = default;
-      public func update(current : T, currentTime : Nat64) {
-        if (condition(value, current) or currentTime > lastWatermarkTimestamp + resetInterval) {
-          value := current;
-          lastWatermarkTimestamp := currentTime;
-        };
-      };
-    };
-
     public var count : Nat = 0;
     public var sum : Nat = 0;
     public let counters : [var Nat] = Array.init<Nat>(limits.size(), 0);
-    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new > old, watermarkEnv.0);
-    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(old, new) = new < old, watermarkEnv.0);
+    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new > old, resetInterval);
+    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new < old, resetInterval);
     public var lastValue : Nat = 0;
 
     public func update(current : Nat) {
+      // main counters
       count += 1;
       sum += current;
-      let now = watermarkEnv.1();
-      // update watermarks
-      highWatermark.update(current, now);
-      lowWatermark.update(current, now);
-      // update bucket counters
+      // watermarks
+      let t = now();
+      highWatermark.update(current, t);
+      lowWatermark.update(current, t);
+      // bucket counters
       var n = limits.size();
       while (n > 0) {
         n -= 1;
@@ -309,8 +314,8 @@ module {
       let all = Vector.fromArray<(Text, Nat)>([
         metric("sum", "", sum),
         metric("count", "", count),
-        metric("high_watermark", "", highWatermark.value),
-        metric("low_watermark", "", lowWatermark.value),
+        metric("high_watermark", "", highWatermark.mark),
+        metric("low_watermark", "", lowWatermark.mark),
       ]);
       for (i in counters.keys()) {
         all.add(metric("bucket", "le=\"" # Nat.toText(limits[i]) # "\"", counters[i]));
