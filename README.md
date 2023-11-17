@@ -46,7 +46,7 @@ For updates, help, questions, feedback and other requests related to this packag
 
 ### Canister including http endpoint
 
-Our [example canister](examples/heartrate.mo)
+Our [example canister](examples)
 tracks the "heartrate" by tracking the time in milliseconds between subsequent heartbeats.
 This value is a GaugeValue and it allows us to see the high and low watermarks as well as the distribution in the form of a histogram.
 
@@ -56,7 +56,7 @@ Create tracker instance like this:
 let tracker = PT.PromTracker(65);
 ```
 65 seconds is the recommended interval if prometheus pulls stats with interval 60 seconds. This value used to clear high 
-and low watermarks in [gauge values](#gauge-value), so each highest and lowest value during your canister lifecycle will
+and low watermarks in gauge values, so each highest and lowest value during your canister lifecycle will
 be reflected in the prometheus data.
 
 Add some values:
@@ -136,7 +136,7 @@ Second argument accepts edge values for buckets
 ```
 
 ### System metrics
-PromTracker has the ability to extend your prometheus exposition output with these [pull values](#pull-value):
+PromTracker has the ability to extend your prometheus exposition output with these pull values:
 1) `cycles_balance` // Cycles.balance()
 1) `rts_memory_size` // Prim.rts_memory_size()
 1) `rts_heap_size` // Prim.rts_heap_size()
