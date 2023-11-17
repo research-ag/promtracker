@@ -36,11 +36,6 @@ module {
     update : (x : Nat) -> ();
     remove : () -> ();
   };
-  /// An access interface for buckets value
-  public type BucketsInterface = {
-    update : (x : Nat) -> ();
-    remove : () -> ();
-  };
 
   /// Value tracker, designed specifically to use as source for Prometheus.
   ///
