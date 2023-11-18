@@ -37,8 +37,15 @@ module {
     remove : () -> ();
   };
 
+  // The two components of the watermark environment are:
+  // - the interval after which the watermarks are reset in seconds as Nat
+  // - the function that returns the current time in nanoseconds as Nat64
+  type WatermarkEnvironment = (Nat64, () -> Nat64);
   public class PromTrackerTestable(watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
-    let watermarkResetInterval : Nat64 = Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000;
+    let env : WatermarkEnvironment = (
+      Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000,
+      now,
+    );
 
     type IValue = {
       prefix : Text;
@@ -98,7 +105,7 @@ module {
 
     /// Register a GaugeValue in the tracker.
     /// A GaugeValue is stateful. It's value can be updated by overwriting it's previous value.
-    /// A GaugeValue keeps some information about it's history such as high and low watermarks 
+    /// A GaugeValue keeps some information about it's history such as high and low watermarks
     /// and histogram buckets counters that can be used to create heatmaps.
     ///
     /// If the second argument is an empty list then no histogram buckets are tracked.
@@ -126,7 +133,7 @@ module {
       };
       // create and register the value
       let gaugeId = values.size();
-      let gaugeValue = GaugeValue(prefix, bucketLimits, (watermarkResetInterval, now));
+      let gaugeValue = GaugeValue(prefix, bucketLimits, env);
       values.add(?gaugeValue);
       // return the interface
       {
@@ -214,7 +221,7 @@ module {
   ///
   /// Example:
   /// ```motoko
-  /// let tracker = PromTracker.PromTracker(65); 
+  /// let tracker = PromTracker.PromTracker(65);
   /// // 65 seconds is the recommended interval if prometheus pulls stats with interval 60 seconds
   /// ....
   /// let successfulHeartbeats = tracker.addCounter("successful_heartbeats", true);
@@ -289,9 +296,9 @@ module {
       };
     };
   };
-  class GaugeValue(prefix_ : Text, limits : [Nat], watermarkEnv : (Nat64, () -> Nat64)) {
+  class GaugeValue(prefix_ : Text, limits : [Nat], env : WatermarkEnvironment) {
     public let prefix = prefix_;
-    let (resetInterval, now) = watermarkEnv;
+    let (resetInterval, now) = env;
 
     func metric(name : Text, labels : Text, value : Nat) : (Text, Nat) {
       (prefix # "_" # name # "{" # labels # "}", value);
