@@ -15,7 +15,7 @@ let testValue = tracker.addPullValue("test_val_0", func() = 150);
 run(
   test(
     "pull value output",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("test_val_0{} 150 123000000\n")),
   )
 );
@@ -25,7 +25,7 @@ testValue.remove();
 run(
   test(
     "value removed",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("")),
   )
 );
@@ -35,7 +35,7 @@ let counter = tracker.addCounter("test_counter", false);
 run(
   test(
     "initial counter state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("test_counter{} 0 123000000\n")),
   )
 );
@@ -43,7 +43,7 @@ counter.add(3);
 run(
   test(
     "counter state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("test_counter{} 3 123000000\n")),
   )
 );
@@ -51,7 +51,7 @@ counter.add(4);
 run(
   test(
     "counter state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("test_counter{} 7 123000000\n")),
   )
 );
@@ -59,7 +59,7 @@ counter.set(2);
 run(
   test(
     "counter state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("test_counter{} 2 123000000\n")),
   )
 );
@@ -70,7 +70,7 @@ let gauge = tracker.addGauge("test_gauge", []);
 run(
   test(
     "initial gauge state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("test_gauge_sum{} 0 123000000
 test_gauge_count{} 0 123000000
 test_gauge_high_watermark{} 0 123000000
@@ -88,7 +88,7 @@ gauge.update(160);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("test_gauge_sum{} 1240 123000000
 test_gauge_count{} 6 123000000
 test_gauge_high_watermark{} 280 123000000
@@ -103,7 +103,7 @@ let gaugeWithBuckets = tracker.addGauge("buckets_gauge", [10, 20, 50, 120, 180])
 run(
   test(
     "initial gauge state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("buckets_gauge_sum{} 0 123000000
 buckets_gauge_count{} 0 123000000
 buckets_gauge_high_watermark{} 0 123000000
@@ -127,7 +127,7 @@ gaugeWithBuckets.update(999999);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("buckets_gauge_sum{} 1000301 123000000
 buckets_gauge_count{} 6 123000000
 buckets_gauge_high_watermark{} 999999 123000000
@@ -151,7 +151,7 @@ gauge2.update(90);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("buckets_gauge_sum{} 1000 123000000
 buckets_gauge_count{} 3 123000000
 buckets_gauge_high_watermark{} 900 123000000
@@ -166,7 +166,7 @@ gauge2.update(180);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("buckets_gauge_sum{} 2000 123001000
 buckets_gauge_count{} 6 123001000
 buckets_gauge_high_watermark{} 900 123001000
@@ -181,7 +181,7 @@ gauge2.update(180);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(),
+    tracker.renderExposition(""),
     M.equals(T.text("buckets_gauge_sum{} 3000 123006000
 buckets_gauge_count{} 9 123006000
 buckets_gauge_high_watermark{} 800 123006000

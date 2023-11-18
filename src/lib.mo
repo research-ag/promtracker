@@ -49,7 +49,6 @@ module {
       Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000,
       now,
     );
-
     type IValue = {
       prefix : Text;
       dump : () -> [Metric];
@@ -176,19 +175,21 @@ module {
       Vector.toArray(result);
     };
 
-    func renderMetric(m : Metric, time : Text) : Text {
+    func renderMetric(m : Metric, addLabels : Text, time : Text) : Text {
       let (name, labels, value) = m;
-      let separator = if (trackerLabels != "" and labels != "") "," else "";
-      name # "{" # trackerLabels # separator # labels # "} " # Nat.toText(value) # " " # time # "\n";
+      let separator = if (addLabels != "" and labels != "") "," else "";
+      name # "{" # addLabels # separator # labels # "} " # Nat.toText(value) # " " # time # "\n";
     };
 
     /// Render all current metrics to prometheus exposition format
-    public func renderExposition() : Text {
+    public func renderExposition(labels : Text) : Text {
       let timeStr = Nat64.toText(now() / 1_000_000);
+      let separator = if (trackerLabels != "" and labels != "") "," else "";
+      let labelStr = trackerLabels # separator # labels;
       Array.foldLeft<Metric, Text>(
         dump(),
         "",
-        func(acc, m) = acc # renderMetric(m, timeStr),
+        func(acc, m) = acc # renderMetric(m, labelStr, timeStr),
       );
     };
 

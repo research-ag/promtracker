@@ -3,11 +3,19 @@ import Time "mo:base/Time";
 import Int "mo:base/Int";
 import Text "mo:base/Text";
 import Array "mo:base/Array";
+import Principal "mo:base/Principal";
+import Prim "mo:prim";
 
 import TinyHttp "tiny_http";
 
 /// A canister, which answers by HTTP at route /metrics with statistics of interval between heartbeats in prometheus format
-actor {
+actor class A() = self {
+  func myname() : Text {
+    let s = Principal.toText(Principal.fromActor(self));
+    let ?name = Text.split(s, #char '-').next() else Prim.trap("");
+    name;
+  };
+
   // initialize the tracker
   let pt = PT.PromTracker("", 65);
 
@@ -32,7 +40,9 @@ actor {
   public query func http_request(req : TinyHttp.Request) : async TinyHttp.Response {
     let ?path = Text.split(req.url, #char '?').next() else return TinyHttp.render400();
     switch (req.method, path) {
-      case ("GET", "/metrics") TinyHttp.renderPlainText(pt.renderExposition());
+      case ("GET", "/metrics") {
+        TinyHttp.renderPlainText(pt.renderExposition("canister=\"" # myname() # "\""));
+      };
       case (_) TinyHttp.render400();
     };
   };
