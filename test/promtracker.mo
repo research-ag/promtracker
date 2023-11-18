@@ -7,7 +7,7 @@ import M "mo:matchers/Matchers";
 let { run; test; suite } = Suite;
 
 var mockedTime : Nat64 = 123_000_000_000_000;
-var tracker = PT.PromTrackerTestable(5, func() = mockedTime);
+var tracker = PT.PromTrackerTestable("", 5, func() = mockedTime);
 //PT.now := func() = mockedTime;
 
 /* --------------------------------------- */

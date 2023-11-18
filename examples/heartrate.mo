@@ -9,7 +9,7 @@ import TinyHttp "tiny_http";
 /// A canister, which answers by HTTP at route /metrics with statistics of interval between heartbeats in prometheus format
 actor {
   // initialize the tracker
-  let pt = PT.PromTracker(65);
+  let pt = PT.PromTracker("", 65);
 
   // register a gauge with 10 buckets (plus the +Inf bucket)
   // bucket limits: 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400

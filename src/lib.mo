@@ -37,11 +37,14 @@ module {
     remove : () -> ();
   };
 
+  // The type of the metrics is (name, labels, value)
+  type Metric = (Text, Text, Nat);
+
   // The two components of the watermark environment are:
   // - the interval after which the watermarks are reset in seconds as Nat
   // - the function that returns the current time in nanoseconds as Nat64
   type WatermarkEnvironment = (Nat64, () -> Nat64);
-  public class PromTrackerTestable(watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
+  public class PromTrackerTestable(trackerLabels : Text, watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
     let env : WatermarkEnvironment = (
       Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000,
       now,
@@ -49,7 +52,7 @@ module {
 
     type IValue = {
       prefix : Text;
-      dump : () -> [(Text, Nat)];
+      dump : () -> [Metric];
       share : () -> ?StableDataItem;
       unshare : (StableDataItem) -> ();
     };
@@ -162,8 +165,8 @@ module {
     func removeValue(id : Nat) : () = values.put(id, null);
 
     /// Dump all current metrics to an array
-    public func dump() : [(Text, Nat)] {
-      let result = Vector.Vector<(Text, Nat)>();
+    public func dump() : [Metric] {
+      let result = Vector.Vector<Metric>();
       for (v in values.vals()) {
         switch (v) {
           case (?value) Vector.addFromIter(result, Iter.fromArray(value.dump()));
@@ -173,16 +176,20 @@ module {
       Vector.toArray(result);
     };
 
-    func renderSingle(name : Text, value : Text, timestamp : Text) : Text = name # " " # value # " " # timestamp # "\n";
+    func renderMetric(m : Metric, time : Text) : Text {
+      let (name, labels, value) = m;
+      let separator = if (trackerLabels != "" and labels != "") "," else "";
+      name # "{" # trackerLabels # separator # labels # "} " # Nat.toText(value) # " " # time # "\n";
+    };
 
     /// Render all current metrics to prometheus exposition format
     public func renderExposition() : Text {
-      let timestamp = Nat64.toText(now() / 1_000_000);
-      var res = "";
-      for ((name, value) in dump().vals()) {
-        res #= renderSingle(name, Nat.toText(value), timestamp);
-      };
-      res;
+      let timeStr = Nat64.toText(now() / 1_000_000);
+      Array.foldLeft<Metric, Text>(
+        dump(),
+        "",
+        func(acc, m) = acc # renderMetric(m, timeStr),
+      );
     };
 
     /// Dump all values, marked as stable, to stable data structure
@@ -253,14 +260,14 @@ module {
   ///
   /// For an executable example, see `examples/heartrate.mo`.
   type PromTracker = PromTrackerTestable;
-  public func PromTracker(watermarkResetIntervalSeconds : Nat) : PromTracker {
-    PromTrackerTestable(watermarkResetIntervalSeconds, now_);
+  public func PromTracker(labels : Text, watermarkResetIntervalSeconds : Nat) : PromTracker {
+    PromTrackerTestable(labels, watermarkResetIntervalSeconds, now_);
   };
 
   class PullValue(prefix_ : Text, pull : () -> Nat) {
     public let prefix = prefix_;
 
-    public func dump() : [(Text, Nat)] = [(prefix # "{}", pull())];
+    public func dump() : [Metric] = [(prefix, "", pull())];
 
     public func share() : ?StableDataItem = null;
     public func unshare(data : StableDataItem) = ();
@@ -274,7 +281,7 @@ module {
     public func add(n : Nat) { value += n };
     public func set(n : Nat) { value := n };
 
-    public func dump() : [(Text, Nat)] = [(prefix # "{}", value)];
+    public func dump() : [Metric] = [(prefix, "", value)];
 
     public func share() : ?StableDataItem {
       if (not isStable) return null;
@@ -300,8 +307,8 @@ module {
     public let prefix = prefix_;
     let (resetInterval, now) = env;
 
-    func metric(name : Text, labels : Text, value : Nat) : (Text, Nat) {
-      (prefix # "_" # name # "{" # labels # "}", value);
+    func metric(suffix : Text, labels : Text, value : Nat) : Metric {
+      (prefix # "_" # suffix, labels, value);
     };
 
     public var count : Nat = 0;
@@ -328,8 +335,8 @@ module {
       };
     };
 
-    public func dump() : [(Text, Nat)] {
-      let all = Vector.fromArray<(Text, Nat)>([
+    public func dump() : [Metric] {
+      let all = Vector.fromArray<Metric>([
         metric("sum", "", sum),
         metric("count", "", count),
         metric("high_watermark", "", highWatermark.mark),
