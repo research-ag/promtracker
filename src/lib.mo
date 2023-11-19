@@ -5,6 +5,7 @@ import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Prim "mo:prim";
+import Principal "mo:base/Principal";
 import StableMemory "mo:base/ExperimentalStableMemory";
 import Time "mo:base/Time";
 import Text "mo:base/Text";
@@ -15,6 +16,21 @@ module {
 
   type StableDataItem = { #counter : Nat };
   public type StableData = AssocList.AssocList<Text, StableDataItem>;
+
+  // Helper function to get the first 5 characters of the canister's
+  // own canister id (by passing `self` to this function).
+  public func shortName(a : actor {}) : Text {
+    let s = Principal.toText(Principal.fromActor(a));
+    let ?name = Text.split(s, #char '-').next() else Prim.trap("");
+    name;
+  };
+
+  // Helper function to create a list of bucket limits.
+  // [a + d, .., a + n * d]
+  // which represents n buckets plus the +Inf bucket. 
+  public func limits(a : Nat, n : Nat, d : Nat) : [Nat] {
+    Array.tabulate<Nat>(n, func(i) = a + (i + 1) * d);
+  };
 
   let now_ : () -> Nat64 = func() = Nat64.fromIntWrap(Time.now());
 
