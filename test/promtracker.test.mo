@@ -1,8 +1,8 @@
 import PT "../src/lib";
 
-import Suite "mo:matchers/Suite";
-import T "mo:matchers/Testable";
-import M "mo:matchers/Matchers";
+import Suite "mo:motoko-matchers/Suite";
+import T "mo:motoko-matchers/Testable";
+import M "mo:motoko-matchers/Matchers";
 
 let { run; test; suite } = Suite;
 

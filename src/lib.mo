@@ -18,6 +18,12 @@ module {
 
   let now_ : () -> Nat64 = func() = Nat64.fromIntWrap(Time.now());
 
+  func concat(a : Text, b : Text) : Text {
+    if (a == "") return b;
+    if (b == "") return a;
+    return a # "," # b;
+  };
+
   /// An access interface for pull value
   public type PullValueInterface = {
     value : () -> Nat;
@@ -37,14 +43,14 @@ module {
     remove : () -> ();
   };
 
-  // The type of the metrics is (name, labels, value)
+  // The data in type Metric is (name, labels, value)
   type Metric = (Text, Text, Nat);
 
   // The two components of the watermark environment are:
   // - the interval after which the watermarks are reset in seconds as Nat
   // - the function that returns the current time in nanoseconds as Nat64
   type WatermarkEnvironment = (Nat64, () -> Nat64);
-  public class PromTrackerTestable(trackerLabels : Text, watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
+  public class PromTrackerTestable(staticGlobalLabels : Text, watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
     let env : WatermarkEnvironment = (
       Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000,
       now,
@@ -175,22 +181,28 @@ module {
       Vector.toArray(result);
     };
 
-    func renderMetric(m : Metric, addLabels : Text, time : Text) : Text {
-      let (name, labels, value) = m;
-      let separator = if (addLabels != "" and labels != "") "," else "";
-      name # "{" # addLabels # separator # labels # "} " # Nat.toText(value) # " " # time # "\n";
+    func renderMetric(m : Metric, globalLabels : Text, time : Text) : Text {
+      let (metricName, metricLabels, natValue) = m;
+      metricName # "{" # concat(globalLabels, metricLabels) # "} "
+      # Nat.toText(natValue) # " " # time # "\n";
     };
 
     /// Render all current metrics to prometheus exposition format
-    public func renderExposition(labels : Text) : Text {
+    public func renderExposition(dynamicGlobalLabels : Text) : Text {
       let timeStr = Nat64.toText(now() / 1_000_000);
-      let separator = if (trackerLabels != "" and labels != "") "," else "";
-      let labelStr = trackerLabels # separator # labels;
+      let globalLabels = concat(staticGlobalLabels, dynamicGlobalLabels);
+      let lines = Array.map<Metric, Text>(
+        dump(),
+        func(m) = renderMetric(m, globalLabels, timeStr),
+      );
+      Text.join("", lines.vals());
+      /*
       Array.foldLeft<Metric, Text>(
         dump(),
         "",
-        func(acc, m) = acc # renderMetric(m, labelStr, timeStr),
+        func(acc, m) = acc # renderMetric(m, globalLabels, timeStr),
       );
+      */
     };
 
     /// Dump all values, marked as stable, to stable data structure
