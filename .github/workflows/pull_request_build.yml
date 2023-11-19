@@ -33,7 +33,8 @@ jobs:
         run: |          
           npm i -g ic-mops@${{ env.mops_version }}
 
+      - name: "install mops packages"
+        run: mops install
+  
       - name: "test"
-        run: |
-          mops install
-          mops test
+        run: DFX_MOC_PATH=/home/runner/bin/moc mops test
