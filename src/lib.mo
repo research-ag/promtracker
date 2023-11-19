@@ -5,6 +5,7 @@ import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Prim "mo:prim";
+import Principal "mo:base/Principal";
 import StableMemory "mo:base/ExperimentalStableMemory";
 import Time "mo:base/Time";
 import Text "mo:base/Text";
@@ -16,7 +17,28 @@ module {
   type StableDataItem = { #counter : Nat };
   public type StableData = AssocList.AssocList<Text, StableDataItem>;
 
+  /// Helper function to get the first 5 characters of the canister's
+  /// own canister id (by passing `self` to this function).
+  public func shortName(a : actor {}) : Text {
+    let s = Principal.toText(Principal.fromActor(a));
+    let ?name = Text.split(s, #char '-').next() else Prim.trap("");
+    name;
+  };
+
+  /// Helper function to create a list of bucket limits.
+  /// [a + d, .., a + n * d]
+  /// which represents n buckets plus the +Inf bucket. 
+  public func limits(a : Nat, n : Nat, d : Nat) : [Nat] {
+    Array.tabulate<Nat>(n, func(i) = a + (i + 1) * d);
+  };
+
   let now_ : () -> Nat64 = func() = Nat64.fromIntWrap(Time.now());
+
+  func concat(a : Text, b : Text) : Text {
+    if (a == "") return b;
+    if (b == "") return a;
+    return a # "," # b;
+  };
 
   /// An access interface for pull value
   public type PullValueInterface = {
@@ -37,12 +59,23 @@ module {
     remove : () -> ();
   };
 
-  public class PromTrackerTestable(watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
-    let watermarkResetInterval : Nat64 = Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000;
+  // The data in type Metric is (name, labels, value)
+  type Metric = (Text, Text, Nat);
 
+  // The two components of the watermark environment are:
+  // - the interval after which the watermarks are reset in seconds as Nat
+  // - the function that returns the current time in nanoseconds as Nat64
+  type WatermarkEnvironment = (Nat64, () -> Nat64);
+  
+  /// The constructor PromTracker should be used instead to create this class.
+  public class PromTrackerTestable(staticGlobalLabels : Text, watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
+    let env : WatermarkEnvironment = (
+      Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000,
+      now,
+    );
     type IValue = {
       prefix : Text;
-      dump : () -> [(Text, Nat)];
+      dump : () -> [Metric];
       share : () -> ?StableDataItem;
       unshare : (StableDataItem) -> ();
     };
@@ -98,7 +131,7 @@ module {
 
     /// Register a GaugeValue in the tracker.
     /// A GaugeValue is stateful. It's value can be updated by overwriting it's previous value.
-    /// A GaugeValue keeps some information about it's history such as high and low watermarks 
+    /// A GaugeValue keeps some information about it's history such as high and low watermarks
     /// and histogram buckets counters that can be used to create heatmaps.
     ///
     /// If the second argument is an empty list then no histogram buckets are tracked.
@@ -126,7 +159,7 @@ module {
       };
       // create and register the value
       let gaugeId = values.size();
-      let gaugeValue = GaugeValue(prefix, bucketLimits, (watermarkResetInterval, now));
+      let gaugeValue = GaugeValue(prefix, bucketLimits, env);
       values.add(?gaugeValue);
       // return the interface
       {
@@ -155,8 +188,8 @@ module {
     func removeValue(id : Nat) : () = values.put(id, null);
 
     /// Dump all current metrics to an array
-    public func dump() : [(Text, Nat)] {
-      let result = Vector.Vector<(Text, Nat)>();
+    public func dump() : [Metric] {
+      let result = Vector.Vector<Metric>();
       for (v in values.vals()) {
         switch (v) {
           case (?value) Vector.addFromIter(result, Iter.fromArray(value.dump()));
@@ -166,16 +199,28 @@ module {
       Vector.toArray(result);
     };
 
-    func renderSingle(name : Text, value : Text, timestamp : Text) : Text = name # " " # value # " " # timestamp # "\n";
+    func renderMetric(m : Metric, globalLabels : Text, time : Text) : Text {
+      let (metricName, metricLabels, natValue) = m;
+      metricName # "{" # concat(globalLabels, metricLabels) # "} "
+      # Nat.toText(natValue) # " " # time # "\n";
+    };
 
     /// Render all current metrics to prometheus exposition format
-    public func renderExposition() : Text {
-      let timestamp = Nat64.toText(now() / 1_000_000);
-      var res = "";
-      for ((name, value) in dump().vals()) {
-        res #= renderSingle(name, Nat.toText(value), timestamp);
-      };
-      res;
+    public func renderExposition(dynamicGlobalLabels : Text) : Text {
+      let timeStr = Nat64.toText(now() / 1_000_000);
+      let globalLabels = concat(staticGlobalLabels, dynamicGlobalLabels);
+      let lines = Array.map<Metric, Text>(
+        dump(),
+        func(m) = renderMetric(m, globalLabels, timeStr),
+      );
+      Text.join("", lines.vals());
+      /*
+      Array.foldLeft<Metric, Text>(
+        dump(),
+        "",
+        func(acc, m) = acc # renderMetric(m, globalLabels, timeStr),
+      );
+      */
     };
 
     /// Dump all values, marked as stable, to stable data structure
@@ -214,7 +259,7 @@ module {
   ///
   /// Example:
   /// ```motoko
-  /// let tracker = PromTracker.PromTracker(65); 
+  /// let tracker = PromTracker.PromTracker(65);
   /// // 65 seconds is the recommended interval if prometheus pulls stats with interval 60 seconds
   /// ....
   /// let successfulHeartbeats = tracker.addCounter("successful_heartbeats", true);
@@ -246,14 +291,14 @@ module {
   ///
   /// For an executable example, see `examples/heartrate.mo`.
   type PromTracker = PromTrackerTestable;
-  public func PromTracker(watermarkResetIntervalSeconds : Nat) : PromTracker {
-    PromTrackerTestable(watermarkResetIntervalSeconds, now_);
+  public func PromTracker(labels : Text, watermarkResetIntervalSeconds : Nat) : PromTracker {
+    PromTrackerTestable(labels, watermarkResetIntervalSeconds, now_);
   };
 
   class PullValue(prefix_ : Text, pull : () -> Nat) {
     public let prefix = prefix_;
 
-    public func dump() : [(Text, Nat)] = [(prefix # "{}", pull())];
+    public func dump() : [Metric] = [(prefix, "", pull())];
 
     public func share() : ?StableDataItem = null;
     public func unshare(data : StableDataItem) = ();
@@ -267,7 +312,7 @@ module {
     public func add(n : Nat) { value += n };
     public func set(n : Nat) { value := n };
 
-    public func dump() : [(Text, Nat)] = [(prefix # "{}", value)];
+    public func dump() : [Metric] = [(prefix, "", value)];
 
     public func share() : ?StableDataItem {
       if (not isStable) return null;
@@ -289,12 +334,12 @@ module {
       };
     };
   };
-  class GaugeValue(prefix_ : Text, limits : [Nat], watermarkEnv : (Nat64, () -> Nat64)) {
+  class GaugeValue(prefix_ : Text, limits : [Nat], env : WatermarkEnvironment) {
     public let prefix = prefix_;
-    let (resetInterval, now) = watermarkEnv;
+    let (resetInterval, now) = env;
 
-    func metric(name : Text, labels : Text, value : Nat) : (Text, Nat) {
-      (prefix # "_" # name # "{" # labels # "}", value);
+    func metric(suffix : Text, labels : Text, value : Nat) : Metric {
+      (prefix # "_" # suffix, labels, value);
     };
 
     public var count : Nat = 0;
@@ -321,8 +366,8 @@ module {
       };
     };
 
-    public func dump() : [(Text, Nat)] {
-      let all = Vector.fromArray<(Text, Nat)>([
+    public func dump() : [Metric] {
+      let all = Vector.fromArray<Metric>([
         metric("sum", "", sum),
         metric("count", "", count),
         metric("high_watermark", "", highWatermark.mark),
