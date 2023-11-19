@@ -17,17 +17,17 @@ module {
   type StableDataItem = { #counter : Nat };
   public type StableData = AssocList.AssocList<Text, StableDataItem>;
 
-  // Helper function to get the first 5 characters of the canister's
-  // own canister id (by passing `self` to this function).
+  /// Helper function to get the first 5 characters of the canister's
+  /// own canister id (by passing `self` to this function).
   public func shortName(a : actor {}) : Text {
     let s = Principal.toText(Principal.fromActor(a));
     let ?name = Text.split(s, #char '-').next() else Prim.trap("");
     name;
   };
 
-  // Helper function to create a list of bucket limits.
-  // [a + d, .., a + n * d]
-  // which represents n buckets plus the +Inf bucket. 
+  /// Helper function to create a list of bucket limits.
+  /// [a + d, .., a + n * d]
+  /// which represents n buckets plus the +Inf bucket. 
   public func limits(a : Nat, n : Nat, d : Nat) : [Nat] {
     Array.tabulate<Nat>(n, func(i) = a + (i + 1) * d);
   };
@@ -66,6 +66,8 @@ module {
   // - the interval after which the watermarks are reset in seconds as Nat
   // - the function that returns the current time in nanoseconds as Nat64
   type WatermarkEnvironment = (Nat64, () -> Nat64);
+  
+  /// The constructor PromTracker should be used instead to create this class.
   public class PromTrackerTestable(staticGlobalLabels : Text, watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
     let env : WatermarkEnvironment = (
       Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000,
