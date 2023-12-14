@@ -68,13 +68,24 @@ counter.remove();
 /* --------------------------------------- */
 let gauge = tracker.addGauge("test_gauge", []);
 run(
-  test(
+  suite(
     "initial gauge state",
-    tracker.renderExposition(""),
-    M.equals(T.text("test_gauge_sum{} 0 123000000
+    [
+      test(
+        "initial gauge exposition",
+        tracker.renderExposition(""),
+        M.equals(T.text("test_gauge_last{} 0 123000000
+test_gauge_sum{} 0 123000000
 test_gauge_count{} 0 123000000
 test_gauge_high_watermark{} 0 123000000
 test_gauge_low_watermark{} 0 123000000\n")),
+      ),
+      test(
+        "initial gauge value",
+        gauge.value(),
+        M.equals(T.nat(0)),
+      ),
+    ],
   )
 );
 
@@ -86,13 +97,24 @@ gauge.update(120);
 gauge.update(160);
 
 run(
-  test(
+  suite(
     "gauge state",
-    tracker.renderExposition(""),
-    M.equals(T.text("test_gauge_sum{} 1240 123000000
+    [
+      test(
+        "gauge state exposition",
+        tracker.renderExposition(""),
+        M.equals(T.text("test_gauge_last{} 160 123000000
+test_gauge_sum{} 1240 123000000
 test_gauge_count{} 6 123000000
 test_gauge_high_watermark{} 280 123000000
 test_gauge_low_watermark{} 120 123000000\n")),
+      ),
+      test(
+        "gauge value",
+        gauge.value(),
+        M.equals(T.nat(160)),
+      ),
+    ],
   )
 );
 
@@ -104,7 +126,8 @@ run(
   test(
     "initial gauge state",
     tracker.renderExposition(""),
-    M.equals(T.text("buckets_gauge_sum{} 0 123000000
+    M.equals(T.text("buckets_gauge_last{} 0 123000000
+buckets_gauge_sum{} 0 123000000
 buckets_gauge_count{} 0 123000000
 buckets_gauge_high_watermark{} 0 123000000
 buckets_gauge_low_watermark{} 0 123000000
@@ -128,7 +151,8 @@ run(
   test(
     "gauge state",
     tracker.renderExposition(""),
-    M.equals(T.text("buckets_gauge_sum{} 1000301 123000000
+    M.equals(T.text("buckets_gauge_last{} 999999 123000000
+buckets_gauge_sum{} 1000301 123000000
 buckets_gauge_count{} 6 123000000
 buckets_gauge_high_watermark{} 999999 123000000
 buckets_gauge_low_watermark{} 1 123000000
@@ -152,7 +176,8 @@ run(
   test(
     "gauge state",
     tracker.renderExposition(""),
-    M.equals(T.text("buckets_gauge_sum{} 1000 123000000
+    M.equals(T.text("buckets_gauge_last{} 90 123000000
+buckets_gauge_sum{} 1000 123000000
 buckets_gauge_count{} 3 123000000
 buckets_gauge_high_watermark{} 900 123000000
 buckets_gauge_low_watermark{} 10 123000000\n")),
@@ -167,7 +192,8 @@ run(
   test(
     "gauge state",
     tracker.renderExposition(""),
-    M.equals(T.text("buckets_gauge_sum{} 2000 123001000
+    M.equals(T.text("buckets_gauge_last{} 180 123001000
+buckets_gauge_sum{} 2000 123001000
 buckets_gauge_count{} 6 123001000
 buckets_gauge_high_watermark{} 900 123001000
 buckets_gauge_low_watermark{} 10 123001000\n")),
@@ -182,7 +208,8 @@ run(
   test(
     "gauge state",
     tracker.renderExposition(""),
-    M.equals(T.text("buckets_gauge_sum{} 3000 123006000
+    M.equals(T.text("buckets_gauge_last{} 180 123006000
+buckets_gauge_sum{} 3000 123006000
 buckets_gauge_count{} 9 123006000
 buckets_gauge_high_watermark{} 800 123006000
 buckets_gauge_low_watermark{} 20 123006000\n")),
