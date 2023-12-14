@@ -350,6 +350,7 @@ module {
     public var lastValue : Nat = 0;
 
     public func update(current : Nat) {
+      lastValue := current;
       // main counters
       count += 1;
       sum += current;
@@ -368,6 +369,7 @@ module {
 
     public func dump() : [Metric] {
       let all = Vector.fromArray<Metric>([
+        metric("last", "", lastValue),
         metric("sum", "", sum),
         metric("count", "", count),
         metric("high_watermark", "", highWatermark.mark),
