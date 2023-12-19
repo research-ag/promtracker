@@ -21,6 +21,16 @@ run(
 );
 
 /* --------------------------------------- */
+testValue.setLabels("foo=\"bar\"");
+run(
+  test(
+    "pull value labels",
+    tracker.renderExposition(""),
+    M.equals(T.text("test_val_0{foo=\"bar\"} 150 123000000\n")),
+  )
+);
+
+/* --------------------------------------- */
 testValue.remove();
 run(
   test(
@@ -61,6 +71,14 @@ run(
     "counter state",
     tracker.renderExposition(""),
     M.equals(T.text("test_counter{} 2 123000000\n")),
+  )
+);
+counter.setLabels("foo=\"bar\"");
+run(
+  test(
+    "counter labels",
+    tracker.renderExposition(""),
+    M.equals(T.text("test_counter{foo=\"bar\"} 2 123000000\n")),
   )
 );
 counter.remove();
@@ -165,6 +183,25 @@ buckets_gauge_bucket{le=\"+Inf\"} 6 123000000\n")),
   )
 );
 
+gaugeWithBuckets.setLabels("foo=\"bar\"");
+run(
+  test(
+    "gauge with bucket labels",
+    tracker.renderExposition(""),
+    M.equals(T.text("buckets_gauge_last{foo=\"bar\"} 999999 123000000
+buckets_gauge_sum{foo=\"bar\"} 1000301 123000000
+buckets_gauge_count{foo=\"bar\"} 6 123000000
+buckets_gauge_high_watermark{foo=\"bar\"} 999999 123000000
+buckets_gauge_low_watermark{foo=\"bar\"} 1 123000000
+buckets_gauge_bucket{foo=\"bar\",le=\"10\"} 1 123000000
+buckets_gauge_bucket{foo=\"bar\",le=\"20\"} 1 123000000
+buckets_gauge_bucket{foo=\"bar\",le=\"50\"} 3 123000000
+buckets_gauge_bucket{foo=\"bar\",le=\"120\"} 4 123000000
+buckets_gauge_bucket{foo=\"bar\",le=\"180\"} 5 123000000
+buckets_gauge_bucket{foo=\"bar\",le=\"+Inf\"} 6 123000000\n")),
+  )
+);
+
 gaugeWithBuckets.remove();
 
 /* --------------------------------------- */
@@ -213,6 +250,19 @@ buckets_gauge_sum{} 3000 123006000
 buckets_gauge_count{} 9 123006000
 buckets_gauge_high_watermark{} 800 123006000
 buckets_gauge_low_watermark{} 20 123006000\n")),
+  )
+);
+
+gauge2.setLabels("foo=\"bar\"");
+run(
+  test(
+    "gauge labels",
+    tracker.renderExposition(""),
+    M.equals(T.text("buckets_gauge_last{foo=\"bar\"} 180 123006000
+buckets_gauge_sum{foo=\"bar\"} 3000 123006000
+buckets_gauge_count{foo=\"bar\"} 9 123006000
+buckets_gauge_high_watermark{foo=\"bar\"} 800 123006000
+buckets_gauge_low_watermark{foo=\"bar\"} 20 123006000\n")),
   )
 );
 
