@@ -11,22 +11,12 @@ var tracker = PT.PromTrackerTestable("", 5, func() = mockedTime);
 //PT.now := func() = mockedTime;
 
 /* --------------------------------------- */
-let testValue = tracker.addPullValue("test_val_0", func() = 150);
+let testValue = tracker.addPullValue("test_val_0", "", func() = 150);
 run(
   test(
     "pull value output",
     tracker.renderExposition(""),
     M.equals(T.text("test_val_0{} 150 123000000\n")),
-  )
-);
-
-/* --------------------------------------- */
-testValue.setLabels("foo=\"bar\"");
-run(
-  test(
-    "pull value labels",
-    tracker.renderExposition(""),
-    M.equals(T.text("test_val_0{foo=\"bar\"} 150 123000000\n")),
   )
 );
 
@@ -41,7 +31,18 @@ run(
 );
 
 /* --------------------------------------- */
-let counter = tracker.addCounter("test_counter", false);
+let testValue1 = tracker.addPullValue("test_val_1", "foo=\"bar\"", func() = 270);
+run(
+  test(
+    "pull value labels",
+    tracker.renderExposition(""),
+    M.equals(T.text("test_val_1{foo=\"bar\"} 270 123000000\n")),
+  )
+);
+testValue1.remove();
+
+/* --------------------------------------- */
+let counter = tracker.addCounter("test_counter", "", false);
 run(
   test(
     "initial counter state",
@@ -65,6 +66,14 @@ run(
     M.equals(T.text("test_counter{} 7 123000000\n")),
   )
 );
+counter.sub(2);
+run(
+  test(
+    "counter state",
+    tracker.renderExposition(""),
+    M.equals(T.text("test_counter{} 5 123000000\n")),
+  )
+);
 counter.set(2);
 run(
   test(
@@ -73,18 +82,21 @@ run(
     M.equals(T.text("test_counter{} 2 123000000\n")),
   )
 );
-counter.setLabels("foo=\"bar\"");
+counter.remove();
+
+/* --------------------------------------- */
+let counter1 = tracker.addCounter("test_counter_1", "foo=\"bar\"", false);
 run(
   test(
     "counter labels",
     tracker.renderExposition(""),
-    M.equals(T.text("test_counter{foo=\"bar\"} 2 123000000\n")),
+    M.equals(T.text("test_counter_1{foo=\"bar\"} 0 123000000\n")),
   )
 );
-counter.remove();
+counter1.remove();
 
 /* --------------------------------------- */
-let gauge = tracker.addGauge("test_gauge", []);
+let gauge = tracker.addGauge("test_gauge", "", #both, []);
 run(
   suite(
     "initial gauge state",
@@ -139,7 +151,7 @@ test_gauge_low_watermark{} 120 123000000\n")),
 gauge.remove();
 
 /* --------------------------------------- */
-let gaugeWithBuckets = tracker.addGauge("buckets_gauge", [10, 20, 50, 120, 180]);
+let gaugeWithBuckets = tracker.addGauge("buckets_gauge", "", #both, [10, 20, 50, 120, 180]);
 run(
   test(
     "initial gauge state",
@@ -182,30 +194,10 @@ buckets_gauge_bucket{le=\"180\"} 5 123000000
 buckets_gauge_bucket{le=\"+Inf\"} 6 123000000\n")),
   )
 );
-
-gaugeWithBuckets.setLabels("foo=\"bar\"");
-run(
-  test(
-    "gauge with bucket labels",
-    tracker.renderExposition(""),
-    M.equals(T.text("buckets_gauge_last{foo=\"bar\"} 999999 123000000
-buckets_gauge_sum{foo=\"bar\"} 1000301 123000000
-buckets_gauge_count{foo=\"bar\"} 6 123000000
-buckets_gauge_high_watermark{foo=\"bar\"} 999999 123000000
-buckets_gauge_low_watermark{foo=\"bar\"} 1 123000000
-buckets_gauge_bucket{foo=\"bar\",le=\"10\"} 1 123000000
-buckets_gauge_bucket{foo=\"bar\",le=\"20\"} 1 123000000
-buckets_gauge_bucket{foo=\"bar\",le=\"50\"} 3 123000000
-buckets_gauge_bucket{foo=\"bar\",le=\"120\"} 4 123000000
-buckets_gauge_bucket{foo=\"bar\",le=\"180\"} 5 123000000
-buckets_gauge_bucket{foo=\"bar\",le=\"+Inf\"} 6 123000000\n")),
-  )
-);
-
 gaugeWithBuckets.remove();
 
 /* --------------------------------------- */
-let gauge2 = tracker.addGauge("buckets_gauge", []);
+let gauge2 = tracker.addGauge("buckets_gauge", "", #both, []);
 gauge2.update(10);
 gauge2.update(900);
 gauge2.update(90);
@@ -252,18 +244,72 @@ buckets_gauge_high_watermark{} 800 123006000
 buckets_gauge_low_watermark{} 20 123006000\n")),
   )
 );
+gauge2.remove();
 
-gauge2.setLabels("foo=\"bar\"");
+/* --------------------------------------- */
+let gaugeWithoutWatermarks = tracker.addGauge("dry_gauge", "", #none, []);
+gaugeWithoutWatermarks.update(20);
+gaugeWithoutWatermarks.update(30);
 run(
   test(
-    "gauge labels",
+    "gauge without watermarks",
     tracker.renderExposition(""),
-    M.equals(T.text("buckets_gauge_last{foo=\"bar\"} 180 123006000
-buckets_gauge_sum{foo=\"bar\"} 3000 123006000
-buckets_gauge_count{foo=\"bar\"} 9 123006000
-buckets_gauge_high_watermark{foo=\"bar\"} 800 123006000
-buckets_gauge_low_watermark{foo=\"bar\"} 20 123006000\n")),
+    M.equals(T.text("dry_gauge_last{} 30 123006000
+dry_gauge_sum{} 50 123006000
+dry_gauge_count{} 2 123006000\n")),
   )
 );
+gaugeWithoutWatermarks.remove();
 
-gauge2.remove();
+/* --------------------------------------- */
+let gaugeWithLowWatermark = tracker.addGauge("half_dry_gauge", "", #low, []);
+gaugeWithLowWatermark.update(20);
+gaugeWithLowWatermark.update(30);
+run(
+  test(
+    "gauge with only low watermark",
+    tracker.renderExposition(""),
+    M.equals(T.text("half_dry_gauge_last{} 30 123006000
+half_dry_gauge_sum{} 50 123006000
+half_dry_gauge_count{} 2 123006000
+half_dry_gauge_low_watermark{} 20 123006000\n")),
+  )
+);
+gaugeWithLowWatermark.remove();
+
+/* --------------------------------------- */
+let gaugeWithHighWatermark = tracker.addGauge("half_wet_gauge", "", #high, []);
+gaugeWithHighWatermark.update(20);
+gaugeWithHighWatermark.update(30);
+run(
+  test(
+    "gauge with only low watermark",
+    tracker.renderExposition(""),
+    M.equals(T.text("half_wet_gauge_last{} 30 123006000
+half_wet_gauge_sum{} 50 123006000
+half_wet_gauge_count{} 2 123006000
+half_wet_gauge_high_watermark{} 30 123006000\n")),
+  )
+);
+gaugeWithHighWatermark.remove();
+
+/* --------------------------------------- */
+let gaugeWithLabels = tracker.addGauge("labels_gauge", "foo=\"bar\"", #both, [10, 20, 50, 120, 180]);
+run(
+  test(
+    "gauge with bucket labels",
+    tracker.renderExposition(""),
+    M.equals(T.text("labels_gauge_last{foo=\"bar\"} 0 123006000
+labels_gauge_sum{foo=\"bar\"} 0 123006000
+labels_gauge_count{foo=\"bar\"} 0 123006000
+labels_gauge_high_watermark{foo=\"bar\"} 0 123006000
+labels_gauge_low_watermark{foo=\"bar\"} 0 123006000
+labels_gauge_bucket{foo=\"bar\",le=\"10\"} 0 123006000
+labels_gauge_bucket{foo=\"bar\",le=\"20\"} 0 123006000
+labels_gauge_bucket{foo=\"bar\",le=\"50\"} 0 123006000
+labels_gauge_bucket{foo=\"bar\",le=\"120\"} 0 123006000
+labels_gauge_bucket{foo=\"bar\",le=\"180\"} 0 123006000
+labels_gauge_bucket{foo=\"bar\",le=\"+Inf\"} 0 123006000\n")),
+  )
+);
+gaugeWithLabels.remove();

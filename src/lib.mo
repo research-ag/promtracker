@@ -44,25 +44,20 @@ module {
   public type PullValueInterface = {
     value : () -> Nat;
     remove : () -> ();
-    setLabels : (val : Text) -> ();
-    getLabels : () -> Text;
   };
   /// An access interface for counter value
   public type CounterInterface = {
     value : () -> Nat;
     set : (x : Nat) -> ();
     add : (x : Nat) -> ();
+    sub : (x : Nat) -> ();
     remove : () -> ();
-    setLabels : (val : Text) -> ();
-    getLabels : () -> Text;
   };
   /// An access interface for gauge value
   public type GaugeInterface = {
     value : () -> Nat;
     update : (x : Nat) -> ();
     remove : () -> ();
-    setLabels : (val : Text) -> ();
-    getLabels : () -> Text;
   };
 
   // The data in type Metric is (name, labels, value)
@@ -96,17 +91,15 @@ module {
     /// ```motoko
     /// let storageSize = tracker.addPullValue("storage_size", func() = storage.size());
     /// ```
-    public func addPullValue(prefix : Text, pull : () -> Nat) : PullValueInterface {
+    public func addPullValue(prefix : Text, labels : Text, pull : () -> Nat) : PullValueInterface {
       // create and register the value
       let id = values.size();
-      let value = PullValue(prefix, pull);
+      let value = PullValue(prefix, labels, pull);
       values.add(?value);
       // return the interface
       {
         value = pull;
         remove = func() = removeValue(id);
-        setLabels = func(labels : Text) { value.labels := labels };
-        getLabels = func() = value.labels;
       };
     };
 
@@ -123,19 +116,18 @@ module {
     /// requestsAmount.add(3);
     /// requestsAmount.add(1);
     /// ```
-    public func addCounter(prefix : Text, isStable : Bool) : CounterInterface {
+    public func addCounter(prefix : Text, labels : Text, isStable : Bool) : CounterInterface {
       // create and register the value
       let id = values.size();
-      let value = CounterValue(prefix, isStable);
+      let value = CounterValue(prefix, labels, isStable);
       values.add(?value);
       // return the interface
       {
         value = func() = value.value;
         set = value.set;
         add = value.add;
+        sub = value.sub;
         remove = func() = removeValue(id);
-        setLabels = func(labels : Text) { value.labels := labels };
-        getLabels = func() = value.labels;
       };
     };
 
@@ -159,7 +151,7 @@ module {
     /// // request_duration_bucket{le="110"}: 1
     /// // request_duration_bucket{le="+Inf"} 2
     /// ```
-    public func addGauge(prefix : Text, bucketLimits : [Nat]) : GaugeInterface {
+    public func addGauge(prefix : Text, labels : Text, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat]) : GaugeInterface {
       // check order of buckets
       let l = bucketLimits;
       var i = 1;
@@ -169,32 +161,36 @@ module {
       };
       // create and register the value
       let gaugeId = values.size();
-      let gaugeValue = GaugeValue(prefix, bucketLimits, env);
+      let (lowWM, highWM) = switch (watermarks) {
+        case (#none)(false, false);
+        case (#low)(true, false);
+        case (#high)(false, true);
+        case (#both)(true, true);
+      };
+      let gaugeValue = GaugeValue(prefix, labels, lowWM, highWM, bucketLimits, env);
       values.add(?gaugeValue);
       // return the interface
       {
         value = func() = gaugeValue.lastValue;
         update = gaugeValue.update;
         remove = func() = removeValue(gaugeId);
-        setLabels = func(labels : Text) { gaugeValue.labels := labels };
-        getLabels = func() = gaugeValue.labels;
       };
     };
 
     /// Add system metrics, such as cycle balance, memory size, heap size etc.
     public func addSystemValues() {
-      ignore addPullValue("cycles_balance", func() = Cycles.balance());
-      ignore addPullValue("rts_memory_size", func() = Prim.rts_memory_size());
-      ignore addPullValue("rts_heap_size", func() = Prim.rts_heap_size());
-      ignore addPullValue("rts_total_allocation", func() = Prim.rts_total_allocation());
-      ignore addPullValue("rts_reclaimed", func() = Prim.rts_reclaimed());
-      ignore addPullValue("rts_max_live_size", func() = Prim.rts_max_live_size());
-      ignore addPullValue("rts_max_stack_size", func() = Prim.rts_max_stack_size());
-      ignore addPullValue("rts_callback_table_count", func() = Prim.rts_callback_table_count());
-      ignore addPullValue("rts_callback_table_size", func() = Prim.rts_callback_table_size());
-      ignore addPullValue("rts_mutator_instructions", func() = Prim.rts_mutator_instructions());
-      ignore addPullValue("rts_collector_instructions", func() = Prim.rts_collector_instructions());
-      ignore addPullValue("stablememory_size", func() = Nat64.toNat(StableMemory.size()));
+      ignore addPullValue("cycles_balance", "", func() = Cycles.balance());
+      ignore addPullValue("rts_memory_size", "", func() = Prim.rts_memory_size());
+      ignore addPullValue("rts_heap_size", "", func() = Prim.rts_heap_size());
+      ignore addPullValue("rts_total_allocation", "", func() = Prim.rts_total_allocation());
+      ignore addPullValue("rts_reclaimed", "", func() = Prim.rts_reclaimed());
+      ignore addPullValue("rts_max_live_size", "", func() = Prim.rts_max_live_size());
+      ignore addPullValue("rts_max_stack_size", "", func() = Prim.rts_max_stack_size());
+      ignore addPullValue("rts_callback_table_count", "", func() = Prim.rts_callback_table_count());
+      ignore addPullValue("rts_callback_table_size", "", func() = Prim.rts_callback_table_size());
+      ignore addPullValue("rts_mutator_instructions", "", func() = Prim.rts_mutator_instructions());
+      ignore addPullValue("rts_collector_instructions", "", func() = Prim.rts_collector_instructions());
+      ignore addPullValue("stablememory_size", "", func() = Nat64.toNat(StableMemory.size()));
     };
 
     func removeValue(id : Nat) : () = values.put(id, null);
@@ -307,9 +303,8 @@ module {
     PromTrackerTestable(labels, watermarkResetIntervalSeconds, now_);
   };
 
-  class PullValue(prefix_ : Text, pull : () -> Nat) {
+  class PullValue(prefix_ : Text, labels : Text, pull : () -> Nat) {
     public let prefix = prefix_;
-    public var labels = "";
 
     public func dump() : [Metric] = [(prefix, labels, pull())];
 
@@ -317,13 +312,13 @@ module {
     public func unshare(data : StableDataItem) = ();
   };
 
-  class CounterValue(prefix_ : Text, isStable : Bool) {
+  class CounterValue(prefix_ : Text, labels : Text, isStable : Bool) {
     public let prefix = prefix_;
-    public var labels = "";
 
     public var value = 0;
 
     public func add(n : Nat) { value += n };
+    public func sub(n : Nat) { value -= n };
     public func set(n : Nat) { value := n };
 
     public func dump() : [Metric] = [(prefix, labels, value)];
@@ -348,9 +343,8 @@ module {
       };
     };
   };
-  class GaugeValue(prefix_ : Text, limits : [Nat], env : WatermarkEnvironment) {
+  class GaugeValue(prefix_ : Text, labels : Text, enableLowWM : Bool, enableHighWM : Bool, limits : [Nat], env : WatermarkEnvironment) {
     public let prefix = prefix_;
-    public var labels = "";
 
     let (resetInterval, now) = env;
 
@@ -367,9 +361,15 @@ module {
       count += 1;
       sum += current;
       // watermarks
-      let t = now();
-      highWatermark.update(current, t);
-      lowWatermark.update(current, t);
+      if (enableLowWM or enableHighWM) {
+        let t = now();
+        if (enableLowWM) {
+          lowWatermark.update(current, t);
+        };
+        if (enableHighWM) {
+          highWatermark.update(current, t);
+        };
+      };
       // bucket counters
       var n = limits.size();
       while (n > 0) {
@@ -388,9 +388,13 @@ module {
         metric("last", labels, lastValue),
         metric("sum", labels, sum),
         metric("count", labels, count),
-        metric("high_watermark", labels, highWatermark.mark),
-        metric("low_watermark", labels, lowWatermark.mark),
       ]);
+      if (enableHighWM) {
+        all.add(metric("high_watermark", labels, highWatermark.mark));
+      };
+      if (enableLowWM) {
+        all.add(metric("low_watermark", labels, lowWatermark.mark));
+      };
       for (i in counters.keys()) {
         all.add(metric("bucket", concat(labels, "le=\"" # Nat.toText(limits[i]) # "\""), counters[i]));
       };
