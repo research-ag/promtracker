@@ -50,6 +50,7 @@ module {
     value : () -> Nat;
     set : (x : Nat) -> ();
     add : (x : Nat) -> ();
+    sub : (x : Nat) -> ();
     remove : () -> ();
   };
   /// An access interface for gauge value
@@ -125,6 +126,7 @@ module {
         value = func() = value.value;
         set = value.set;
         add = value.add;
+        sub = value.sub;
         remove = func() = removeValue(id);
       };
     };
@@ -310,6 +312,7 @@ module {
     public var value = 0;
 
     public func add(n : Nat) { value += n };
+    public func sub(n : Nat) { value -= n };
     public func set(n : Nat) { value := n };
 
     public func dump() : [Metric] = [(prefix, labels, value)];

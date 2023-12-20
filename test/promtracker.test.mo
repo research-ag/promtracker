@@ -66,6 +66,14 @@ run(
     M.equals(T.text("test_counter{} 7 123000000\n")),
   )
 );
+counter.sub(2);
+run(
+  test(
+    "counter state",
+    tracker.renderExposition(""),
+    M.equals(T.text("test_counter{} 5 123000000\n")),
+  )
+);
 counter.set(2);
 run(
   test(
