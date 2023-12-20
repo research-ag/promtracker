@@ -96,7 +96,7 @@ run(
 counter1.remove();
 
 /* --------------------------------------- */
-let gauge = tracker.addGauge("test_gauge", "", []);
+let gauge = tracker.addGauge("test_gauge", "", #both, []);
 run(
   suite(
     "initial gauge state",
@@ -151,7 +151,7 @@ test_gauge_low_watermark{} 120 123000000\n")),
 gauge.remove();
 
 /* --------------------------------------- */
-let gaugeWithBuckets = tracker.addGauge("buckets_gauge", "", [10, 20, 50, 120, 180]);
+let gaugeWithBuckets = tracker.addGauge("buckets_gauge", "", #both, [10, 20, 50, 120, 180]);
 run(
   test(
     "initial gauge state",
@@ -197,7 +197,7 @@ buckets_gauge_bucket{le=\"+Inf\"} 6 123000000\n")),
 gaugeWithBuckets.remove();
 
 /* --------------------------------------- */
-let gauge2 = tracker.addGauge("buckets_gauge", "", []);
+let gauge2 = tracker.addGauge("buckets_gauge", "", #both, []);
 gauge2.update(10);
 gauge2.update(900);
 gauge2.update(90);
@@ -247,7 +247,54 @@ buckets_gauge_low_watermark{} 20 123006000\n")),
 gauge2.remove();
 
 /* --------------------------------------- */
-let gaugeWithLabels = tracker.addGauge("labels_gauge", "foo=\"bar\"", [10, 20, 50, 120, 180]);
+let gaugeWithoutWatermarks = tracker.addGauge("dry_gauge", "", #none, []);
+gaugeWithoutWatermarks.update(20);
+gaugeWithoutWatermarks.update(30);
+run(
+  test(
+    "gauge without watermarks",
+    tracker.renderExposition(""),
+    M.equals(T.text("dry_gauge_last{} 30 123006000
+dry_gauge_sum{} 50 123006000
+dry_gauge_count{} 2 123006000\n")),
+  )
+);
+gaugeWithoutWatermarks.remove();
+
+/* --------------------------------------- */
+let gaugeWithLowWatermark = tracker.addGauge("half_dry_gauge", "", #low, []);
+gaugeWithLowWatermark.update(20);
+gaugeWithLowWatermark.update(30);
+run(
+  test(
+    "gauge with only low watermark",
+    tracker.renderExposition(""),
+    M.equals(T.text("half_dry_gauge_last{} 30 123006000
+half_dry_gauge_sum{} 50 123006000
+half_dry_gauge_count{} 2 123006000
+half_dry_gauge_low_watermark{} 20 123006000\n")),
+  )
+);
+gaugeWithLowWatermark.remove();
+
+/* --------------------------------------- */
+let gaugeWithHighWatermark = tracker.addGauge("half_wet_gauge", "", #high, []);
+gaugeWithHighWatermark.update(20);
+gaugeWithHighWatermark.update(30);
+run(
+  test(
+    "gauge with only low watermark",
+    tracker.renderExposition(""),
+    M.equals(T.text("half_wet_gauge_last{} 30 123006000
+half_wet_gauge_sum{} 50 123006000
+half_wet_gauge_count{} 2 123006000
+half_wet_gauge_high_watermark{} 30 123006000\n")),
+  )
+);
+gaugeWithHighWatermark.remove();
+
+/* --------------------------------------- */
+let gaugeWithLabels = tracker.addGauge("labels_gauge", "foo=\"bar\"", #both, [10, 20, 50, 120, 180]);
 run(
   test(
     "gauge with bucket labels",

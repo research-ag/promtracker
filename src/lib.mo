@@ -151,7 +151,7 @@ module {
     /// // request_duration_bucket{le="110"}: 1
     /// // request_duration_bucket{le="+Inf"} 2
     /// ```
-    public func addGauge(prefix : Text, labels : Text, bucketLimits : [Nat]) : GaugeInterface {
+    public func addGauge(prefix : Text, labels : Text, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat]) : GaugeInterface {
       // check order of buckets
       let l = bucketLimits;
       var i = 1;
@@ -161,7 +161,13 @@ module {
       };
       // create and register the value
       let gaugeId = values.size();
-      let gaugeValue = GaugeValue(prefix, labels, bucketLimits, env);
+      let (lowWM, highWM) = switch (watermarks) {
+        case (#none)(false, false);
+        case (#low)(true, false);
+        case (#high)(false, true);
+        case (#both)(true, true);
+      };
+      let gaugeValue = GaugeValue(prefix, labels, lowWM, highWM, bucketLimits, env);
       values.add(?gaugeValue);
       // return the interface
       {
@@ -337,7 +343,7 @@ module {
       };
     };
   };
-  class GaugeValue(prefix_ : Text, labels : Text, limits : [Nat], env : WatermarkEnvironment) {
+  class GaugeValue(prefix_ : Text, labels : Text, enableLowWM : Bool, enableHighWM : Bool, limits : [Nat], env : WatermarkEnvironment) {
     public let prefix = prefix_;
 
     let (resetInterval, now) = env;
@@ -355,9 +361,15 @@ module {
       count += 1;
       sum += current;
       // watermarks
-      let t = now();
-      highWatermark.update(current, t);
-      lowWatermark.update(current, t);
+      if (enableLowWM or enableHighWM) {
+        let t = now();
+        if (enableLowWM) {
+          lowWatermark.update(current, t);
+        };
+        if (enableHighWM) {
+          highWatermark.update(current, t);
+        };
+      };
       // bucket counters
       var n = limits.size();
       while (n > 0) {
@@ -376,9 +388,13 @@ module {
         metric("last", labels, lastValue),
         metric("sum", labels, sum),
         metric("count", labels, count),
-        metric("high_watermark", labels, highWatermark.mark),
-        metric("low_watermark", labels, lowWatermark.mark),
       ]);
+      if (enableHighWM) {
+        all.add(metric("high_watermark", labels, highWatermark.mark));
+      };
+      if (enableLowWM) {
+        all.add(metric("low_watermark", labels, lowWatermark.mark));
+      };
       for (i in counters.keys()) {
         all.add(metric("bucket", concat(labels, "le=\"" # Nat.toText(limits[i]) # "\""), counters[i]));
       };
