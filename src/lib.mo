@@ -27,7 +27,7 @@ module {
 
   /// Helper function to create a list of bucket limits.
   /// [a + d, .., a + n * d]
-  /// which represents n buckets plus the +Inf bucket. 
+  /// which represents n buckets plus the +Inf bucket.
   public func limits(a : Nat, n : Nat, d : Nat) : [Nat] {
     Array.tabulate<Nat>(n, func(i) = a + (i + 1) * d);
   };
@@ -44,6 +44,8 @@ module {
   public type PullValueInterface = {
     value : () -> Nat;
     remove : () -> ();
+    setLabels : (val : Text) -> ();
+    getLabels : () -> Text;
   };
   /// An access interface for counter value
   public type CounterInterface = {
@@ -51,12 +53,16 @@ module {
     set : (x : Nat) -> ();
     add : (x : Nat) -> ();
     remove : () -> ();
+    setLabels : (val : Text) -> ();
+    getLabels : () -> Text;
   };
   /// An access interface for gauge value
   public type GaugeInterface = {
     value : () -> Nat;
     update : (x : Nat) -> ();
     remove : () -> ();
+    setLabels : (val : Text) -> ();
+    getLabels : () -> Text;
   };
 
   // The data in type Metric is (name, labels, value)
@@ -66,7 +72,7 @@ module {
   // - the interval after which the watermarks are reset in seconds as Nat
   // - the function that returns the current time in nanoseconds as Nat64
   type WatermarkEnvironment = (Nat64, () -> Nat64);
-  
+
   /// The constructor PromTracker should be used instead to create this class.
   public class PromTrackerTestable(staticGlobalLabels : Text, watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
     let env : WatermarkEnvironment = (
@@ -99,6 +105,8 @@ module {
       {
         value = pull;
         remove = func() = removeValue(id);
+        setLabels = func(labels : Text) { value.labels := labels };
+        getLabels = func() = value.labels;
       };
     };
 
@@ -126,6 +134,8 @@ module {
         set = value.set;
         add = value.add;
         remove = func() = removeValue(id);
+        setLabels = func(labels : Text) { value.labels := labels };
+        getLabels = func() = value.labels;
       };
     };
 
@@ -166,6 +176,8 @@ module {
         value = func() = gaugeValue.lastValue;
         update = gaugeValue.update;
         remove = func() = removeValue(gaugeId);
+        setLabels = func(labels : Text) { gaugeValue.labels := labels };
+        getLabels = func() = gaugeValue.labels;
       };
     };
 
@@ -297,8 +309,9 @@ module {
 
   class PullValue(prefix_ : Text, pull : () -> Nat) {
     public let prefix = prefix_;
+    public var labels = "";
 
-    public func dump() : [Metric] = [(prefix, "", pull())];
+    public func dump() : [Metric] = [(prefix, labels, pull())];
 
     public func share() : ?StableDataItem = null;
     public func unshare(data : StableDataItem) = ();
@@ -306,13 +319,14 @@ module {
 
   class CounterValue(prefix_ : Text, isStable : Bool) {
     public let prefix = prefix_;
+    public var labels = "";
 
     public var value = 0;
 
     public func add(n : Nat) { value += n };
     public func set(n : Nat) { value := n };
 
-    public func dump() : [Metric] = [(prefix, "", value)];
+    public func dump() : [Metric] = [(prefix, labels, value)];
 
     public func share() : ?StableDataItem {
       if (not isStable) return null;
@@ -336,11 +350,9 @@ module {
   };
   class GaugeValue(prefix_ : Text, limits : [Nat], env : WatermarkEnvironment) {
     public let prefix = prefix_;
-    let (resetInterval, now) = env;
+    public var labels = "";
 
-    func metric(suffix : Text, labels : Text, value : Nat) : Metric {
-      (prefix # "_" # suffix, labels, value);
-    };
+    let (resetInterval, now) = env;
 
     public var count : Nat = 0;
     public var sum : Nat = 0;
@@ -367,19 +379,23 @@ module {
       };
     };
 
+    func metric(suffix : Text, labels : Text, value : Nat) : Metric {
+      (prefix # "_" # suffix, labels, value);
+    };
+
     public func dump() : [Metric] {
       let all = Vector.fromArray<Metric>([
-        metric("last", "", lastValue),
-        metric("sum", "", sum),
-        metric("count", "", count),
-        metric("high_watermark", "", highWatermark.mark),
-        metric("low_watermark", "", lowWatermark.mark),
+        metric("last", labels, lastValue),
+        metric("sum", labels, sum),
+        metric("count", labels, count),
+        metric("high_watermark", labels, highWatermark.mark),
+        metric("low_watermark", labels, lowWatermark.mark),
       ]);
       for (i in counters.keys()) {
-        all.add(metric("bucket", "le=\"" # Nat.toText(limits[i]) # "\"", counters[i]));
+        all.add(metric("bucket", concat(labels, "le=\"" # Nat.toText(limits[i]) # "\""), counters[i]));
       };
       if (counters.size() > 0) {
-        all.add(metric("bucket", "le=\"+Inf\"", count));
+        all.add(metric("bucket", concat(labels, "le=\"+Inf\""), count));
       };
       Vector.toArray(all);
     };
