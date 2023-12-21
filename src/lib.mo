@@ -9,12 +9,16 @@ import Principal "mo:base/Principal";
 import StableMemory "mo:base/ExperimentalStableMemory";
 import Time "mo:base/Time";
 import Text "mo:base/Text";
+import Bool "mo:base/Bool";
 
 import Vector "mo:vector/Class";
 
 module {
 
-  type StableDataItem = { #counter : Nat };
+  type StableDataItem = {
+    #counter : Nat;
+    #gauge : (Nat, Nat, Nat, [Nat], [Nat]);
+  };
   public type StableData = AssocList.AssocList<Text, StableDataItem>;
 
   /// Helper function to get the first 5 characters of the canister's
@@ -151,7 +155,7 @@ module {
     /// // request_duration_bucket{le="110"}: 1
     /// // request_duration_bucket{le="+Inf"} 2
     /// ```
-    public func addGauge(prefix : Text, labels : Text, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat]) : GaugeInterface {
+    public func addGauge(prefix : Text, labels : Text, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat], isStable : Bool) : GaugeInterface {
       // check order of buckets
       let l = bucketLimits;
       var i = 1;
@@ -167,7 +171,7 @@ module {
         case (#high)(false, true);
         case (#both)(true, true);
       };
-      let gaugeValue = GaugeValue(prefix, labels, lowWM, highWM, bucketLimits, env);
+      let gaugeValue = GaugeValue(prefix, labels, lowWM, highWM, bucketLimits, env, isStable);
       values.add(?gaugeValue);
       // return the interface
       {
@@ -343,7 +347,7 @@ module {
       };
     };
   };
-  class GaugeValue(prefix_ : Text, labels : Text, enableLowWM : Bool, enableHighWM : Bool, limits : [Nat], env : WatermarkEnvironment) {
+  class GaugeValue(prefix_ : Text, labels : Text, enableLowWM : Bool, enableHighWM : Bool, limits : [Nat], env : WatermarkEnvironment, isStable : Bool) {
     public let prefix = prefix_;
 
     let (resetInterval, now) = env;
@@ -404,9 +408,23 @@ module {
       Vector.toArray(all);
     };
 
-    // sharing is disabled for GaugeValue
-    public func share() : ?StableDataItem = null;
-    public func unshare(data : StableDataItem) = ();
+    public func share() : ?StableDataItem {
+      if (not isStable) return null;
+      ? #gauge(lastValue, count, sum, limits, Array.freeze(counters));
+    };
+    public func unshare(data : StableDataItem) = switch (data, isStable) {
+      case (#gauge(v, c, s, bl, bv), true) {
+        lastValue := v;
+        count := c;
+        sum := s;
+        if (Array.equal<Nat>(limits, bl, Nat.equal)) {
+          for (i in bv.keys()) {
+            counters[i] := bv[i];
+          };
+        };
+      };
+      case (_) {};
+    };
   };
 
 };
