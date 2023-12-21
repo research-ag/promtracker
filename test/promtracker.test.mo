@@ -336,8 +336,8 @@ stableCounter2.remove();
 let newTracker = PT.PromTrackerTestable("", 5, func() = mockedTime);
 // the same gauge, state should be the same
 ignore newTracker.addGauge("stable_gauge1", "", #none, [150, 200], true);
-// gauge with changed buckets, buckets should be clean
-ignore newTracker.addGauge("stable_gauge2", "", #none, [151, 201], true);
+// gauge with changed buckets, buckets should be overwritten by stable data
+ignore newTracker.addGauge("stable_gauge2", "", #none, [151, 201, 250], true);
 // the same counter
 ignore newTracker.addCounter("stable_counter1", "", true);
 // counter now marked as not stable, should not be unshared
@@ -357,8 +357,8 @@ stable_gauge1_bucket{le=\"+Inf\"} 3 123006000
 stable_gauge2_last{} 180 123006000
 stable_gauge2_sum{} 1000 123006000
 stable_gauge2_count{} 3 123006000
-stable_gauge2_bucket{le=\"151\"} 0 123006000
-stable_gauge2_bucket{le=\"201\"} 0 123006000
+stable_gauge2_bucket{le=\"150\"} 1 123006000
+stable_gauge2_bucket{le=\"200\"} 2 123006000
 stable_gauge2_bucket{le=\"+Inf\"} 3 123006000
 stable_counter1{} 5 123006000
 stable_counter2{} 0 123006000\n")),

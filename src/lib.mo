@@ -346,14 +346,15 @@ module {
       };
     };
   };
-  class GaugeValue(prefix_ : Text, labels : Text, enableLowWM : Bool, enableHighWM : Bool, limits : [Nat], env : WatermarkEnvironment, isStable : Bool) {
+  class GaugeValue(prefix_ : Text, labels : Text, enableLowWM : Bool, enableHighWM : Bool, limits_ : [Nat], env : WatermarkEnvironment, isStable : Bool) {
     public let prefix = prefix_;
 
     let (resetInterval, now) = env;
 
     public var count : Nat = 0;
     public var sum : Nat = 0;
-    public let counters : [var Nat] = Array.init<Nat>(limits.size(), 0);
+    var limits = limits_;
+    public var counters : [var Nat] = Array.init<Nat>(limits.size(), 0);
     public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new > old, resetInterval);
     public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new < old, resetInterval);
     public var lastValue : Nat = 0;
@@ -416,11 +417,8 @@ module {
         lastValue := v;
         count := c;
         sum := s;
-        if (Array.equal<Nat>(limits, bl, Nat.equal)) {
-          for (i in bv.keys()) {
-            counters[i] := bv[i];
-          };
-        };
+        limits := bl;
+        counters := Array.thaw(bv);
       };
       case (_) {};
     };
