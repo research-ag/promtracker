@@ -9,7 +9,6 @@ import Principal "mo:base/Principal";
 import StableMemory "mo:base/ExperimentalStableMemory";
 import Time "mo:base/Time";
 import Text "mo:base/Text";
-import Bool "mo:base/Bool";
 
 import Vector "mo:vector/Class";
 
