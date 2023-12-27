@@ -15,14 +15,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Make bin directory
-        run: mkdir -p /home/runner/bin
-
-      - name: "Install wasmtime"
-        run: |
-          curl https://wasmtime.dev/install.sh -sSf | bash
-          echo "/home/runner/.wasmtime/bin" >> $GITHUB_PATH
-  
       - name: "install mops"
         run: |          
           npm i -g ic-mops@${{ env.mops_version }}
