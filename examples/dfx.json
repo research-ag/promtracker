@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "canisters": {
+    "example": {
+      "type": "motoko",
+      "main": "example.mo"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": "mops sources"
+    }
+  }
+}
