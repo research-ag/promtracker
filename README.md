@@ -61,10 +61,10 @@ be reflected in the prometheus data.
 
 Add some values:
 ```motoko
-let successfulHeartbeats = tracker.addCounter("successful_heartbeats", true);
-let failedHeartbeats = tracker.addCounter("failed_heartbeats", true);
-let heartbeats = tracker.addPullValue("heartbeats", func() = successfulHeartbeats.value() + failedHeartbeats.value());
-let heartbeatDuration = tracker.addGauge("heartbeat_duration", null);
+let successfulHeartbeats = tracker.addCounter("successful_heartbeats", "", true);
+let failedHeartbeats = tracker.addCounter("failed_heartbeats", "", true);
+let heartbeats = tracker.addPullValue("heartbeats", "", func() = successfulHeartbeats.value() + failedHeartbeats.value());
+let heartbeatDuration = tracker.addGauge("heartbeat_duration", "", #both, null, false);
 ```
 
 Update values:
@@ -98,14 +98,14 @@ system func postupgrade() {
 ### PullValue
 A stateless value interface, which runs the provided getter function on demand.
 ```motoko
-let storageSize = tracker.addPullValue("storage_size", func() = storage.size());
+let storageSize = tracker.addPullValue("storage_size", "", func() = storage.size());
 ```
 
 ### CounterValue
 An accumulating counter value interface. Second argument is a flag whether you want to save the state of this value
 to stable data using share/unshare api
 ```motoko
-    let requestsAmount = tracker.addCounter("requests_amount", false);
+    let requestsAmount = tracker.addCounter("requests_amount", "", false);
     // now it will output 0
     requestsAmount.add(3);
     // it will output 3
@@ -121,7 +121,7 @@ set on tracker instance and ability to bucket the values for histogram output. O
 pushed values, amount of pushes, lowest value during interval, highest value during interval, histogram buckets. 
 Second argument accepts edge values for buckets
 ```motoko
-    let requestDuration = tracker.addGauge("request_duration", ?[50, 110]);
+    let requestDuration = tracker.addGauge("request_duration", "", #both, ?[50, 110], false);
     requestDuration.update(123);
     requestDuration.update(101);
     // now it will output stats: 
@@ -161,7 +161,7 @@ MR Research AG, 2023
 
 ## Authors
 
-AndyGura with contributions from timohanke
+Andy Gura (AndyGura) with contributions from Timo Hanke (timohanke)
 
 ## License
 

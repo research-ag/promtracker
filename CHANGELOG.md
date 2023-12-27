@@ -1,5 +1,14 @@
 # PromTracker changelog
 
+## 0.3.0 (2023-12-27)
+
+Changes to gauge values:  
+* Gauge values: allow "stable" declaration
+* Gauge values: make watermarks optional
+* Gauge values: add tracking of `lastValue`
+* Counter values: add `sub` function to interface 
+* Allow per-value labels
+
 ## 0.2.0 (2023-11-19)
 
 * Introduce "global" labels, defined once per PromTracker class

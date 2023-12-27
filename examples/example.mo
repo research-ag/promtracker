@@ -2,7 +2,6 @@ import Array "mo:base/Array";
 import Cycles "mo:base/ExperimentalCycles";
 import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
-import Principal "mo:base/Principal";
 import Prim "mo:prim";
 import Prng "mo:prng";
 import Time "mo:base/Time";
@@ -25,18 +24,18 @@ actor class Main() = self {
   // register a gauge with 10 buckets (plus the +Inf bucket)
   // bucket limits: 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600
   let limits = Array.tabulate<Nat>(12, func(n) = 500 + n * 100);
-  let time_gauge = pt.addGauge("time", limits);
+  let time_gauge = pt.addGauge("time", "", #both, limits, false);
 
   // register a pull value for the cycle balance
-  let cycle_balance = pt.addPullValue("cycles", Cycles.balance);
+  let cycle_balance = pt.addPullValue("cycles", "", Cycles.balance);
 
   // register a gauge for the cycles used to pass the last call arguments
   // For local deployment, use limits PT.limits(2200, 15, 100)
   // For mainnet deployment, use limits PT.limits(4600, 10, 100)
-  let instructions_gauge = pt.addGauge("instructions", PT.limits(4600, 10, 200));
+  let instructions_gauge = pt.addGauge("instructions", "", #both, PT.limits(4600, 10, 200), false);
 
   // register a gauge for the cycles used to pass the last call arguments
-  let size_gauge = pt.addGauge("bytes", PT.limits(0, 10, 10));
+  let size_gauge = pt.addGauge("bytes", "", #both, PT.limits(0, 10, 10), false);
 
   // We make random calls to the following function and measure:
   // - instructions for candid parsing of the arguments
