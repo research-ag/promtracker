@@ -6,6 +6,7 @@ on:
 env:
   mops_version: latest
   moc_version: 0.10.3
+  dfx_version: 0.15.2
 
 jobs:
   build:
@@ -24,3 +25,11 @@ jobs:
   
       - name: "test"
         run: mops test
+
+      - name: Get dfx
+        run: |
+          DFX_VERSION=${{ env.dfx_version }} sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+
+      - name: Build example
+        working-directory: ./examples
+        run: dfx build --check
