@@ -225,13 +225,6 @@ module {
         func(m) = renderMetric(m, globalLabels, timeStr),
       );
       Text.join("", lines.vals());
-      /*
-      Array.foldLeft<Metric, Text>(
-        dump(),
-        "",
-        func(acc, m) = acc # renderMetric(m, globalLabels, timeStr),
-      );
-      */
     };
 
     /// Dump all values, marked as stable, to stable data structure

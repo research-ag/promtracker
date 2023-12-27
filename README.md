@@ -161,7 +161,7 @@ MR Research AG, 2023
 
 ## Authors
 
-AndyGura with contributions from timohanke
+Andy Gura (AndyGura) with contributions from Timo Hanke (timohanke)
 
 ## License
 
