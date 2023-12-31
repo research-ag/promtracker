@@ -1,4 +1,4 @@
-import PT "../src/lib";
+import PT "../src/testable";
 
 import Suite "mo:motoko-matchers/Suite";
 import T "mo:motoko-matchers/Testable";
@@ -7,7 +7,7 @@ import M "mo:motoko-matchers/Matchers";
 let { run; test; suite } = Suite;
 
 var mockedTime : Nat64 = 123_000_000_000_000;
-var tracker = PT.PromTrackerTestable("", 5, func() = mockedTime);
+var tracker = PT.PromTracker("", 5, func() = mockedTime);
 //PT.now := func() = mockedTime;
 
 /* --------------------------------------- */
@@ -333,7 +333,7 @@ stableGauge2.remove();
 stableCounter1.remove();
 stableCounter2.remove();
 
-let newTracker = PT.PromTrackerTestable("", 5, func() = mockedTime);
+let newTracker = PT.PromTracker("", 5, func() = mockedTime);
 // the same gauge, state should be the same
 ignore newTracker.addGauge("stable_gauge1", "", #none, [150, 200], true);
 // gauge with changed buckets, buckets should be overwritten by stable data

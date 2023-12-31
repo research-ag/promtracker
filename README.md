@@ -6,29 +6,29 @@
 ## Overview
 
 The purpose of PromTracker is to record different kinds of values during the operation of a canister,
-aggregate them and in some case process them, 
+aggregate and in some cases process them, 
 and export them in the Prometheus exposition format.
 
-The exposition format can then be provided on an http endpoint from where it can be accessed by a scraper.
+The exposition format can then be provided by an http endpoint from where it can be accessed by a scraper.
 Serving the http endpoint is not directly part of this package, but is provided in the example directory.
 
-The two main value types that can be tracked are Counters and Gauges. 
+The two main value types that can be tracked are `CounterValue` and `GaugeValue`. 
 These values are explicitly updated by events in canister code.
 
-A counter is normally an ever-increasing counter such as the number of total requests received. The scraper only sees it's last value. The values between scraping events are considered not important. 
+A counter is normally an ever-increasing counter such as the number of total requests received. The scraper only sees its last value. The values between scraping events are considered not important. 
 
-A gauge is a more frequently changing and normally fluctuating value such as the size of the last request, time between last two events, etc. The values between scraping events are considered important. That's why a gauge value allows to automatically track the high and low watermark between scraping events as well as a histogram. The exported histograms over time can be used to create heatmaps.
+A gauge is a more frequently changing and normally fluctuating value such as the size of the last request, time between last two events, etc. The values between scraping events are considered important. That's why a gauge value allows to automatically track the high and low watermark between scraping events as well as a histogram. It also allowst to export histograms taken over time can be used to create heatmaps.
 
-The third value type is the PullValue which is stateless version of a counter. 
+The third value type is the `PullValue` which is stateless version of a counter. 
 It is not explicitly updated by events in canister code.
 Instead, the value is calculated on the fly when the scraping happens. 
-This type is convenient to expose a canister's system state such a cycle balance and memory size because those are already tracked by the runtime or management canister and canister code does not need to update them explicitly.
+This type is convenient for exposing a canister's system state such a cycle balance and memory size because those are already tracked by the runtime or management canister and canister code does not need to update them explicitly.
 This type can also be used to expose an expression in one or more other tracked values regardless of those values' types such as for example the sum of two other values.
 
-The tracker class PromTracker is instantiated once per canister.
+The tracker class `PromTracker` is instantiated once per canister.
 Then various code modules can each register a value with the PromTracker class that they like to have tracked
 and that they the maintain (i.e. update).
-The http endpoint accesses only the PromTracker instance once to get the exposition of all tracked values.
+The http endpoint accesses only the PromTracker instance, not the various code modules, to get the exposition of all tracked values.
 
 ## Links
 
