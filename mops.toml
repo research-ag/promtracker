@@ -1,6 +1,6 @@
 [package]
 name = "promtracker"
-version = "0.3.0"
+version = "0.4.0"
 description = "Motoko value tracker for prometheus"
 repository = "https://github.com/research-ag/promtracker"
 keywords = [ "prometheus", "stats", "http", "metrics", "monitoring" ]
