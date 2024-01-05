@@ -2,7 +2,6 @@ import Array "mo:base/Array";
 import Nat64 "mo:base/Nat64";
 import Prim "mo:prim";
 import Principal "mo:base/Principal";
-import Time "mo:base/Time";
 import Text "mo:base/Text";
 import Testable "testable";
 
@@ -22,7 +21,7 @@ module {
     Array.tabulate<Nat>(n, func(i) = a + (i + 1) * d);
   };
 
-  let now : () -> Nat64 = func() = Nat64.fromIntWrap(Time.now());
+  let now : () -> Nat64 = func() = Prim.time();
 
   public type StableData = Testable.StableData;
   public type PullValue = Testable.PullValueInterface;
