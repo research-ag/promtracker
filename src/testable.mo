@@ -46,6 +46,8 @@ module {
   /// An access interface for gauge value
   public type GaugeInterface = {
     value : () -> Nat;
+    sum : () -> Nat;
+    count : () -> Nat;
     update : (x : Nat) -> ();
     remove : () -> ();
   };
@@ -143,16 +145,18 @@ module {
       // create and register the value
       let gaugeId = values.size();
       let (lowWM, highWM) = switch (watermarks) {
-        case (#none)(false, false);
-        case (#low)(true, false);
-        case (#high)(false, true);
-        case (#both)(true, true);
+        case (#none) (false, false);
+        case (#low) (true, false);
+        case (#high) (false, true);
+        case (#both) (true, true);
       };
       let gaugeValue = GaugeValue(prefix, labels, lowWM, highWM, bucketLimits, env, isStable);
       values.add(?gaugeValue);
       // return the interface
       {
         value = func() = gaugeValue.lastValue;
+        sum = func() = gaugeValue.sum;
+        count = func() = gaugeValue.count;
         update = gaugeValue.update;
         remove = func() = removeValue(gaugeId);
       };
@@ -353,4 +357,4 @@ module {
       case (_) {};
     };
   };
-}
+};
