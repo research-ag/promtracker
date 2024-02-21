@@ -4,7 +4,6 @@ import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
 import Prim "mo:prim";
 import Prng "mo:prng";
-import Time "mo:base/Time";
 import Text "mo:base/Text";
 
 import PT "../src";
@@ -12,7 +11,7 @@ import Http "tiny_http";
 
 /// A canister, which answers by HTTP at route /metrics with a statistics in Prometheus format
 /// It provides the following metrics:
-/// 
+///
 /// - time: a gauge of the time between heartbeats
 /// - cycles: a pull value of the cycles balance
 /// - instructions: a gauge of the cycles used to parse the last call arguments
@@ -55,7 +54,7 @@ actor class Main() = self {
   var last_time : ?Nat = null;
   system func heartbeat() : async () {
     // determine time since last heartbeat and update gauge
-    let now = Int.abs(Time.now()) / 1000000;
+    let now = Prim.nat64ToNat(Prim.time() / 1000000);
     switch (last_time) {
       case (?last) time_gauge.update(now - last : Nat);
       case (_) {};

@@ -1,5 +1,10 @@
 # PromTracker changelog
 
+## 0.5.0 
+
+* Expose `sum` and `count` in GaugeInterface
+* More efficient time calculation
+
 ## 0.4.0 (2023-12-31)
 
 * Remove unneeded exports from public module interface (minor breaking change)
