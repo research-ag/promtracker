@@ -28,7 +28,10 @@ jobs:
       - name: Get dfx
         run: |
           DFX_VERSION=${{ env.dfx_version }} DFXVM_INIT_YES=true sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+          source "$HOME/.local/share/dfx/env"
 
       - name: Build example
         working-directory: ./examples
-        run: dfx build --check
+        run: |
+          dfx build --check
+
