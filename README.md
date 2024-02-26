@@ -119,7 +119,7 @@ to stable data using share/unshare api
 A gauge value interface for ever-changing value, with ability to catch the highest and lowest value during interval, 
 set on tracker instance and ability to bucket the values for histogram output. Outputs few stats at once: sum of all 
 pushed values, amount of pushes, lowest value during interval, highest value during interval, histogram buckets. 
-Second argument accepts edge values for buckets
+4th argument accepts edge values for buckets
 ```motoko
     let requestDuration = tracker.addGauge("request_duration", "", #both, ?[50, 110], false);
     requestDuration.update(123);

@@ -327,11 +327,18 @@ let stableCounter1 = tracker.addCounter("stable_counter1", "", true);
 stableCounter1.add(5);
 let stableCounter2 = tracker.addCounter("stable_counter2", "", true);
 stableCounter2.add(7);
+let stableCounterDuplicatedKeyFoo = tracker.addCounter("stable_counter_duplicated_key", "keyId=\"foo\"", true);
+stableCounterDuplicatedKeyFoo.add(123);
+let stableCounterDuplicatedKeyBar = tracker.addCounter("stable_counter_duplicated_key", "keyId=\"bar\"", true);
+stableCounterDuplicatedKeyBar.add(456);
+
 let sharedData = tracker.share();
 stableGauge1.remove();
 stableGauge2.remove();
 stableCounter1.remove();
 stableCounter2.remove();
+stableCounterDuplicatedKeyFoo.remove();
+stableCounterDuplicatedKeyBar.remove();
 
 let newTracker = PT.PromTracker("", 5, func() = mockedTime);
 // the same gauge, state should be the same
@@ -342,6 +349,10 @@ ignore newTracker.addGauge("stable_gauge2", "", #none, [151, 201, 250], true);
 ignore newTracker.addCounter("stable_counter1", "", true);
 // counter now marked as not stable, should not be unshared
 ignore newTracker.addCounter("stable_counter2", "", false);
+// stable counters, duplicated key
+ignore newTracker.addCounter("stable_counter_duplicated_key", "keyId=\"foo\"", true);
+ignore newTracker.addCounter("stable_counter_duplicated_key", "keyId=\"bar\"", true);
+
 newTracker.unshare(sharedData);
 
 run(
@@ -361,6 +372,8 @@ stable_gauge2_bucket{le=\"150\"} 1 123006000
 stable_gauge2_bucket{le=\"200\"} 2 123006000
 stable_gauge2_bucket{le=\"+Inf\"} 3 123006000
 stable_counter1{} 5 123006000
-stable_counter2{} 0 123006000\n")),
+stable_counter2{} 0 123006000
+stable_counter_duplicated_key{keyId=\"foo\"} 123 123006000
+stable_counter_duplicated_key{keyId=\"bar\"} 456 123006000\n")),
   )
 );
