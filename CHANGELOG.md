@@ -1,6 +1,10 @@
 # PromTracker changelog
 
-## 0.5.0 
+## 0.5.2
+
+* Fixed unsharing state of metrics with duplicated names from stable data
+
+## 0.5.0
 
 * Expose `sum` and `count` in GaugeInterface
 * More efficient time calculation

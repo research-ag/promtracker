@@ -59,6 +59,7 @@ module {
     );
     type IValue = {
       prefix : Text;
+      labels : Text;
       dump : () -> [Metric];
       share : () -> ?StableDataItem;
       unshare : (StableDataItem) -> ();
@@ -209,6 +210,11 @@ module {
       Text.join("", lines.vals());
     };
 
+    private func stablePrefix(v : IValue) : Text = switch (v.labels.size()) {
+      case (0) v.prefix;
+      case (_) v.prefix # "{}" # v.labels;
+    };
+
     /// Dump all values, marked as stable, to stable data structure
     public func share() : StableData {
       var res : StableData = null;
@@ -216,7 +222,7 @@ module {
         switch (value) {
           case (?v) switch (v.share()) {
             case (?data) {
-              res := AssocList.replace(res, v.prefix, Text.equal, ?data).0;
+              res := AssocList.replace(res, stablePrefix(v), Text.equal, ?data).0;
             };
             case (_) {};
           };
@@ -230,7 +236,7 @@ module {
     public func unshare(data : StableData) : () {
       for (value in values.vals()) {
         switch (value) {
-          case (?v) switch (AssocList.find(data, v.prefix, Text.equal)) {
+          case (?v) switch (AssocList.find(data, stablePrefix(v), Text.equal)) {
             case (?data) v.unshare(data);
             case (_) {};
           };
@@ -240,8 +246,9 @@ module {
     };
   };
 
-  class PullValue(prefix_ : Text, labels : Text, pull : () -> Nat) {
+  class PullValue(prefix_ : Text, labels_ : Text, pull : () -> Nat) {
     public let prefix = prefix_;
+    public let labels = labels_;
 
     public func dump() : [Metric] = [(prefix, labels, pull())];
 
@@ -249,8 +256,9 @@ module {
     public func unshare(data : StableDataItem) = ();
   };
 
-  class CounterValue(prefix_ : Text, labels : Text, isStable : Bool) {
+  class CounterValue(prefix_ : Text, labels_ : Text, isStable : Bool) {
     public let prefix = prefix_;
+    public let labels = labels_;
 
     public var value = 0;
 
@@ -280,8 +288,9 @@ module {
       };
     };
   };
-  class GaugeValue(prefix_ : Text, labels : Text, enableLowWM : Bool, enableHighWM : Bool, limits_ : [Nat], env : WatermarkEnvironment, isStable : Bool) {
+  class GaugeValue(prefix_ : Text, labels_ : Text, enableLowWM : Bool, enableHighWM : Bool, limits_ : [Nat], env : WatermarkEnvironment, isStable : Bool) {
     public let prefix = prefix_;
+    public let labels = labels_;
 
     let (resetInterval, now) = env;
 
