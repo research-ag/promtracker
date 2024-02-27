@@ -2,11 +2,14 @@
 
 ## 0.5.2
 
-* Fixed unsharing state of metrics with duplicated names from stable data
+* Fix a bug in share/unshare() that occured when metrics had the same prefix and differed only in label
+
+## 0.5.1
+
+* Expose `sum` and `count` in GaugeInterface
 
 ## 0.5.0
 
-* Expose `sum` and `count` in GaugeInterface
 * More efficient time calculation
 
 ## 0.4.0 (2023-12-31)
