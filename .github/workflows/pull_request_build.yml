@@ -12,25 +12,21 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: "install mops"
-        run: |          
-          npm i -g ic-mops@${{ env.mops_version }}
-
-      - name: "install mops packages"
-        run: mops install
+        uses: actions/checkout@v4
+      - uses: ZenVoich/setup-mops@v1
+      - uses: dfinity/setup-dfx@main
   
-      - name: "test"
+      - name: Confirm dfx installation
+        run: dfx --version
+  
+      - name: Make sure moc is installed
+        run: mops toolchain bin moc || mops toolchain use moc latest
+  
+      - name: Run mops test
         run: mops test
-
-      - name: Get dfx
-        run: DFX_VERSION=${{ env.dfx_version }} DFXVM_INIT_YES=true sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
 
       - name: Build example
         working-directory: ./examples
-        run: |
-          source "$HOME/.local/share/dfx/env"
-          dfx build --check
-
+        run: dfx build --check
