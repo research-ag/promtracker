@@ -1,6 +1,5 @@
 import Array "mo:base/Array";
 import Cycles "mo:base/ExperimentalCycles";
-import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
 import Prim "mo:prim";
 import Prng "mo:prng";
@@ -26,7 +25,7 @@ actor class Main() = self {
   let time_gauge = pt.addGauge("time", "", #both, limits, false);
 
   // register a pull value for the cycle balance
-  let cycle_balance = pt.addPullValue("cycles", "", Cycles.balance);
+  let _cycle_balance = pt.addPullValue("cycles", "", Cycles.balance);
 
   // register a gauge for the cycles used to pass the last call arguments
   // For local deployment, use limits PT.limits(2200, 15, 100)
