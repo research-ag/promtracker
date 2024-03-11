@@ -1,5 +1,9 @@
 # PromTracker changelog
 
+## 0.5.3
+
+* Bump base dependency to 0.11.0
+
 ## 0.5.2
 
 * Fix a bug in share/unshare() that occured when metrics had the same prefix and differed only in label
