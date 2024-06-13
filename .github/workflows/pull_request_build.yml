@@ -5,7 +5,7 @@ on:
 
 env:
   mops_version: latest
-  dfx_version: 0.18.0
+  dfx_version: 0.20.1
 
 jobs:
   build:
