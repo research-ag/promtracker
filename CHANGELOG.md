@@ -1,5 +1,9 @@
 # PromTracker changelog
 
+## 0.5.4
+
+* Upgrade dependencies
+
 ## 0.5.3
 
 * Bump base dependency to 0.11.0
@@ -26,13 +30,13 @@
 * Gauge values: allow "stable" declaration
 * Gauge values: make watermarks optional
 * Gauge values: add tracking of `lastValue`
-* Counter values: add `sub` function to interface 
+* Counter values: add `sub` function to interface
 
 ## 0.2.0 (2023-11-19)
 
 * Introduce "global" labels, defined once per PromTracker class
 * Helper function to get the first 5-character-group of the canister's own principal
-* Helper function to generate equi-distant bucket limits 
+* Helper function to generate equi-distant bucket limits
 * 3 new metrics in example canister
 * Make tests run by `mops test`
 * Code improvements
