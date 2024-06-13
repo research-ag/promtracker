@@ -2,7 +2,7 @@
 
 ## 0.5.4
 
-* Upgrade dependencies
+* Bump dependencies
 
 ## 0.5.3
 
