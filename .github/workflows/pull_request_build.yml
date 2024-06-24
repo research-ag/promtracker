@@ -14,8 +14,8 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - uses: ZenVoich/setup-mops@v1
+        uses: actions/checkout@v4.1.7
+      - uses: ZenVoich/setup-mops@v1.2
       - uses: dfinity/setup-dfx@main
   
       - name: Confirm dfx installation

@@ -157,7 +157,7 @@ metrics.addSystemValues();
 
 ## Copyright
 
-MR Research AG, 2023
+MR Research AG, 2023-24
 
 ## Authors
 
