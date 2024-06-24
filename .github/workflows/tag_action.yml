@@ -16,11 +16,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set up environment variables
-        run: |
-          echo "NOTION_DATABASE_ID=e3aca840563b4cc8b273e65da748e1dd" >> $GITHUB_ENV
-          echo "WEBHOOK_URL=https://hook.eu2.make.com/sg1xhhlvnp4314llgde92csqgjrpm42e" >> $GITHUB_ENV
-
       - name: Extract tag name and commit URL
         id: extract_info
         run: |
