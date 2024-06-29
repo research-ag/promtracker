@@ -5,7 +5,7 @@ on:
 
 env:
   mops_version: latest
-  dfx_version: 0.18.0
+  dfx_version: 0.20.1
 
 jobs:
   build:
@@ -14,8 +14,8 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
-      - uses: ZenVoich/setup-mops@v1
+        uses: actions/checkout@v4.1.7
+      - uses: ZenVoich/setup-mops@v1.2.0
       - uses: dfinity/setup-dfx@main
   
       - name: Confirm dfx installation
