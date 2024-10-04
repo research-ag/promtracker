@@ -177,6 +177,7 @@ module {
       ignore addPullValue("rts_mutator_instructions", "", func() = Prim.rts_mutator_instructions());
       ignore addPullValue("rts_collector_instructions", "", func() = Prim.rts_collector_instructions());
       ignore addPullValue("stablememory_size", "", func() = Nat64.toNat(StableMemory.size()));
+      ignore addPullValue("canister_version", "", func() = Nat64.toNat(Prim.canisterVersion()));
     };
 
     func removeValue(id : Nat) : () = values.put(id, null);
@@ -253,7 +254,7 @@ module {
     public func dump() : [Metric] = [(prefix, labels, pull())];
 
     public func share() : ?StableDataItem = null;
-    public func unshare(data : StableDataItem) = ();
+    public func unshare(_ : StableDataItem) = ();
   };
 
   class CounterValue(prefix_ : Text, labels_ : Text, isStable : Bool) {
