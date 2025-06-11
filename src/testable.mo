@@ -4,7 +4,6 @@ import Cycles "mo:base/ExperimentalCycles";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
-import StableMemory "mo:base/ExperimentalStableMemory";
 import Text "mo:base/Text";
 import Prim "mo:prim";
 import Vector "mo:vector/Class";
@@ -166,6 +165,7 @@ module {
     /// Add system metrics, such as cycle balance, memory size, heap size etc.
     public func addSystemValues() {
       ignore addPullValue("cycles_balance", "", func() = Cycles.balance());
+
       ignore addPullValue("rts_memory_size", "", func() = Prim.rts_memory_size());
       ignore addPullValue("rts_heap_size", "", func() = Prim.rts_heap_size());
       ignore addPullValue("rts_total_allocation", "", func() = Prim.rts_total_allocation());
@@ -176,7 +176,10 @@ module {
       ignore addPullValue("rts_callback_table_size", "", func() = Prim.rts_callback_table_size());
       ignore addPullValue("rts_mutator_instructions", "", func() = Prim.rts_mutator_instructions());
       ignore addPullValue("rts_collector_instructions", "", func() = Prim.rts_collector_instructions());
-      ignore addPullValue("stablememory_size", "", func() = Nat64.toNat(StableMemory.size()));
+      ignore addPullValue("rts_upgrade_instructions", "", func() = Prim.rts_upgrade_instructions());
+      ignore addPullValue("rts_stable_memory_size", "", func() = Prim.rts_stable_memory_size());
+      ignore addPullValue("rts_logical_stable_memory_size", "", func() = Prim.rts_logical_stable_memory_size());
+
       ignore addPullValue("canister_version", "", func() = Nat64.toNat(Prim.canisterVersion()));
     };
 
@@ -271,7 +274,7 @@ module {
 
     public func share() : ?StableDataItem {
       if (not isStable) return null;
-      ? #counter(value);
+      ?#counter(value);
     };
     public func unshare(data : StableDataItem) = switch (data, isStable) {
       case (#counter x, true) value := x;
@@ -354,7 +357,7 @@ module {
 
     public func share() : ?StableDataItem {
       if (not isStable) return null;
-      ? #gauge(lastValue, count, sum, limits, Array.freeze(counters));
+      ?#gauge(lastValue, count, sum, limits, Array.freeze(counters));
     };
     public func unshare(data : StableDataItem) = switch (data, isStable) {
       case (#gauge(v, c, s, bl, bv), true) {
