@@ -1,12 +1,12 @@
 import Array "mo:base/Array";
 import AssocList "mo:base/AssocList";
 import Cycles "mo:base/ExperimentalCycles";
-import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Text "mo:base/Text";
 import Prim "mo:prim";
-import Vector "mo:vector/Class";
+
+import List "mo:new-base/List";
 
 module {
   func concat(a : Text, b : Text) : Text {
@@ -64,7 +64,7 @@ module {
       unshare : (StableDataItem) -> ();
     };
 
-    let values = Vector.Vector<?IValue>();
+    let values : List.List<?IValue> = List.empty();
 
     /// Register a PullValue in the tracker.
     /// A PullValue is stateless.
@@ -76,13 +76,13 @@ module {
     /// ```
     public func addPullValue(prefix : Text, labels : Text, pull : () -> Nat) : PullValueInterface {
       // create and register the value
-      let id = values.size();
+      let id = List.size(values);
       let value = PullValue(prefix, labels, pull);
-      values.add(?value);
+      List.add(values, ?value);
       // return the interface
       {
         value = pull;
-        remove = func() = removeValue(id);
+        remove = func() = removeValueById_(id);
       };
     };
 
@@ -101,16 +101,16 @@ module {
     /// ```
     public func addCounter(prefix : Text, labels : Text, isStable : Bool) : CounterInterface {
       // create and register the value
-      let id = values.size();
+      let id = List.size(values);
       let value = CounterValue(prefix, labels, isStable);
-      values.add(?value);
+      List.add(values, ?value);
       // return the interface
       {
         value = func() = value.value;
         set = value.set;
         add = value.add;
         sub = value.sub;
-        remove = func() = removeValue(id);
+        remove = func() = removeValueById_(id);
       };
     };
 
@@ -143,7 +143,7 @@ module {
         i += 1;
       };
       // create and register the value
-      let gaugeId = values.size();
+      let gaugeId = List.size(values);
       let (lowWM, highWM) = switch (watermarks) {
         case (#none) (false, false);
         case (#low) (true, false);
@@ -151,14 +151,14 @@ module {
         case (#both) (true, true);
       };
       let gaugeValue = GaugeValue(prefix, labels, lowWM, highWM, bucketLimits, env, isStable);
-      values.add(?gaugeValue);
+      List.add(values, ?gaugeValue);
       // return the interface
       {
         value = func() = gaugeValue.lastValue;
         sum = func() = gaugeValue.sum;
         count = func() = gaugeValue.count;
         update = gaugeValue.update;
-        remove = func() = removeValue(gaugeId);
+        remove = func() = removeValueById_(gaugeId);
       };
     };
 
@@ -183,18 +183,32 @@ module {
       ignore addPullValue("canister_version", "", func() = Nat64.toNat(Prim.canisterVersion()));
     };
 
-    func removeValue(id : Nat) : () = values.put(id, null);
+    func removeValueById_(id : Nat) : () = List.put(values, id, null);
 
-    /// Dump all current metrics to an array
-    public func dump() : [Metric] {
-      let result = Vector.Vector<Metric>();
-      for (v in values.vals()) {
-        switch (v) {
-          case (?value) Vector.addFromIter(result, Iter.fromArray(value.dump()));
+    public func removeValue(prefix : Text, labels : Text) {
+      for ((value, id) in List.entries(values)) {
+        switch (value) {
+          case (?v) {
+            if (v.prefix == prefix and v.labels == labels) {
+              removeValueById_(id);
+              return;
+            };
+          };
           case (null) {};
         };
       };
-      Vector.toArray(result);
+    };
+
+    /// Dump all current metrics to an array
+    public func dump() : [Metric] {
+      let result = List.empty<Metric>();
+      for (v in List.values(values)) {
+        switch (v) {
+          case (?value) List.addAll(result, value.dump().vals());
+          case (null) {};
+        };
+      };
+      List.toArray(result);
     };
 
     func renderMetric(m : Metric, globalLabels : Text, time : Text) : Text {
@@ -222,7 +236,7 @@ module {
     /// Dump all values, marked as stable, to stable data structure
     public func share() : StableData {
       var res : StableData = null;
-      for (value in values.vals()) {
+      for (value in List.values(values)) {
         switch (value) {
           case (?v) switch (v.share()) {
             case (?data) {
@@ -238,7 +252,7 @@ module {
 
     /// Restore all values from stable data
     public func unshare(data : StableData) : () {
-      for (value in values.vals()) {
+      for (value in List.values(values)) {
         switch (value) {
           case (?v) switch (AssocList.find(data, stablePrefix(v), Text.equal)) {
             case (?data) v.unshare(data);
@@ -335,24 +349,24 @@ module {
     };
 
     public func dump() : [Metric] {
-      let all = Vector.fromArray<Metric>([
+      let all = List.fromArray<Metric>([
         metric("last", labels, lastValue),
         metric("sum", labels, sum),
         metric("count", labels, count),
       ]);
       if (enableHighWM) {
-        all.add(metric("high_watermark", labels, highWatermark.mark));
+        List.add(all, metric("high_watermark", labels, highWatermark.mark));
       };
       if (enableLowWM) {
-        all.add(metric("low_watermark", labels, lowWatermark.mark));
+        List.add(all, metric("low_watermark", labels, lowWatermark.mark));
       };
       for (i in counters.keys()) {
-        all.add(metric("bucket", concat(labels, "le=\"" # Nat.toText(limits[i]) # "\""), counters[i]));
+        List.add(all, metric("bucket", concat(labels, "le=\"" # Nat.toText(limits[i]) # "\""), counters[i]));
       };
       if (counters.size() > 0) {
-        all.add(metric("bucket", concat(labels, "le=\"+Inf\""), count));
+        List.add(all, metric("bucket", concat(labels, "le=\"+Inf\""), count));
       };
-      Vector.toArray(all);
+      List.toArray(all);
     };
 
     public func share() : ?StableDataItem {
