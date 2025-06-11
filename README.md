@@ -148,7 +148,10 @@ PromTracker has the ability to extend your prometheus exposition output with the
 1) `rts_callback_table_size` // Prim.rts_callback_table_size()
 1) `rts_mutator_instructions` // Prim.rts_mutator_instructions()
 1) `rts_collector_instructions` // Prim.rts_collector_instructions()
-1) `stablememory_size` // StableMemory.size()
+1) `rts_upgrade_instructions` // Prim.rts_upgrade_instructions()
+1) `rts_stable_memory_size` // Prim.rts_stable_memory_size()
+1) `rts_logical_stable_memory_size` // Prim.rts_logical_stable_memory_size()
+1) `canister_version` // Prim.canisterVersion()
 
 To register them, call function:
 ```motoko
