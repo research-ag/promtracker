@@ -1,5 +1,13 @@
 # PromTracker changelog
 
+## 0.6.0
+
+* Add all new rts_ system values
+* Bump dependencies
+* Rename stablememory_size metric to rts_stable_memory_size 
+* Add ability to remove metrics by prefix/label
+* replace vector dependency by new-base
+
 ## 0.5.4
 
 * Bump dependencies
