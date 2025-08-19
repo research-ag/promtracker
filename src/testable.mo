@@ -6,7 +6,7 @@ import Nat64 "mo:base/Nat64";
 import Text "mo:base/Text";
 import Prim "mo:prim";
 
-import List "mo:new-base/List";
+import List "mo:core/List";
 
 module {
   func concat(a : Text, b : Text) : Text {
@@ -233,7 +233,7 @@ module {
     func removeValueById_(id : Nat) : () = List.put(values, id, null);
 
     public func removeValue(prefix : Text, labels : Text) {
-      for ((value, id) in List.entries(values)) {
+      for ((id, value) in List.enumerate(values)) {
         switch (value) {
           case (?v) {
             if (v.prefix == prefix and v.labels == labels) {
