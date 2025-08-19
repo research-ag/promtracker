@@ -15,25 +15,25 @@ import Http "tiny_http";
 /// - cycles: a pull value of the cycles balance
 /// - instructions: a gauge of the cycles used to parse the last call arguments
 /// - bytes: a gauge of the size of the last call arguments
-actor class Main() = self {
+persistent actor class Main() = self {
   // initialize the tracker
-  let pt = PT.PromTracker("", 65);
+  transient let pt = PT.PromTracker("", 65);
 
   // register a gauge with 10 buckets (plus the +Inf bucket)
   // bucket limits: 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600
-  let limits = Array.tabulate<Nat>(12, func(n) = 500 + n * 100);
-  let time_gauge = pt.addGauge("time", "", #both, limits, false);
+  transient let limits = Array.tabulate<Nat>(12, func(n) = 500 + n * 100);
+  transient let time_gauge = pt.addGauge("time", "", #both, limits, false);
 
   // register a pull value for the cycle balance
-  let _cycle_balance = pt.addPullValue("cycles", "", Cycles.balance);
+  transient let _cycle_balance = pt.addPullValue("cycles", "", Cycles.balance);
 
   // register a gauge for the cycles used to pass the last call arguments
   // For local deployment, use limits PT.limits(2200, 15, 100)
   // For mainnet deployment, use limits PT.limits(4600, 10, 100)
-  let instructions_gauge = pt.addGauge("instructions", "", #both, PT.limits(4600, 10, 200), false);
+  transient let instructions_gauge = pt.addGauge("instructions", "", #both, PT.limits(4600, 10, 200), false);
 
   // register a gauge for the cycles used to pass the last call arguments
-  let size_gauge = pt.addGauge("bytes", "", #both, PT.limits(0, 10, 10), false);
+  transient let size_gauge = pt.addGauge("bytes", "", #both, PT.limits(0, 10, 10), false);
 
   // We make random calls to the following function and measure:
   // - instructions for candid parsing of the arguments
@@ -45,12 +45,12 @@ actor class Main() = self {
   };
 
   // Random number generator for generating random arguments for foo()
-  let rng = Prng.Seiran128();
+  transient let rng = Prng.Seiran128();
   rng.init(0);
 
   // We update a gauge in heartbeat
   // gauge value = time delta between last two heartbeats in milliseconds
-  var last_time : ?Nat = null;
+  transient var last_time : ?Nat = null;
   system func heartbeat() : async () {
     // determine time since last heartbeat and update gauge
     let now = Prim.nat64ToNat(Prim.time() / 1000000);

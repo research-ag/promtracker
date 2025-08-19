@@ -27,6 +27,7 @@ module {
   public type PullValue = Testable.PullValueInterface;
   public type CounterValue = Testable.CounterInterface;
   public type GaugeValue = Testable.GaugeInterface;
+  public type HeatmapValue = Testable.HeatmapInterface;
 
   /// Value tracker, designed specifically for use as a source for Prometheus.
   ///

@@ -6,7 +6,7 @@ import Nat64 "mo:base/Nat64";
 import Text "mo:base/Text";
 import Prim "mo:prim";
 
-import List "mo:new-base/List";
+import List "mo:core/List";
 
 module {
   func concat(a : Text, b : Text) : Text {
@@ -18,6 +18,7 @@ module {
   type StableDataItem = {
     #counter : Nat;
     #gauge : (Nat, Nat, Nat, [Nat], [Nat]);
+    #heatmap : (Nat, Nat, [Nat]);
   };
   public type StableData = AssocList.AssocList<Text, StableDataItem>;
 
@@ -48,6 +49,15 @@ module {
     sum : () -> Nat;
     count : () -> Nat;
     update : (x : Nat) -> ();
+    remove : () -> ();
+  };
+  /// An access interface for heatmap value
+  public type HeatmapInterface = {
+    sum : () -> Nat;
+    count : () -> Nat;
+    addEntry : (Nat) -> ();
+    removeEntry : (Nat) -> ();
+    updateEntry : (oldValue : Nat, newValue : Nat) -> ();
     remove : () -> ();
   };
 
@@ -119,16 +129,15 @@ module {
     /// A GaugeValue keeps some information about it's history such as high and low watermarks
     /// and histogram buckets counters that can be used to create heatmaps.
     ///
-    /// If the second argument is an empty list then no histogram buckets are tracked.
+    /// If the 4-th argument is an empty list then no histogram buckets are tracked.
     /// ```motoko
-    /// let requestDuration = tracker.addGauge("request_duration", ?[50, 110]);
+    /// let requestDuration = tracker.addGauge("request_duration", "", #both, ?[50, 110], false);
     /// requestDuration.update(123);
     /// requestDuration.update(101);
     /// // now it will output stats:
     /// // request_duration_sum: 224
     /// // request_duration_count: 2
     /// // request_duration_high_watermark: 123
-    /// // request_duration_low_watermark: 101
     /// // request_duration_low_watermark: 101
     /// // request_duration_bucket{le="50"}: 0
     /// // request_duration_bucket{le="110"}: 1
@@ -162,6 +171,46 @@ module {
       };
     };
 
+    /// Register a HeatmapValue in the tracker.
+    /// A HeatmapValue is stateful. It's values can be updated by adding/removing/updating particular entries.
+    /// A HeatmapValue does not store entries themselves. It is the responsibility of client code to update/remove them correctly
+    /// A HeatmapValue stores histogram buckets counters with limits 0 and powers of 2. Buckets amount increases automatically
+    /// when big entry is added and never shrinks.
+    ///
+    /// Entry values have to be in Nat64 range [0;2^64-1]
+    ///
+    /// ```motoko
+    /// let payloadSizes = tracker.addHeatmap("payload_sizes", "", false);
+    /// payloadSizes.addEntry(50);
+    /// payloadSizes.addEntry(20);
+    /// // now it will output stats:
+    /// // payload_sizes{le="0"}: 0
+    /// // payload_sizes{le="1"}: 0
+    /// // payload_sizes{le="2"}: 0
+    /// // payload_sizes{le="4"}: 0
+    /// // payload_sizes{le="8"}: 0
+    /// // payload_sizes{le="16"}: 0
+    /// // payload_sizes{le="32"}: 1
+    /// // payload_sizes{le="64"}: 2
+    /// // payload_sizes_count: 2
+    /// // payload_sizes_sum: 70
+    /// ```
+    public func addHeatmap(prefix : Text, labels : Text, isStable : Bool) : HeatmapInterface {
+      // create and register the value
+      let heatmapId = List.size(values);
+      let heatmapValue = HeatmapValue(prefix, labels, isStable);
+      List.add(values, ?heatmapValue);
+      // return the interface
+      {
+        sum = func() = heatmapValue.sum;
+        count = func() = heatmapValue.count;
+        addEntry = heatmapValue.addEntry;
+        removeEntry = heatmapValue.removeEntry;
+        updateEntry = heatmapValue.updateEntry;
+        remove = func() = removeValueById_(heatmapId);
+      };
+    };
+
     /// Add system metrics, such as cycle balance, memory size, heap size etc.
     public func addSystemValues() {
       ignore addPullValue("cycles_balance", "", func() = Cycles.balance());
@@ -186,7 +235,7 @@ module {
     func removeValueById_(id : Nat) : () = List.put(values, id, null);
 
     public func removeValue(prefix : Text, labels : Text) {
-      for ((value, id) in List.entries(values)) {
+      for ((id, value) in List.enumerate(values)) {
         switch (value) {
           case (?v) {
             if (v.prefix == prefix and v.labels == labels) {
@@ -380,6 +429,94 @@ module {
         sum := s;
         limits := bl;
         counters := Array.thaw(bv);
+      };
+      case (_) {};
+    };
+  };
+  class HeatmapValue(prefix_ : Text, labels_ : Text, isStable : Bool) {
+    public let prefix = prefix_;
+    public let labels = labels_;
+
+    public var count : Nat = 0;
+    public var sum : Nat = 0;
+    public var buckets : [var Nat] = [var];
+
+    func getBucketIndex_(entry : Nat) : Nat {
+      if (entry == 0) return 0;
+      let bits = Nat64.bitcountLeadingZero(Nat64.fromNat(entry - 1));
+      return 65 - Nat64.toNat(bits);
+    };
+
+    func getLimit_(bucket : Nat) : Nat64 {
+      var pow2 : Nat64 = 0;
+      if (bucket > 0) {
+        pow2 := 1 << Nat64.fromNat(bucket - 1);
+      };
+      pow2;
+    };
+
+    func allocateBucketFor_(entry : Nat) : Nat {
+      let bucket = getBucketIndex_(entry);
+      if (buckets.size() < bucket + 1) {
+        buckets := Array.tabulateVar<Nat>(
+          bucket + 1,
+          func(i) {
+            if (i < buckets.size()) return buckets[i];
+            0;
+          },
+        );
+      };
+      bucket;
+    };
+
+    public func addEntry(entry : Nat) {
+      count += 1;
+      sum += entry;
+      buckets[allocateBucketFor_(entry)] += 1;
+    };
+
+    public func removeEntry(entry : Nat) {
+      count -= 1;
+      sum -= entry;
+      buckets[allocateBucketFor_(entry)] -= 1;
+    };
+
+    public func updateEntry(oldEntryValue : Nat, newEntryValue : Nat) {
+      sum += newEntryValue;
+      sum -= oldEntryValue;
+      let oldBucket = allocateBucketFor_(oldEntryValue);
+      let newBucket = allocateBucketFor_(newEntryValue);
+      if (oldBucket == newBucket) return;
+      buckets[oldBucket] -= 1;
+      buckets[newBucket] += 1;
+    };
+
+    public func dump() : [Metric] {
+      var aggregatedCounter = 0;
+      Array.tabulate<Metric>(
+        buckets.size() + 2,
+        func(i) {
+          if (i < buckets.size()) {
+            aggregatedCounter += buckets[i];
+            (prefix, concat(labels, "le=\"" # Nat64.toText(getLimit_(i)) # "\""), aggregatedCounter);
+          } else if (i == buckets.size()) {
+            (prefix # "_count", labels, count);
+          } else {
+            (prefix # "_sum", labels, sum);
+          };
+        },
+      );
+    };
+
+    public func share() : ?StableDataItem {
+      if (not isStable) return null;
+      ?#heatmap(sum, count, Array.freeze(buckets));
+    };
+    public func unshare(data : StableDataItem) = switch (data, isStable) {
+      case (#heatmap(s, c, b), true) {
+        sum := s;
+        count := c;
+        buckets := Array.thaw(b);
       };
       case (_) {};
     };

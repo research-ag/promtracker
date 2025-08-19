@@ -4,6 +4,10 @@
     "example": {
       "type": "motoko",
       "main": "example.mo"
+    },
+    "persistency_example": {
+      "type": "motoko",
+      "main": "persistency_example.mo"
     }
   },
   "defaults": {
