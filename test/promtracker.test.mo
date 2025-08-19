@@ -377,3 +377,110 @@ stable_counter_duplicated_key{keyId=\"foo\"} 123 123006000
 stable_counter_duplicated_key{keyId=\"bar\"} 456 123006000\n")),
   )
 );
+
+/* --------------------------------------- */
+let heatmap = tracker.addHeatmap("test_heatmap", "", false);
+run(
+  suite(
+    "initial heatmap state",
+    [
+      test(
+        "initial heatmap exposition",
+        tracker.renderExposition(""),
+        M.equals(T.text("test_heatmap_count{} 0 123006000
+test_heatmap_sum{} 0 123006000\n")),
+      ),
+      test(
+        "initial heatmap sum",
+        heatmap.sum(),
+        M.equals(T.nat(0)),
+      ),
+      test(
+        "initial heatmap count",
+        heatmap.count(),
+        M.equals(T.nat(0)),
+      ),
+    ],
+  )
+);
+
+heatmap.addEntry(100);
+heatmap.addEntry(0);
+heatmap.addEntry(3);
+heatmap.addEntry(64);
+
+run(
+  suite(
+    "heatmap state",
+    [
+      test(
+        "heatmap state exposition",
+        tracker.renderExposition(""),
+        M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
+test_heatmap{le=\"1\"} 1 123006000
+test_heatmap{le=\"2\"} 1 123006000
+test_heatmap{le=\"4\"} 2 123006000
+test_heatmap{le=\"8\"} 2 123006000
+test_heatmap{le=\"16\"} 2 123006000
+test_heatmap{le=\"32\"} 2 123006000
+test_heatmap{le=\"64\"} 3 123006000
+test_heatmap{le=\"128\"} 4 123006000
+test_heatmap_count{} 4 123006000
+test_heatmap_sum{} 167 123006000\n")),
+      ),
+    ],
+  )
+);
+
+heatmap.updateEntry(3, 103);
+
+run(
+  suite(
+    "heatmap state",
+    [
+      test(
+        "heatmap state exposition",
+        tracker.renderExposition(""),
+        M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
+test_heatmap{le=\"1\"} 1 123006000
+test_heatmap{le=\"2\"} 1 123006000
+test_heatmap{le=\"4\"} 1 123006000
+test_heatmap{le=\"8\"} 1 123006000
+test_heatmap{le=\"16\"} 1 123006000
+test_heatmap{le=\"32\"} 1 123006000
+test_heatmap{le=\"64\"} 2 123006000
+test_heatmap{le=\"128\"} 4 123006000
+test_heatmap_count{} 4 123006000
+test_heatmap_sum{} 267 123006000\n")),
+      ),
+    ],
+  )
+);
+
+heatmap.removeEntry(103);
+heatmap.removeEntry(100);
+
+run(
+  suite(
+    "heatmap state",
+    [
+      test(
+        "heatmap state exposition",
+        tracker.renderExposition(""),
+        M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
+test_heatmap{le=\"1\"} 1 123006000
+test_heatmap{le=\"2\"} 1 123006000
+test_heatmap{le=\"4\"} 1 123006000
+test_heatmap{le=\"8\"} 1 123006000
+test_heatmap{le=\"16\"} 1 123006000
+test_heatmap{le=\"32\"} 1 123006000
+test_heatmap{le=\"64\"} 2 123006000
+test_heatmap{le=\"128\"} 2 123006000
+test_heatmap_count{} 2 123006000
+test_heatmap_sum{} 64 123006000\n")),
+      ),
+    ],
+  )
+);
+
+heatmap.remove();
