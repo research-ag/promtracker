@@ -14,7 +14,7 @@ persistent actor class Main() = self {
   transient let pt = PT.PromTracker("", 65);
 
   system func postupgrade() {
-    // this should be called after all the metrics were added to the promtracker. Otherwise stable data will be ignored
+    // this must be called after all the metrics were added to the promtracker. Otherwise stable data will be ignored
     pt.unshare(ptData);
   };
 
