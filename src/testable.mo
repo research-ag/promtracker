@@ -177,6 +177,8 @@ module {
     /// A HeatmapValue stores histogram buckets counters with limits 0 and powers of 2. Buckets amount increases automatically
     /// when big entry is added and never shrinks.
     ///
+    /// Entry values have to be in Nat64 range [0;2^64-1]
+    ///
     /// ```motoko
     /// let payloadSizes = tracker.addHeatmap("payload_sizes", "", false);
     /// payloadSizes.addEntry(50);
@@ -441,20 +443,8 @@ module {
 
     func getBucketIndex_(entry : Nat) : Nat {
       if (entry == 0) return 0;
-      var x : Nat64 = Nat64.fromNat(entry) - 1;
-      x |= x >> 1;
-      x |= x >> 2;
-      x |= x >> 4;
-      x |= x >> 8;
-      x |= x >> 16;
-      x |= x >> 32;
-      x += 1;
-      var bucketIndex : Nat = 0;
-      while (x > 0) {
-        x >>= 1;
-        bucketIndex += 1;
-      };
-      bucketIndex;
+      let bits = Nat64.bitcountLeadingZero(Nat64.fromNat(entry - 1));
+      return 65 - Nat64.toNat(bits);
     };
 
     func getLimit_(bucket : Nat) : Nat64 {
