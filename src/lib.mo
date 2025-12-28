@@ -1,8 +1,8 @@
-import Array "mo:base/Array";
-import Nat64 "mo:base/Nat64";
+import Array "mo:core/Array";
+import Nat64 "mo:core/Nat64";
 import Prim "mo:prim";
-import Principal "mo:base/Principal";
-import Text "mo:base/Text";
+import Principal "mo:core/Principal";
+import Text "mo:core/Text";
 import Testable "testable";
 
 module {
@@ -24,9 +24,13 @@ module {
   let now : () -> Nat64 = func() = Prim.time();
 
   public type StableData = Testable.StableData;
+  
   public type PullValue = Testable.PullValueInterface;
+  
   public type CounterValue = Testable.CounterInterface;
+  
   public type GaugeValue = Testable.GaugeInterface;
+  
   public type HeatmapValue = Testable.HeatmapInterface;
 
   /// Value tracker, designed specifically for use as a source for Prometheus.
@@ -65,8 +69,8 @@ module {
   ///
   /// For an executable example, see `examples/heartrate.mo`.
   public type PromTracker = Testable.PromTracker;
+
   public func PromTracker(labels : Text, watermarkResetIntervalSeconds : Nat) : PromTracker {
     Testable.PromTracker(labels, watermarkResetIntervalSeconds, now);
   };
-
 };

@@ -1,9 +1,9 @@
-import Array "mo:base/Array";
-import Cycles "mo:base/ExperimentalCycles";
-import Nat64 "mo:base/Nat64";
+import Array "mo:core/Array";
+import Cycles "mo:core/Cycles";
+import Nat64 "mo:core/Nat64";
 import Prim "mo:prim";
 import Prng "mo:prng";
-import Text "mo:base/Text";
+import Text "mo:core/Text";
 
 import PT "../src";
 import Http "tiny_http";

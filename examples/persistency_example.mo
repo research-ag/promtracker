@@ -1,6 +1,6 @@
-import Cycles "mo:base/ExperimentalCycles";
+import Cycles "mo:core/Cycles";
 import Prim "mo:prim";
-import Text "mo:base/Text";
+import Text "mo:core/Text";
 
 import PT "../src";
 import Http "tiny_http";

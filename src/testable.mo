@@ -1,12 +1,13 @@
-import Array "mo:base/Array";
-import AssocList "mo:base/AssocList";
-import Cycles "mo:base/ExperimentalCycles";
-import Nat "mo:base/Nat";
-import Nat64 "mo:base/Nat64";
-import Text "mo:base/Text";
-import Prim "mo:prim";
-
+import Array "mo:core/Array";
+import Cycles "mo:core/Cycles";
+import Nat "mo:core/Nat";
+import Nat64 "mo:core/Nat64";
+import Text "mo:core/Text";
 import List "mo:core/List";
+import VarArray "mo:core/VarArray";
+import Types "mo:core/Types";
+import PureList "mo:core/pure/List";
+import Prim "mo:prim";
 
 module {
   func concat(a : Text, b : Text) : Text {
@@ -20,7 +21,8 @@ module {
     #gauge : (Nat, Nat, Nat, [Nat], [Nat]);
     #heatmap : (Nat, Nat, [Nat]);
   };
-  public type StableData = AssocList.AssocList<Text, StableDataItem>;
+
+  public type StableData = Types.Pure.List<(Text, StableDataItem)>;
 
   // The data in type Metric is (name, labels, value)
   type Metric = (Text, Text, Nat);
@@ -35,6 +37,7 @@ module {
     value : () -> Nat;
     remove : () -> ();
   };
+
   /// An access interface for counter value
   public type CounterInterface = {
     value : () -> Nat;
@@ -43,6 +46,7 @@ module {
     sub : (x : Nat) -> ();
     remove : () -> ();
   };
+
   /// An access interface for gauge value
   public type GaugeInterface = {
     value : () -> Nat;
@@ -51,6 +55,7 @@ module {
     update : (x : Nat) -> ();
     remove : () -> ();
   };
+
   /// An access interface for heatmap value
   public type HeatmapInterface = {
     sum : () -> Nat;
@@ -274,12 +279,45 @@ module {
         dump(),
         func(m) = renderMetric(m, globalLabels, timeStr),
       );
-      Text.join("", lines.vals());
+      Text.join(lines.vals(), "");
     };
 
     private func stablePrefix(v : IValue) : Text = switch (v.labels.size()) {
       case (0) v.prefix;
       case (_) v.prefix # "{}" # v.labels;
+    };
+
+    func replace<K, V>(
+      map : PureList.List<(K, V)>,
+      key : K,
+      equal : (K, K) -> Bool,
+      value : ?V,
+    ) : (PureList.List<(K, V)>, ?V) {
+      var prev : ?V = null;
+      func del(al : PureList.List<(K, V)>) : PureList.List<(K, V)> {
+        switch (al) {
+          case (?(kv, tl)) {
+            if (equal(key, kv.0)) {
+              prev := ?kv.1;
+              tl;
+            } else {
+              let tl1 = del(tl);
+              switch (prev) {
+                case null { al };
+                case (?_) { ?(kv, tl1) };
+              };
+            };
+          };
+          case null {
+            null;
+          };
+        };
+      };
+      let map1 = del(map);
+      switch value {
+        case (?value) { (?((key, value), map1), prev) };
+        case null { (map1, prev) };
+      };
     };
 
     /// Dump all values, marked as stable, to stable data structure
@@ -289,7 +327,7 @@ module {
         switch (value) {
           case (?v) switch (v.share()) {
             case (?data) {
-              res := AssocList.replace(res, stablePrefix(v), Text.equal, ?data).0;
+              res := replace(res, stablePrefix(v), Text.equal, ?data).0;
             };
             case (_) {};
           };
@@ -303,8 +341,8 @@ module {
     public func unshare(data : StableData) : () {
       for (value in List.values(values)) {
         switch (value) {
-          case (?v) switch (AssocList.find(data, stablePrefix(v), Text.equal)) {
-            case (?data) v.unshare(data);
+          case (?v) switch (PureList.find(data, func x = x.0 == stablePrefix(v))) {
+            case (?data) v.unshare(data.1);
             case (_) {};
           };
           case (_) {};
@@ -364,7 +402,7 @@ module {
     public var count : Nat = 0;
     public var sum : Nat = 0;
     var limits = limits_;
-    public var counters : [var Nat] = Array.init<Nat>(limits.size(), 0);
+    public var counters : [var Nat] = VarArray.repeat<Nat>(0, limits.size());
     public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new > old, resetInterval);
     public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new < old, resetInterval);
     public var lastValue : Nat = 0;
@@ -420,15 +458,16 @@ module {
 
     public func share() : ?StableDataItem {
       if (not isStable) return null;
-      ?#gauge(lastValue, count, sum, limits, Array.freeze(counters));
+      ?#gauge(lastValue, count, sum, limits, VarArray.toArray(counters));
     };
+
     public func unshare(data : StableDataItem) = switch (data, isStable) {
       case (#gauge(v, c, s, bl, bv), true) {
         lastValue := v;
         count := c;
         sum := s;
         limits := bl;
-        counters := Array.thaw(bv);
+        counters := VarArray.fromArray(bv);
       };
       case (_) {};
     };
@@ -458,7 +497,7 @@ module {
     func allocateBucketFor_(entry : Nat) : Nat {
       let bucket = getBucketIndex_(entry);
       if (buckets.size() < bucket + 1) {
-        buckets := Array.tabulateVar<Nat>(
+        buckets := VarArray.tabulate<Nat>(
           bucket + 1,
           func(i) {
             if (i < buckets.size()) return buckets[i];
@@ -510,13 +549,14 @@ module {
 
     public func share() : ?StableDataItem {
       if (not isStable) return null;
-      ?#heatmap(sum, count, Array.freeze(buckets));
+      ?#heatmap(sum, count, VarArray.toArray(buckets));
     };
+
     public func unshare(data : StableDataItem) = switch (data, isStable) {
       case (#heatmap(s, c, b), true) {
         sum := s;
         count := c;
-        buckets := Array.thaw(b);
+        buckets := VarArray.fromArray(b);
       };
       case (_) {};
     };
