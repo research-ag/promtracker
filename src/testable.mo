@@ -287,39 +287,6 @@ module {
       case (_) v.prefix # "{}" # v.labels;
     };
 
-    func replace<K, V>(
-      map : PureList.List<(K, V)>,
-      key : K,
-      equal : (K, K) -> Bool,
-      value : ?V,
-    ) : (PureList.List<(K, V)>, ?V) {
-      var prev : ?V = null;
-      func del(al : PureList.List<(K, V)>) : PureList.List<(K, V)> {
-        switch (al) {
-          case (?(kv, tl)) {
-            if (equal(key, kv.0)) {
-              prev := ?kv.1;
-              tl;
-            } else {
-              let tl1 = del(tl);
-              switch (prev) {
-                case null { al };
-                case (?_) { ?(kv, tl1) };
-              };
-            };
-          };
-          case null {
-            null;
-          };
-        };
-      };
-      let map1 = del(map);
-      switch value {
-        case (?value) { (?((key, value), map1), prev) };
-        case null { (map1, prev) };
-      };
-    };
-
     /// Dump all values, marked as stable, to stable data structure
     public func share() : StableData {
       var res : StableData = null;
@@ -327,7 +294,7 @@ module {
         switch (value) {
           case (?v) switch (v.share()) {
             case (?data) {
-              res := replace(res, stablePrefix(v), Text.equal, ?data).0;
+              res := PureList.pushFront(res, (stablePrefix(v), data));
             };
             case (_) {};
           };
