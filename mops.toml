@@ -1,20 +1,19 @@
 [package]
 name = "promtracker"
-version = "0.6.0"
+version = "0.6.1"
 description = "Motoko value tracker for prometheus"
 repository = "https://github.com/research-ag/promtracker"
 keywords = [ "prometheus", "stats", "http", "metrics", "monitoring" ]
 license = "Apache-2.0"
 
 [dependencies]
-base = "0.16.0"
-core = "1.0.0"
+core = "2.0.0"
 
 [dev-dependencies]
 motoko-matchers = "https://github.com/kritzcreek/motoko-matchers#v1.3.0@3dac8a071b69e4e651b25a7d9683fe831eb7cffd"
 
 [requirements]
-moc = "0.14.9"
+moc = "1.0.0"
 
 [toolchain]
-moc = "0.16.0"
+moc = "1.0.0"

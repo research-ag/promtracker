@@ -1,4 +1,4 @@
-import Text "mo:base/Text";
+import Text_ "mo:core/Text";
 
 module TinyHttp {
   public type Request = {
@@ -7,6 +7,7 @@ module TinyHttp {
     headers : [(Text, Text)];
     body : Blob;
   };
+
   public type Response = {
     status_code : Nat16;
     headers : [(Text, Text)];
@@ -18,9 +19,10 @@ module TinyHttp {
     headers : [(Text, Text)] = [];
     body : Blob = "Invalid request";
   };
+
   public func renderPlainText(text : Text) : Response = {
     status_code = 200;
     headers = [("content-type", "text/plain")];
-    body = Text.encodeUtf8(text);
+    body = text.encodeUtf8();
   };
 };

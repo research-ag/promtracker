@@ -1,16 +1,16 @@
-import Array "mo:base/Array";
-import Nat64 "mo:base/Nat64";
+import Array "mo:core/Array";
+import Principal "mo:core/Principal";
+import Text_ "mo:core/Text";
 import Prim "mo:prim";
-import Principal "mo:base/Principal";
-import Text "mo:base/Text";
+
 import Testable "testable";
 
 module {
   /// Helper function to get the first 5 characters of the canister's
   /// own canister id (by passing `self` to this function).
   public func shortName(a : actor {}) : Text {
-    let s = Principal.toText(Principal.fromActor(a));
-    let ?name = Text.split(s, #char '-').next() else Prim.trap("");
+    let s = Principal.fromActor(a).toText();
+    let ?name = s.split(#char '-').next() else Prim.trap("");
     name;
   };
 
@@ -24,9 +24,13 @@ module {
   let now : () -> Nat64 = func() = Prim.time();
 
   public type StableData = Testable.StableData;
+  
   public type PullValue = Testable.PullValueInterface;
+  
   public type CounterValue = Testable.CounterInterface;
+  
   public type GaugeValue = Testable.GaugeInterface;
+  
   public type HeatmapValue = Testable.HeatmapInterface;
 
   /// Value tracker, designed specifically for use as a source for Prometheus.
@@ -65,8 +69,8 @@ module {
   ///
   /// For an executable example, see `examples/heartrate.mo`.
   public type PromTracker = Testable.PromTracker;
+
   public func PromTracker(labels : Text, watermarkResetIntervalSeconds : Nat) : PromTracker {
     Testable.PromTracker(labels, watermarkResetIntervalSeconds, now);
   };
-
 };

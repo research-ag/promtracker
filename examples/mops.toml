@@ -1,7 +1,6 @@
 [dependencies]
-base = "0.16.0"
-core = "1.0.0"
-prng = "0.0.3"
+core = "2.0.0"
+prng = "0.0.6"
 
 [toolchain]
-moc = "0.16.0"
+moc = "1.0.0"
