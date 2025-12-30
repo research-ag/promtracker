@@ -1,4 +1,5 @@
 import Cycles "mo:core/Cycles";
+import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
 import Text "mo:core/Text";
 
@@ -50,7 +51,7 @@ persistent actor class Main() = self {
 
   transient var last_time : ?Nat = null;
   system func heartbeat() : async () {
-    let now = Prim.nat64ToNat(Prim.time() / 1000000);
+    let now = (Prim.time() / 1000000).toNat();
     switch (last_time) {
       case (?last) {
         gauge0.update(now - last : Nat);
@@ -62,7 +63,7 @@ persistent actor class Main() = self {
   };
 
   public query func http_request(req : Http.Request) : async Http.Response {
-    let ?path = Text.split(req.url, #char '?').next() else return Http.render400();
+    let ?path = req.url.split(#char '?').next() else return Http.render400();
     let labels = "canister=\"" # PT.shortName(self) # "\"";
     switch (req.method, path) {
       case ("GET", "/metrics") {

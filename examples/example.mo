@@ -1,9 +1,9 @@
 import Array "mo:core/Array";
 import Cycles "mo:core/Cycles";
-import Nat64 "mo:core/Nat64";
+import Nat64_ "mo:core/Nat64";
+import Text_ "mo:core/Text";
 import Prim "mo:prim";
 import Prng "mo:prng";
-import Text "mo:core/Text";
 
 import PT "../src";
 import Http "tiny_http";
@@ -39,7 +39,7 @@ persistent actor class Main() = self {
   // - instructions for candid parsing of the arguments
   // - size of the candid encoded arguments
   public func foo(arg : [Nat64]) : () {
-    instructions_gauge.update(Nat64.toNat(Prim.performanceCounter(0)));
+    instructions_gauge.update(Prim.performanceCounter(0).toNat());
     let b = to_candid (arg);
     size_gauge.update(b.size());
   };
@@ -62,13 +62,13 @@ persistent actor class Main() = self {
 
     // once every 4 heartbeats call foo with a random-length argument
     if (rng.next() % 4 != 0) return;
-    let len = Nat64.toNat(rng.next() % 6 + rng.next() % 6);
+    let len = (rng.next() % 6 + rng.next() % 6).toNat();
     foo(Array.tabulate<Nat64>(len, func(n) = rng.next()));
   };
 
   // provide the "/metrics" endpoint
   public query func http_request(req : Http.Request) : async Http.Response {
-    let ?path = Text.split(req.url, #char '?').next() else return Http.render400();
+    let ?path = req.url.split(#char '?').next() else return Http.render400();
     let labels = "canister=\"" # PT.shortName(self) # "\"";
     switch (req.method, path) {
       case ("GET", "/metrics") {

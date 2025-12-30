@@ -9,8 +9,8 @@ module {
   /// Helper function to get the first 5 characters of the canister's
   /// own canister id (by passing `self` to this function).
   public func shortName(a : actor {}) : Text {
-    let s = Principal.toText(Principal.fromActor(a));
-    let ?name = Text.split(s, #char '-').next() else Prim.trap("");
+    let s = Principal.fromActor(a).toText();
+    let ?name = s.split(#char '-').next() else Prim.trap("");
     name;
   };
 

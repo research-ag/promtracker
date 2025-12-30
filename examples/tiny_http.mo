@@ -23,6 +23,6 @@ module TinyHttp {
   public func renderPlainText(text : Text) : Response = {
     status_code = 200;
     headers = [("content-type", "text/plain")];
-    body = Text.encodeUtf8(text);
+    body = text.encodeUtf8();
   };
 };

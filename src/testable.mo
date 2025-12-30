@@ -68,7 +68,7 @@ module {
 
   public class PromTracker(staticGlobalLabels : Text, watermarkResetIntervalSeconds : Nat, now : () -> Nat64) {
     let env : WatermarkEnvironment = (
-      Nat64.fromNat(watermarkResetIntervalSeconds) * 1_000_000_000,
+      watermarkResetIntervalSeconds.toNat64() * 1_000_000_000,
       now,
     );
     type IValue = {
@@ -91,7 +91,7 @@ module {
     /// ```
     public func addPullValue(prefix : Text, labels : Text, pull : () -> Nat) : PullValueInterface {
       // create and register the value
-      let id = List.size(values);
+      let id = values.size();
       let value = PullValue(prefix, labels, pull);
       List.add(values, ?value);
       // return the interface
@@ -116,9 +116,9 @@ module {
     /// ```
     public func addCounter(prefix : Text, labels : Text, isStable : Bool) : CounterInterface {
       // create and register the value
-      let id = List.size(values);
+      let id = values.size();
       let value = CounterValue(prefix, labels, isStable);
-      List.add(values, ?value);
+      values.add(?value);
       // return the interface
       {
         value = func() = value.value;
@@ -157,7 +157,7 @@ module {
         i += 1;
       };
       // create and register the value
-      let gaugeId = List.size(values);
+      let gaugeId = values.size();
       let (lowWM, highWM) = switch (watermarks) {
         case (#none) (false, false);
         case (#low) (true, false);
@@ -165,7 +165,7 @@ module {
         case (#both) (true, true);
       };
       let gaugeValue = GaugeValue(prefix, labels, lowWM, highWM, bucketLimits, env, isStable);
-      List.add(values, ?gaugeValue);
+      values.add(?gaugeValue);
       // return the interface
       {
         value = func() = gaugeValue.lastValue;
@@ -202,9 +202,9 @@ module {
     /// ```
     public func addHeatmap(prefix : Text, labels : Text, isStable : Bool) : HeatmapInterface {
       // create and register the value
-      let heatmapId = List.size(values);
+      let heatmapId = values.size();
       let heatmapValue = HeatmapValue(prefix, labels, isStable);
-      List.add(values, ?heatmapValue);
+      values.add(?heatmapValue);
       // return the interface
       {
         sum = func() = heatmapValue.sum;
@@ -237,10 +237,10 @@ module {
       ignore addPullValue("canister_version", "", func() = Nat64.toNat(Prim.canisterVersion()));
     };
 
-    func removeValueById_(id : Nat) : () = List.put(values, id, null);
+    func removeValueById_(id : Nat) : () = values.put(id, null);
 
     public func removeValue(prefix : Text, labels : Text) {
-      for ((id, value) in List.enumerate(values)) {
+      for ((id, value) in values.enumerate()) {
         switch (value) {
           case (?v) {
             if (v.prefix == prefix and v.labels == labels) {
@@ -256,24 +256,24 @@ module {
     /// Dump all current metrics to an array
     public func dump() : [Metric] {
       let result = List.empty<Metric>();
-      for (v in List.values(values)) {
+      for (v in values.values()) {
         switch (v) {
-          case (?value) List.addAll(result, value.dump().vals());
+          case (?value) result.addAll(value.dump().vals());
           case (null) {};
         };
       };
-      List.toArray(result);
+      result.toArray();
     };
 
     func renderMetric(m : Metric, globalLabels : Text, time : Text) : Text {
       let (metricName, metricLabels, natValue) = m;
       metricName # "{" # concat(globalLabels, metricLabels) # "} "
-      # Nat.toText(natValue) # " " # time # "\n";
+      # natValue.toText() # " " # time # "\n";
     };
 
     /// Render all current metrics to prometheus exposition format
     public func renderExposition(dynamicGlobalLabels : Text) : Text {
-      let timeStr = Nat64.toText(now() / 1_000_000);
+      let timeStr = (now() / 1_000_000).toText();
       let globalLabels = concat(staticGlobalLabels, dynamicGlobalLabels);
       let lines = Array.map<Metric, Text>(
         dump(),
@@ -290,11 +290,11 @@ module {
     /// Dump all values, marked as stable, to stable data structure
     public func share() : StableData {
       var res : StableData = null;
-      for (value in List.values(values)) {
+      for (value in values.values()) {
         switch (value) {
           case (?v) switch (v.share()) {
             case (?data) {
-              res := PureList.pushFront(res, (stablePrefix(v), data));
+              res := res.pushFront((stablePrefix(v), data));
             };
             case (_) {};
           };
@@ -306,13 +306,9 @@ module {
 
     /// Restore all values from stable data
     public func unshare(data : StableData) : () {
-      for (value in List.values(values)) {
+      for (value in values.values()) {
         switch (value) {
-          case (?v) switch (PureList.find(data, func x = x.0 == stablePrefix(v))) {
-            case (?data) v.unshare(data.1);
-            case (_) {};
-          };
-          case (_) {};
+          case (?v) switch (data.find(func x = x.0 == stablePrefix(v))) { case (?data) v.unshare(data.1); case (_) {}; }; case (_) {};
         };
       };
     };
@@ -382,12 +378,8 @@ module {
       // watermarks
       if (enableLowWM or enableHighWM) {
         let t = now();
-        if (enableLowWM) {
-          lowWatermark.update(current, t);
-        };
-        if (enableHighWM) {
-          highWatermark.update(current, t);
-        };
+        if (enableLowWM) lowWatermark.update(current, t);
+        if (enableHighWM) highWatermark.update(current, t);
       };
       // bucket counters
       var n = limits.size();
@@ -409,23 +401,23 @@ module {
         metric("count", labels, count),
       ]);
       if (enableHighWM) {
-        List.add(all, metric("high_watermark", labels, highWatermark.mark));
+        all.add(metric("high_watermark", labels, highWatermark.mark));
       };
       if (enableLowWM) {
-        List.add(all, metric("low_watermark", labels, lowWatermark.mark));
+        all.add(metric("low_watermark", labels, lowWatermark.mark));
       };
       for (i in counters.keys()) {
-        List.add(all, metric("bucket", concat(labels, "le=\"" # Nat.toText(limits[i]) # "\""), counters[i]));
+        all.add(metric("bucket", concat(labels, "le=\"" # Nat.toText(limits[i]) # "\""), counters[i]));
       };
       if (counters.size() > 0) {
-        List.add(all, metric("bucket", concat(labels, "le=\"+Inf\""), count));
+        all.add(metric("bucket", concat(labels, "le=\"+Inf\""), count));
       };
-      List.toArray(all);
+      all.toArray();
     };
 
     public func share() : ?StableDataItem {
       if (not isStable) return null;
-      ?#gauge(lastValue, count, sum, limits, VarArray.toArray(counters));
+      ?#gauge(lastValue, count, sum, limits, counters.toArray());
     };
 
     public func unshare(data : StableDataItem) = switch (data, isStable) {
@@ -434,7 +426,7 @@ module {
         count := c;
         sum := s;
         limits := bl;
-        counters := VarArray.fromArray(bv);
+        counters := bv.toVarArray();
       };
       case (_) {};
     };
@@ -450,7 +442,7 @@ module {
     func getBucketIndex_(entry : Nat) : Nat {
       if (entry == 0) return 0;
       let bits = Nat64.bitcountLeadingZero(Nat64.fromNat(entry - 1));
-      return 65 - Nat64.toNat(bits);
+      return 65 - bits.toNat();
     };
 
     func getLimit_(bucket : Nat) : Nat64 {
@@ -504,7 +496,7 @@ module {
         func(i) {
           if (i < buckets.size()) {
             aggregatedCounter += buckets[i];
-            (prefix, concat(labels, "le=\"" # Nat64.toText(getLimit_(i)) # "\""), aggregatedCounter);
+            (prefix, concat(labels, "le=\"" # (getLimit_(i)).toText() # "\""), aggregatedCounter);
           } else if (i == buckets.size()) {
             (prefix # "_count", labels, count);
           } else {
@@ -516,14 +508,14 @@ module {
 
     public func share() : ?StableDataItem {
       if (not isStable) return null;
-      ?#heatmap(sum, count, VarArray.toArray(buckets));
+      ?#heatmap(sum, count, buckets.toArray());
     };
 
     public func unshare(data : StableDataItem) = switch (data, isStable) {
       case (#heatmap(s, c, b), true) {
         sum := s;
         count := c;
-        buckets := VarArray.fromArray(b);
+        buckets := b.toVarArray();
       };
       case (_) {};
     };
