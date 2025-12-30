@@ -1,4 +1,4 @@
-import Text "mo:core/Text";
+import Text_ "mo:core/Text";
 
 module TinyHttp {
   public type Request = {

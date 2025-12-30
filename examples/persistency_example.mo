@@ -1,7 +1,7 @@
 import Cycles "mo:core/Cycles";
 import Nat64_ "mo:core/Nat64";
+import Text_ "mo:core/Text";
 import Prim "mo:prim";
-import Text "mo:core/Text";
 
 import PT "../src";
 import Http "tiny_http";

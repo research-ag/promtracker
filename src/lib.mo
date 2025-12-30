@@ -1,8 +1,8 @@
 import Array "mo:core/Array";
-import Nat64 "mo:core/Nat64";
-import Prim "mo:prim";
 import Principal "mo:core/Principal";
-import Text "mo:core/Text";
+import Text_ "mo:core/Text";
+import Prim "mo:prim";
+
 import Testable "testable";
 
 module {

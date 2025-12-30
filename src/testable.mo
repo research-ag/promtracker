@@ -1,12 +1,12 @@
 import Array "mo:core/Array";
 import Cycles "mo:core/Cycles";
-import Nat "mo:core/Nat";
-import Nat64 "mo:core/Nat64";
-import Text "mo:core/Text";
 import List "mo:core/List";
-import VarArray "mo:core/VarArray";
-import Types "mo:core/Types";
+import Nat_ "mo:core/Nat";
+import Nat64 "mo:core/Nat64";
 import PureList "mo:core/pure/List";
+import Text_ "mo:core/Text";
+import Types "mo:core/Types";
+import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 module {
@@ -234,7 +234,7 @@ module {
       ignore addPullValue("rts_stable_memory_size", "", func() = Prim.rts_stable_memory_size());
       ignore addPullValue("rts_logical_stable_memory_size", "", func() = Prim.rts_logical_stable_memory_size());
 
-      ignore addPullValue("canister_version", "", func() = Nat64.toNat(Prim.canisterVersion()));
+      ignore addPullValue("canister_version", "", func() = Prim.canisterVersion().toNat());
     };
 
     func removeValueById_(id : Nat) : () = values.put(id, null);
@@ -279,7 +279,7 @@ module {
         dump(),
         func(m) = renderMetric(m, globalLabels, timeStr),
       );
-      Text.join(lines.vals(), "");
+      lines.vals().join("");
     };
 
     private func stablePrefix(v : IValue) : Text = switch (v.labels.size()) {
@@ -407,7 +407,7 @@ module {
         all.add(metric("low_watermark", labels, lowWatermark.mark));
       };
       for (i in counters.keys()) {
-        all.add(metric("bucket", concat(labels, "le=\"" # Nat.toText(limits[i]) # "\""), counters[i]));
+        all.add(metric("bucket", concat(labels, "le=\"" # limits[i].toText() # "\""), counters[i]));
       };
       if (counters.size() > 0) {
         all.add(metric("bucket", concat(labels, "le=\"+Inf\""), count));
