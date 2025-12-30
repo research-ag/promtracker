@@ -1,5 +1,9 @@
 # PromTracker changelog
 
+## 0.6.1
+
+* Switch from base to core 2.0.0
+
 ## 0.6.0
 
 * Add all new rts_ system values
