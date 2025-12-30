@@ -7,7 +7,6 @@ keywords = [ "prometheus", "stats", "http", "metrics", "monitoring" ]
 license = "Apache-2.0"
 
 [dependencies]
-base = "0.16.0"
 core = "2.0.0"
 
 [dev-dependencies]
