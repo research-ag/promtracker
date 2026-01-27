@@ -198,7 +198,7 @@ module {
     ///
     /// If the 4-th argument is an empty list then no histogram buckets are tracked.
     /// ```motoko
-    /// let requestDuration = tracker.addGauge("request_duration", "", #both, ?[50, 110], false);
+    /// let requestDuration = tracker.addGauge("request_duration", "", #both, [50, 110], false);
     /// requestDuration.update(123);
     /// requestDuration.update(101);
     /// // now it will output stats:
