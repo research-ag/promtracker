@@ -12,7 +12,7 @@ import Prim "mo:prim";
 
 module {
   /// Helper function to get the first 5 characters of the canister's
-  /// own canister id (by passing `self` to this function).
+  /// own canister id (by passing itself to this function).
   public func shortName(a : actor {}) : Text {
     let s = Principal.fromActor(a).toText();
     let ?name = s.split(#char '-').next() else Prim.trap("");
@@ -90,7 +90,7 @@ module {
   ///
   /// Example:
   /// ```motoko
-  /// let tracker = PromTracker.PromTracker(65);
+  /// let tracker = PromTracker.PromTracker("", 65);
   /// // 65 seconds is the recommended interval if prometheus pulls stats with interval 60 seconds
   /// ....
   /// let successfulHeartbeats = tracker.addCounter("successful_heartbeats", true);
@@ -106,7 +106,7 @@ module {
   /// heartbeatDuration.update(14);
   /// ....
   /// // get prometheus metrics:
-  /// let text = tracker.renderStats();
+  /// let text = tracker.renderExposition();
   /// ```
   ///
   /// Expected output is:
@@ -120,7 +120,10 @@ module {
   /// heartbeat_duration_low_watermark{} 10 1698842860811
   /// ```
   ///
-  /// For an executable example, see `examples/heartrate.mo`.
+  /// The first argument `staticGlobalLabels` is a text that will be added as global labels to each metric.
+  /// For example, if you want to add `canister="my_name"` as a label to each metric.
+  ///
+  /// For executable examples see the various examples in `examples/`.
   public class PromTracker(
     staticGlobalLabels : Text,
     watermarkResetIntervalSeconds : Nat,
@@ -331,6 +334,8 @@ module {
     };
 
     /// Render all current metrics to prometheus exposition format
+    /// The argument `dynamicGlobalLabels` is a text that will be added as labels globally to each metric.
+    /// The provided labels are added on top of the global labels provided in the constructor.
     public func renderExposition(dynamicGlobalLabels : Text) : Text {
       let timeStr = (now() / 1_000_000).toText();
       let globalLabels = concat(staticGlobalLabels, dynamicGlobalLabels);

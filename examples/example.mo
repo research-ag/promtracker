@@ -15,9 +15,11 @@ import Http "tiny_http";
 /// - cycles: a pull value of the cycles balance
 /// - instructions: a gauge of the cycles used to parse the last call arguments
 /// - bytes: a gauge of the size of the last call arguments
-persistent actor class Main() = self {
+persistent actor Main {
+
   // initialize the tracker
-  transient let pt = PT.PromTracker("", 65);
+  transient let labels = "canister=\"" # PT.shortName(Main) # "\"";
+  transient let pt = PT.PromTracker(labels, 65);
 
   // register a gauge with 10 buckets (plus the +Inf bucket)
   // bucket limits: 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600
@@ -69,10 +71,9 @@ persistent actor class Main() = self {
   // provide the "/metrics" endpoint
   public query func http_request(req : Http.Request) : async Http.Response {
     let ?path = req.url.split(#char '?').next() else return Http.render400();
-    let labels = "canister=\"" # PT.shortName(self) # "\"";
     switch (req.method, path) {
       case ("GET", "/metrics") {
-        Http.renderPlainText(pt.renderExposition(labels));
+        Http.renderPlainText(pt.renderExposition(""));
       };
       case (_) Http.render400();
     };
