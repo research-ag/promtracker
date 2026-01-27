@@ -26,15 +26,8 @@ module {
     Array.tabulate<Nat>(n, func(i) = a + (i + 1) * d);
   };
 
-  public let now : () -> Nat64 = func() = Prim.time();
-
-  public type PullValue = PullValueInterface;
-  
-  public type CounterValue = CounterInterface;
-  
-  public type GaugeValue = GaugeInterface;
-  
-  public type HeatmapValue = HeatmapInterface;
+  /// Default value for implicit `now` argument in the `PromTracker` constructor
+  public let now : () -> Nat64 = Prim.time;
 
   func concat(a : Text, b : Text) : Text {
     if (a == "") return b;
@@ -48,6 +41,7 @@ module {
     #heatmap : (Nat, Nat, [Nat]);
   };
 
+  /// Stable data type returned by `share()` function
   public type StableData = Types.Pure.List<(Text, StableDataItem)>;
 
   // The data in type Metric is (name, labels, value)
@@ -58,14 +52,14 @@ module {
   // - the function that returns the current time in nanoseconds as Nat64
   type WatermarkEnvironment = (Nat64, () -> Nat64);
 
-  /// An access interface for pull value
-  type PullValueInterface = {
+  /// The access interface for pull values
+  public type PullValue = {
     value : () -> Nat;
     remove : () -> ();
   };
 
-  /// An access interface for counter value
-  type CounterInterface = {
+  /// The access interface for counter values
+  public type Counter = {
     value : () -> Nat;
     set : (x : Nat) -> ();
     add : (x : Nat) -> ();
@@ -73,8 +67,8 @@ module {
     remove : () -> ();
   };
 
-  /// An access interface for gauge value
-  type GaugeInterface = {
+  /// The access interface for gauge values
+  public type Gauge = {
     value : () -> Nat;
     sum : () -> Nat;
     count : () -> Nat;
@@ -82,8 +76,8 @@ module {
     remove : () -> ();
   };
 
-  /// An access interface for heatmap value
-  type HeatmapInterface = {
+  /// The access interface for heatmap values
+  public type Heatmap = {
     sum : () -> Nat;
     count : () -> Nat;
     addEntry : (Nat) -> ();
@@ -127,7 +121,11 @@ module {
   /// ```
   ///
   /// For an executable example, see `examples/heartrate.mo`.
-  public class PromTracker(staticGlobalLabels : Text, watermarkResetIntervalSeconds : Nat, now : (implicit : () -> Nat64)) {
+  public class PromTracker(
+    staticGlobalLabels : Text,
+    watermarkResetIntervalSeconds : Nat,
+    now : (implicit : () -> Nat64),
+  ) {
     let env : WatermarkEnvironment = (
       watermarkResetIntervalSeconds.toNat64() * 1_000_000_000,
       now,
@@ -150,7 +148,7 @@ module {
     /// ```motoko
     /// let storageSize = tracker.addPullValue("storage_size", func() = storage.size());
     /// ```
-    public func addPullValue(prefix : Text, labels : Text, pull : () -> Nat) : PullValueInterface {
+    public func addPullValue(prefix : Text, labels : Text, pull : () -> Nat) : PullValue {
       // create and register the value
       let id = values.size();
       let value = PullValueClass(prefix, labels, pull);
@@ -175,7 +173,7 @@ module {
     /// requestsAmount.add(3);
     /// requestsAmount.add(1);
     /// ```
-    public func addCounter(prefix : Text, labels : Text, isStable : Bool) : CounterInterface {
+    public func addCounter(prefix : Text, labels : Text, isStable : Bool) : Counter {
       // create and register the value
       let id = values.size();
       let value = CounterValueClass(prefix, labels, isStable);
@@ -209,7 +207,7 @@ module {
     /// // request_duration_bucket{le="110"}: 1
     /// // request_duration_bucket{le="+Inf"} 2
     /// ```
-    public func addGauge(prefix : Text, labels : Text, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat], isStable : Bool) : GaugeInterface {
+    public func addGauge(prefix : Text, labels : Text, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat], isStable : Bool) : Gauge {
       // check order of buckets
       let l = bucketLimits;
       var i = 1;
@@ -261,7 +259,7 @@ module {
     /// // payload_sizes_count: 2
     /// // payload_sizes_sum: 70
     /// ```
-    public func addHeatmap(prefix : Text, labels : Text, isStable : Bool) : HeatmapInterface {
+    public func addHeatmap(prefix : Text, labels : Text, isStable : Bool) : Heatmap {
       // create and register the value
       let heatmapId = values.size();
       let heatmapValue = HeatmapValueClass(prefix, labels, isStable);
@@ -348,7 +346,7 @@ module {
       case (_) v.prefix # "{}" # v.labels;
     };
 
-    /// Dump all values, marked as stable, to stable data structure
+    /// Export all values, marked as stable, to stable data structure
     public func share() : StableData {
       var res : StableData = null;
       for (value in values.values()) {
@@ -369,7 +367,11 @@ module {
     public func unshare(data : StableData) : () {
       for (value in values.values()) {
         switch (value) {
-          case (?v) switch (data.find(func x = x.0 == stablePrefix(v))) { case (?data) v.unshare(data.1); case (_) {}; }; case (_) {};
+          case (?v) switch (data.find(func x = x.0 == stablePrefix(v))) {
+            case (?data) v.unshare(data.1);
+            case (_) {};
+          };
+          case (_) {};
         };
       };
     };
@@ -407,7 +409,11 @@ module {
     };
   };
 
-  class WatermarkTracker<T>(initialMark : T, isHigher : (new : T, old : T) -> Bool, resetInterval : Nat64) {
+  class WatermarkTracker<T>(
+    initialMark : T,
+    isHigher : (new : T, old : T) -> Bool,
+    resetInterval : Nat64,
+  ) {
     var lastMarkTime : Nat64 = 0;
     public var mark : T = initialMark;
     public func update(value : T, time : Nat64) {
@@ -417,7 +423,15 @@ module {
       };
     };
   };
-  class GaugeValueClass(prefix_ : Text, labels_ : Text, enableLowWM : Bool, enableHighWM : Bool, limits_ : [Nat], env : WatermarkEnvironment, isStable : Bool) {
+  class GaugeValueClass(
+    prefix_ : Text,
+    labels_ : Text,
+    enableLowWM : Bool,
+    enableHighWM : Bool,
+    limits_ : [Nat],
+    env : WatermarkEnvironment,
+    isStable : Bool,
+  ) {
     public let prefix = prefix_;
     public let labels = labels_;
 
