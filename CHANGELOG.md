@@ -1,5 +1,12 @@
 # PromTracker changelog
 
+## 0.6.2
+
+* Refactor code
+* New implicit argument `now` to pass a time function
+* Update examples
+* Add and update documentation
+
 ## 0.6.1
 
 * Switch from base to core 2.0.0
