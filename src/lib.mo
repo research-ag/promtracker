@@ -155,7 +155,7 @@ module {
       // create and register the value
       let id = values.size();
       let value = PullValueClass(prefix, labels, pull);
-      List.add(values, ?value);
+      values.add(?value);
       // return the interface
       {
         value = pull;
