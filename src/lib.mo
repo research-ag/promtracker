@@ -59,6 +59,8 @@ module {
   };
 
   /// The access interface for counter values
+  /// Warning: Counter silently prevents underflow on `sub` operation by setting the counter value to zero.
+  /// This can lead to unexpected values after such an event.
   public type Counter = {
     value : () -> Nat;
     set : (x : Nat) -> ();
@@ -77,6 +79,8 @@ module {
   };
 
   /// The access interface for heatmap values
+  /// Warning: `removeEntry` and `updateEntry` can trap if you are removing/updating
+  /// an entry that was not previously added.
   public type Heatmap = {
     sum : () -> Nat;
     count : () -> Nat;
@@ -122,6 +126,13 @@ module {
   ///
   /// The first argument `staticGlobalLabels` is a text that will be added as global labels to each metric.
   /// For example, if you want to add `canister="my_name"` as a label to each metric.
+  ///
+  /// The second argument `watermarkResetIntervalSeconds` specifies the interval in seconds after which
+  /// watermarks are reset. 
+  /// The interval should be slighly larger thatn the scraping interval used by your Prometheus scraper.
+  ///
+  /// The third argument `now` should not be provided because it is implicit and has a default value.
+  /// It is only used internally for testing purposes.
   ///
   /// For executable examples see the various examples in `examples/`.
   public class PromTracker(
@@ -215,7 +226,7 @@ module {
       let l = bucketLimits;
       var i = 1;
       while (i < l.size()) {
-        if (l[i - 1] >= l[i]) Prim.trap("Buckets have to be ordered and non-empty");
+        if (l[i - 1] >= l[i]) Prim.trap("Bucket limits have to be strictly increasing"); 
         i += 1;
       };
       // create and register the value
@@ -240,7 +251,7 @@ module {
 
     /// Register a HeatmapValue in the tracker.
     /// A HeatmapValue is stateful. Its values can be updated by adding/removing/updating particular entries.
-    /// A HeatmapValue does not store entries themselves. It is the responsibility of client code to update/remove them correctly
+    /// A HeatmapValue does not store entries themselves. It is the responsibility of client code to update/remove them correctly.
     /// A HeatmapValue stores histogram buckets counters with limits 0 and powers of 2. Buckets amount increases automatically
     /// when big entry is added and never shrinks.
     ///
