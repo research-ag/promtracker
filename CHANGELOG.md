@@ -6,6 +6,7 @@
 * New implicit argument `now` to pass a time function
 * Update examples
 * Add and update documentation
+* Protect CounterValue against underflows
 
 ## 0.6.1
 
