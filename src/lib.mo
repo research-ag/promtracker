@@ -399,7 +399,7 @@ module {
     public var value = 0;
 
     public func add(n : Nat) { value += n };
-    public func sub(n : Nat) { value -= n };
+    public func sub(n : Nat) { if (n > value) value := 0 else value -= n };
     public func set(n : Nat) { value := n };
 
     public func dump() : [Metric] = [(prefix, labels, value)];
