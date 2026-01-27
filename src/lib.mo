@@ -110,7 +110,7 @@ module {
   /// heartbeatDuration.update(14);
   /// ....
   /// // get prometheus metrics:
-  /// let text = tracker.renderExposition();
+  /// let text = tracker.renderExposition("");
   /// ```
   ///
   /// Expected output is:
@@ -129,7 +129,7 @@ module {
   ///
   /// The second argument `watermarkResetIntervalSeconds` specifies the interval in seconds after which
   /// watermarks are reset. 
-  /// The interval should be slighly larger thatn the scraping interval used by your Prometheus scraper.
+  /// The interval should be slightly larger thatn the scraping interval used by your Prometheus scraper.
   ///
   /// The third argument `now` should not be provided because it is implicit and has a default value.
   /// It is only used internally for testing purposes.
