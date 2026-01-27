@@ -1,5 +1,9 @@
 # PromTracker changelog
 
+## 0.6.3
+
+* Update documentation
+
 ## 0.6.2
 
 * Refactor code
