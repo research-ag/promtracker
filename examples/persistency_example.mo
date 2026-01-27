@@ -7,12 +7,13 @@ import PT "../src";
 import Http "tiny_http";
 
 /// This canister shows how to setup the metrics to preserve values through the canister upgrades
-persistent actor class Main() = self {
+persistent actor Main {
 
   // a stable variable which will store metrics states
   var ptData : PT.StableData = null;
 
-  transient let pt = PT.PromTracker("", 65);
+  transient let labels = "canister=\"" # PT.shortName(Main) # "\"";
+  transient let pt = PT.PromTracker(labels, 65);
 
   system func postupgrade() {
     // this must be called after all the metrics were added to the promtracker. Otherwise stable data will be ignored
@@ -64,10 +65,9 @@ persistent actor class Main() = self {
 
   public query func http_request(req : Http.Request) : async Http.Response {
     let ?path = req.url.split(#char '?').next() else return Http.render400();
-    let labels = "canister=\"" # PT.shortName(self) # "\"";
     switch (req.method, path) {
       case ("GET", "/metrics") {
-        Http.renderPlainText(pt.renderExposition(labels));
+        Http.renderPlainText(pt.renderExposition(""));
       };
       case (_) Http.render400();
     };

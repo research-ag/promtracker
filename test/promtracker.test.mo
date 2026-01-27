@@ -1,14 +1,18 @@
-import PT "../src/testable";
+import PT "../src/lib";
 
 import Suite "mo:motoko-matchers/Suite";
 import T "mo:motoko-matchers/Testable";
 import M "mo:motoko-matchers/Matchers";
+import Nat64 "mo:base/Nat64";
 
 let { run; test; suite } = Suite;
 
 var mockedTime : Nat64 = 123_000_000_000_000;
-var tracker = PT.PromTracker("", 5, func() = mockedTime);
-//PT.now := func() = mockedTime;
+
+// Re-define the default value for the implicit `now` parameter in the PromTracker constructor
+func now() : Nat64 = mockedTime; 
+
+var tracker = PT.PromTracker("", 5);
 
 /* --------------------------------------- */
 let testValue = tracker.addPullValue("test_val_0", "", func() = 150);
@@ -340,7 +344,7 @@ stableCounter2.remove();
 stableCounterDuplicatedKeyFoo.remove();
 stableCounterDuplicatedKeyBar.remove();
 
-let newTracker = PT.PromTracker("", 5, func() = mockedTime);
+let newTracker = PT.PromTracker("", 5);
 // the same gauge, state should be the same
 ignore newTracker.addGauge("stable_gauge1", "", #none, [150, 200], true);
 // gauge with changed buckets, buckets should be overwritten by stable data
