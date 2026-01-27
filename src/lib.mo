@@ -19,9 +19,9 @@ module {
     name;
   };
 
-  /// Helper function to create a list of bucket limits.
-  /// [a + d, .., a + n * d]
-  /// which represents n buckets plus the +Inf bucket.
+  /// Helper function to create a list of bucket limits:
+  /// `[a + d, .., a + n * d]`
+  /// which represents `n` buckets plus the `+Inf` bucket.
   public func limits(a : Nat, n : Nat, d : Nat) : [Nat] {
     Array.tabulate<Nat>(n, func(i) = a + (i + 1) * d);
   };
@@ -149,7 +149,7 @@ module {
     ///
     /// Example:
     /// ```motoko
-    /// let storageSize = tracker.addPullValue("storage_size", func() = storage.size());
+    /// let storageSize = tracker.addPullValue("storage_size", "", func() = storage.size());
     /// ```
     public func addPullValue(prefix : Text, labels : Text, pull : () -> Nat) : PullValue {
       // create and register the value
@@ -166,12 +166,12 @@ module {
     /// Register a CounterValue in the tracker.
     /// A CounterValue is stateful. It is either set to a concrete value or incremented by a delta.
     ///
-    /// A CounterValue can be declated stable by setting the second argument to `true`.
-    /// In this case it will preserved across canister upgrades.
+    /// A CounterValue can be declared stable by setting the third argument to `true`.
+    /// In this case it will be preserved across canister upgrades.
     ///
     /// Example:
     /// ```motoko
-    /// let requestsAmount = tracker.addCounter("requests_amount", true);
+    /// let requestsAmount = tracker.addCounter("requests_amount", "", true);
     /// ....
     /// requestsAmount.add(3);
     /// requestsAmount.add(1);
@@ -192,8 +192,8 @@ module {
     };
 
     /// Register a GaugeValue in the tracker.
-    /// A GaugeValue is stateful. It's value can be updated by overwriting it's previous value.
-    /// A GaugeValue keeps some information about it's history such as high and low watermarks
+    /// A GaugeValue is stateful. Its value can be updated by overwriting its previous value.
+    /// A GaugeValue keeps some information about its history such as high and low watermarks
     /// and histogram buckets counters that can be used to create heatmaps.
     ///
     /// If the 4-th argument is an empty list then no histogram buckets are tracked.
@@ -239,7 +239,7 @@ module {
     };
 
     /// Register a HeatmapValue in the tracker.
-    /// A HeatmapValue is stateful. It's values can be updated by adding/removing/updating particular entries.
+    /// A HeatmapValue is stateful. Its values can be updated by adding/removing/updating particular entries.
     /// A HeatmapValue does not store entries themselves. It is the responsibility of client code to update/remove them correctly
     /// A HeatmapValue stores histogram buckets counters with limits 0 and powers of 2. Buckets amount increases automatically
     /// when big entry is added and never shrinks.
@@ -301,6 +301,8 @@ module {
 
     func removeValueById_(id : Nat) : () = values.put(id, null);
 
+    /// Remove a previously added value by its prefix and labels
+    /// (both must match).
     public func removeValue(prefix : Text, labels : Text) {
       for ((id, value) in values.enumerate()) {
         switch (value) {
