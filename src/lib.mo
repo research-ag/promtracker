@@ -10,6 +10,8 @@ import Types "mo:core/Types";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
+import Http "internal/tiny_http";
+
 module {
   /// Helper function to get the first 5 characters of the canister's
   /// own canister id (by passing itself to this function).
@@ -96,6 +98,14 @@ module {
     updateEntry : (oldValue : Nat, newValue : Nat) -> ();
     remove : () -> ();
   };
+
+  /// Type for HTTP requests.
+  /// This type is used to declare the canister's http_request query function.
+  public type HttpReq = Http.Request;
+
+  /// Type for HTTP responses.
+  /// This type is used to declare the canister's http_request query function.
+  public type HttpResp = Http.Response;
 
   /// Value tracker, designed specifically for use as a source for Prometheus.
   ///
@@ -398,6 +408,29 @@ module {
           };
           case (_) {};
         };
+      };
+    };
+
+    /// Drop-in `http_request` function to handle "/metrics" endpoint
+    /// If your canister serves no other http endpoints expcept `/metrics` then
+    /// you can use this function as is. Just connect it to an async query
+    /// function of your canister as follows:
+    ///
+    /// ```motoko
+    /// public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
+    ///   pt.http_request(req);
+    /// };
+    /// ```
+    /// 
+    /// If you want to serve other endpoints as well then you have to write
+    /// your own http_request function and call `renderExposition` inside it.
+    public func http_request(req : Http.Request) : Http.Response {
+      let ?path = req.url.split(#char '?').next() else return Http.render400();
+      switch (req.method, path) {
+        case ("GET", "/metrics") {
+          Http.renderPlainText(renderExposition(""));
+        };
+        case (_) Http.render400();
       };
     };
   };

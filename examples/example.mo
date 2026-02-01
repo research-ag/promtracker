@@ -1,12 +1,9 @@
 import Array "mo:core/Array";
 import Cycles "mo:core/Cycles";
 import Nat64_ "mo:core/Nat64";
-import Text_ "mo:core/Text";
 import Prim "mo:prim";
 import Prng "mo:prng";
-
 import PT "../src";
-import Http "tiny_http";
 
 /// A canister, which answers by HTTP at route /metrics with a statistics in Prometheus format
 /// It provides the following metrics:
@@ -67,15 +64,8 @@ persistent actor Main {
     foo(Array.tabulate<Nat64>(len, func(n) = rng.next()));
   };
 
-  // provide the "/metrics" endpoint
-  public query func http_request(req : Http.Request) : async Http.Response {
-    let ?path = req.url.split(#char '?').next() else return Http.render400();
-    switch (req.method, path) {
-      case ("GET", "/metrics") {
-        Http.renderPlainText(pt.renderExposition(""));
-      };
-      case (_) Http.render400();
-    };
+  // Expose the `/metrics` endpoint
+  public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
+    pt.http_request(req);
   };
-
 };
