@@ -18,8 +18,7 @@ import Http "tiny_http";
 persistent actor Main {
 
   // initialize the tracker
-  transient let labels = "canister=\"" # PT.shortName(Main) # "\"";
-  transient let pt = PT.PromTracker(labels, 65);
+  transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
 
   // register a gauge with 10 buckets (plus the +Inf bucket)
   // bucket limits: 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600

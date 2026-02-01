@@ -12,8 +12,7 @@ persistent actor Main {
   // a stable variable which will store metrics states
   var ptData : PT.StableData = null;
 
-  transient let labels = "canister=\"" # PT.shortName(Main) # "\"";
-  transient let pt = PT.PromTracker(labels, 65);
+  transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
 
   system func postupgrade() {
     // this must be called after all the metrics were added to the promtracker. Otherwise stable data will be ignored

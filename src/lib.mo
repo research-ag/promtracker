@@ -19,6 +19,13 @@ module {
     name;
   };
 
+  /// Helper function to create a canister label in the form:
+  ///   `canister="abcde"`
+  /// if the canister id starts with `abcde-...`.
+  public func canisterLabel(a : actor {}) : Text {
+    "canister=\"" # shortName(a) # "\"";
+  };
+
   /// Helper function to create a list of bucket limits:
   /// `[a + d, .., a + n * d]`
   /// which represents `n` buckets plus the `+Inf` bucket.
