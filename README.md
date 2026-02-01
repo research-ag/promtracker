@@ -121,7 +121,7 @@ set on tracker instance and ability to bucket the values for histogram output. O
 pushed values, amount of pushes, lowest value during interval, highest value during interval, histogram buckets. 
 4th argument accepts edge values for buckets
 ```motoko
-    let requestDuration = tracker.addGauge("request_duration", "", #both, ?[50, 110], false);
+    let requestDuration = tracker.addGauge("request_duration", "", #both, [50, 110], false);
     requestDuration.update(123);
     requestDuration.update(101);
     // now it will output stats: 
