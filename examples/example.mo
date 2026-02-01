@@ -1,12 +1,9 @@
 import Array "mo:core/Array";
 import Cycles "mo:core/Cycles";
 import Nat64_ "mo:core/Nat64";
-import Text_ "mo:core/Text";
 import Prim "mo:prim";
 import Prng "mo:prng";
-
 import PT "../src";
-import Http "tiny_http";
 
 /// A canister, which answers by HTTP at route /metrics with a statistics in Prometheus format
 /// It provides the following metrics:
@@ -18,8 +15,7 @@ import Http "tiny_http";
 persistent actor Main {
 
   // initialize the tracker
-  transient let labels = "canister=\"" # PT.shortName(Main) # "\"";
-  transient let pt = PT.PromTracker(labels, 65);
+  transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
 
   // register a gauge with 10 buckets (plus the +Inf bucket)
   // bucket limits: 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600
@@ -68,15 +64,8 @@ persistent actor Main {
     foo(Array.tabulate<Nat64>(len, func(n) = rng.next()));
   };
 
-  // provide the "/metrics" endpoint
-  public query func http_request(req : Http.Request) : async Http.Response {
-    let ?path = req.url.split(#char '?').next() else return Http.render400();
-    switch (req.method, path) {
-      case ("GET", "/metrics") {
-        Http.renderPlainText(pt.renderExposition(""));
-      };
-      case (_) Http.render400();
-    };
+  // Expose the `/metrics` endpoint
+  public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
+    pt.http_request(req);
   };
-
 };

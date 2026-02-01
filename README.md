@@ -53,7 +53,7 @@ This value is a GaugeValue and it allows us to see the high and low watermarks a
 ### The PromTracker class
 Create tracker instance like this:
 ```motoko
-let tracker = PT.PromTracker(65);
+let tracker = PT.PromTracker("", 65);
 ```
 65 seconds is the recommended interval if prometheus pulls stats with interval 60 seconds. This value used to clear high 
 and low watermarks in gauge values, so each highest and lowest value during your canister lifecycle will
@@ -64,7 +64,7 @@ Add some values:
 let successfulHeartbeats = tracker.addCounter("successful_heartbeats", "", true);
 let failedHeartbeats = tracker.addCounter("failed_heartbeats", "", true);
 let heartbeats = tracker.addPullValue("heartbeats", "", func() = successfulHeartbeats.value() + failedHeartbeats.value());
-let heartbeatDuration = tracker.addGauge("heartbeat_duration", "", #both, null, false);
+let heartbeatDuration = tracker.addGauge("heartbeat_duration", "", #both, [1,2,3,5,10], false);
 ```
 
 Update values:
@@ -121,7 +121,7 @@ set on tracker instance and ability to bucket the values for histogram output. O
 pushed values, amount of pushes, lowest value during interval, highest value during interval, histogram buckets. 
 4th argument accepts edge values for buckets
 ```motoko
-    let requestDuration = tracker.addGauge("request_duration", "", #both, ?[50, 110], false);
+    let requestDuration = tracker.addGauge("request_duration", "", #both, [50, 110], false);
     requestDuration.update(123);
     requestDuration.update(101);
     // now it will output stats: 
