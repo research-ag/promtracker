@@ -1,6 +1,6 @@
 # PromTracker changelog
 
-## 7.0.0
+## 0.7.0
 
 * Add `http_request` function to `PromTracker` class
 * Add `canisterLabel` convenience function
