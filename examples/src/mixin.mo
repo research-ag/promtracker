@@ -1,7 +1,9 @@
-import PromTracker "../../src/mixins/PtMixin";
+import PromTracker "../../src/mixins/default";
+// In production use this instead:
+// import PromTracker "mo:promtracker/mixins/default";
 
-// The mixin defines the public http_request function.
-// If you want to define your own then you cannot use the mixin.
+// The `default` mixin defines the public http_request function.
+// If you want to define your own then use `base` mixin instead.
 
 persistent actor Main {
   include PromTracker(Main, true); // defines `transient let pt`

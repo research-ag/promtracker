@@ -31,3 +31,11 @@ jobs:
       - name: Build persistency example
         working-directory: ./examples
         run: icp build persistency
+
+      - name: Build mixin example
+        working-directory: ./examples
+        run: icp build mixin
+
+      - name: Build mixin-base example
+        working-directory: ./examples
+        run: icp build mixin-base

@@ -1,16 +1,15 @@
 import Cycles "mo:core/Cycles";
 import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
-import PT "../../src";
+import PT "../../src"; // "mo:promtracker"
+import PtMixin "../../src/mixins/default"; // "mo:promtracker/mixins/default"
 
 /// This canister shows how to setup the metrics to preserve values through the canister upgrades
 persistent actor Main {
-  transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
-
-  // Persist stream state and metrics across upgrades
-  var ptData = pt.share();
-  system func preupgrade() = ptData := pt.share();
-  system func postupgrade() = pt.unshare(ptData);
+  include PtMixin(Main, true);
+  // Hook up pre/postupgrade (optional)
+  system func preupgrade() { pt_preupgrade() };
+  system func postupgrade() { pt_postupgrade() };
 
   // pull values can not be stable as they do not store any data
   ignore pt.addPullValue("cycles", "", Cycles.balance);
@@ -55,10 +54,4 @@ persistent actor Main {
     counter0.add(1);
     counter1.add(1);
   };
-
-  // Expose the `/metrics` endpoint
-  public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
-    pt.http_request(req);
-  };
-
 };

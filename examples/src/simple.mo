@@ -3,7 +3,8 @@ import Cycles "mo:core/Cycles";
 import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
 import Prng "mo:prng";
-import PT "../../src";
+import PT "../../src"; // "mo:promtracker"
+import PtMixin "../../src/mixins/default"; // "mo:promtracker/mixins/default"
 
 /// A canister, which answers by HTTP at route /metrics with a statistics in Prometheus format
 /// It provides the following metrics:
@@ -13,9 +14,10 @@ import PT "../../src";
 /// - instructions: a gauge of the cycles used to parse the last call arguments
 /// - bytes: a gauge of the size of the last call arguments
 persistent actor Main {
-
-  // initialize the tracker
-  transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
+  include PtMixin(Main, true);
+  // Hook up pre/postupgrade (optional)
+  system func preupgrade() { pt_preupgrade() };
+  system func postupgrade() { pt_postupgrade() };
 
   // register a gauge with 10 buckets (plus the +Inf bucket)
   // bucket limits: 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600
@@ -64,8 +66,4 @@ persistent actor Main {
     foo(Array.tabulate<Nat64>(len, func(n) = rng.next()));
   };
 
-  // Expose the `/metrics` endpoint
-  public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
-    pt.http_request(req);
-  };
 };
