@@ -44,6 +44,11 @@ For updates, help, questions, feedback and other requests related to this packag
 
 ## Examples
 
+### Executable examples
+
+The `examples/` directory contains executable examples.
+For an overview and how to run them locally see: [examples/README.md](examples/README.md).
+
 ### Canister including http endpoint
 
 Our [example canister](examples)

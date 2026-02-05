@@ -1,79 +1,113 @@
-# Run
+# Executable examples to run locally
+## Run
 
-Requirements:
-
-* You need `mops` installed
-* You need a local `dfx` running in the background
-
-Run:
-
-```
-dfx deploy
+Install `icp` executable:
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dfinity/icp-cli/releases/download/v0.1.0-beta.6/icp-cli-installer.sh | sh
 ```
 
-The output should look like this:
+Install [node](https://nodejs.org/) (LTS recommended) including `npm`.
+Required for `mops`.
 
-```
-Deploying all canisters.
-Creating canisters...
-Creating canister heartrate...
-heartrate canister created with canister id: asrmz-lmaaa-aaaaa-qaaeq-cai
-Building canisters...
-Installing canisters...
-Creating UI canister on the local network.
-The UI canister on the "local" network is "a3shf-5eaaa-aaaaa-qaafa-cai"
-Installing code for canister heartrate, with canister ID asrmz-lmaaa-aaaaa-qaaeq-cai
-Deployed canisters.
-URLs:
-  Backend canister via Candid interface:
-    heartrate: http://127.0.0.1:4943/?canisterId=a3shf-5eaaa-aaaaa-qaafa-cai&id=asrmz-lmaaa-aaaaa-qaaeq-cai
+Install `mops`:
+```sh
+npm install -g ic-mops
+mops toolchain init
 ```
 
-Copy the canister id (in the example above `asrmz-lmaaa-aaaaa-qaaeq-cai`) and 
-point the browser to `http://asrmz-lmaaa-aaaaa-qaaeq-cai.localhost:4943/metrics` 
-
-The output will look like this:
-```
-time_sum{} 19590 1700221913679
-time_count{} 30 1700221913679
-time_high_watermark{} 692 1700221913679
-time_low_watermark{} 631 1700221913679
-time_bucket{le="500"} 0 1700221913679
-time_bucket{le="600"} 0 1700221913679
-time_bucket{le="700"} 30 1700221913679
-time_bucket{le="800"} 30 1700221913679
-time_bucket{le="900"} 30 1700221913679
-time_bucket{le="1000"} 30 1700221913679
-time_bucket{le="1100"} 30 1700221913679
-time_bucket{le="1200"} 30 1700221913679
-time_bucket{le="1300"} 30 1700221913679
-time_bucket{le="1400"} 30 1700221913679
-time_bucket{le="+Inf"} 30 1700221913679
+Change into the examples subdirectory:
+```sh
+cd examples
 ```
 
-For deployment on mainnet run:
+Then do:
+```sh
+icp network start -d
+icp deploy
+icp network stop
+```
 
+Two canisters get deployed called `simple` and `persistency`.
+Their canister ids will get printed.
+
+You can watch the metrics from a browser at a URL like this:
+http://txyno-ch777-77776-aaaaq-cai.raw.localhost:8000/metrics
+where `txyno-ch777-77776-aaaaq-cai` is replaced by the canister id
+that is shown during `icp deploy`.
+Refresh the page to see how the metrics have changed in the meantime.
+
+## Simple
+
+The simple example shows how to configure a PromTracker,
+how to add a PullValue and a Gauge,
+how provide the http endpoint.
+
+The metrics in the browser will look like this:
 ```
-dfx deploy --network ic
+time_last{canister="tz2ag"} 159 1770294366163
+time_sum{canister="tz2ag"} 4150 1770294366163
+time_count{canister="tz2ag"} 29 1770294366163
+time_high_watermark{canister="tz2ag"} 164 1770294366163
+time_low_watermark{canister="tz2ag"} 119 1770294366163
+time_bucket{canister="tz2ag",le="500"} 29 1770294366163
+time_bucket{canister="tz2ag",le="600"} 29 1770294366163
+time_bucket{canister="tz2ag",le="700"} 29 1770294366163
+time_bucket{canister="tz2ag",le="800"} 29 1770294366163
+time_bucket{canister="tz2ag",le="900"} 29 1770294366163
+time_bucket{canister="tz2ag",le="1000"} 29 1770294366163
+time_bucket{canister="tz2ag",le="1100"} 29 1770294366163
+time_bucket{canister="tz2ag",le="1200"} 29 1770294366163
+time_bucket{canister="tz2ag",le="1300"} 29 1770294366163
+time_bucket{canister="tz2ag",le="1400"} 29 1770294366163
+time_bucket{canister="tz2ag",le="1500"} 29 1770294366163
+time_bucket{canister="tz2ag",le="1600"} 29 1770294366163
+time_bucket{canister="tz2ag",le="+Inf"} 29 1770294366163
+cycles{canister="tz2ag"} 1069400377267 1770294366163
+instructions_last{canister="tz2ag"} 7573 1770294366163
+instructions_sum{canister="tz2ag"} 28603 1770294366163
+instructions_count{canister="tz2ag"} 4 1770294366163
+instructions_high_watermark{canister="tz2ag"} 7708 1770294366163
+instructions_low_watermark{canister="tz2ag"} 6661 1770294366163
+instructions_bucket{canister="tz2ag",le="4800"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="5000"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="5200"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="5400"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="5600"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="5800"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="6000"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="6200"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="6400"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="6600"} 0 1770294366163
+instructions_bucket{canister="tz2ag",le="+Inf"} 4 1770294366163
+bytes_last{canister="tz2ag"} 50 1770294366163
+bytes_sum{canister="tz2ag"} 152 1770294366163
+bytes_count{canister="tz2ag"} 4 1770294366163
+bytes_high_watermark{canister="tz2ag"} 50 1770294366163
+bytes_low_watermark{canister="tz2ag"} 26 1770294366163
+bytes_bucket{canister="tz2ag",le="10"} 0 1770294366163
+bytes_bucket{canister="tz2ag",le="20"} 0 1770294366163
+bytes_bucket{canister="tz2ag",le="30"} 2 1770294366163
+bytes_bucket{canister="tz2ag",le="40"} 2 1770294366163
+bytes_bucket{canister="tz2ag",le="50"} 4 1770294366163
+bytes_bucket{canister="tz2ag",le="60"} 4 1770294366163
+bytes_bucket{canister="tz2ag",le="70"} 4 1770294366163
+bytes_bucket{canister="tz2ag",le="80"} 4 1770294366163
+bytes_bucket{canister="tz2ag",le="90"} 4 1770294366163
+bytes_bucket{canister="tz2ag",le="100"} 4 1770294366163
+bytes_bucket{canister="tz2ag",le="+Inf"} 4 1770294366163
 ```
 
-and point the browser to `https://<canister id>.raw.icp0.io/metrics`.
-The output will look like this:
+## Persistency
 
+The persistency example show additionally how to make the metrics persist across canister upgrades.
+This can be configured selectively, on a per-metric basis.
+
+While you watch the metrics re-run this command:
+```sh
+icp deploy
 ```
-time_sum{} 149683 1700222126127
-time_count{} 160 1700222126127
-time_high_watermark{} 2119 1700222126127
-time_low_watermark{} 669 1700222126127
-time_bucket{le="500"} 0 1700222126127
-time_bucket{le="600"} 0 1700222126127
-time_bucket{le="700"} 7 1700222126127
-time_bucket{le="800"} 20 1700222126127
-time_bucket{le="900"} 76 1700222126127
-time_bucket{le="1000"} 127 1700222126127
-time_bucket{le="1100"} 149 1700222126127
-time_bucket{le="1200"} 155 1700222126127
-time_bucket{le="1300"} 156 1700222126127
-time_bucket{le="1400"} 156 1700222126127
-time_bucket{le="+Inf"} 160 1700222126127
-```
+This will upgrade both canisters.
+You can see in the browser how the metrics of the simple examples have been reset.
+In the persistency example you will see that some metrics reset
+and some didn't,
+just as they were configured to do.

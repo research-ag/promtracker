@@ -3,7 +3,7 @@ import Cycles "mo:core/Cycles";
 import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
 import Prng "mo:prng";
-import PT "../src";
+import PT "../../src";
 
 /// A canister, which answers by HTTP at route /metrics with a statistics in Prometheus format
 /// It provides the following metrics:
