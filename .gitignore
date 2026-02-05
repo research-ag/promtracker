@@ -1,6 +1,7 @@
-.dfx
-.mops
-.tmp
+.icp/
+.dfx/
+.mops/
+.tmp/
 .vessel/
 .vscode/
 .idea/

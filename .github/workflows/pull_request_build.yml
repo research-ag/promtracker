@@ -8,21 +8,28 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v6
       - uses: caffeinelabs/setup-mops@v1
-      - uses: dfinity/setup-dfx@main
-  
-      - name: Confirm dfx installation
-        run: dfx --version
-  
-      - name: Make sure moc is installed
+
+      - name: Install icp-cli
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dfinity/icp-cli/releases/download/v0.1.0-beta.6/icp-cli-installer.sh | sh
+
+      - name: Confirm icp-cli version
+        run: icp --version
+
+      - name: make sure moc is installed
         run: mops toolchain bin moc || mops toolchain use moc latest
-  
-      - name: Run mops test
+
+      - name: run tests
         run: mops test
 
-      - name: Build example
-        working-directory: ./examples
-        run: dfx build --check
+      - name: Build simple example with icp-cli
+        working-directory: ./examples/simple
+        run: |
+          icp build simple
+
+      - name: Build persistency example with icp-cli
+        working-directory: ./examples/persistency
+        run: |
+          icp build persistency
