@@ -5,20 +5,12 @@ import PT "../src";
 
 /// This canister shows how to setup the metrics to preserve values through the canister upgrades
 persistent actor Main {
-
-  // a stable variable which will store metrics states
-  var ptData : PT.StableData = null;
-
   transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
 
-  system func postupgrade() {
-    // this must be called after all the metrics were added to the promtracker. Otherwise stable data will be ignored
-    pt.unshare(ptData);
-  };
-
-  system func preupgrade() {
-    ptData := pt.share();
-  };
+  // Persist stream state and metrics across upgrades
+  var ptData = pt.share();
+  system func preupgrade() = ptData := pt.share();
+  system func postupgrade() = pt.unshare(ptData);
 
   // pull values can not be stable as they do not store any data
   ignore pt.addPullValue("cycles", "", Cycles.balance);
@@ -29,19 +21,19 @@ persistent actor Main {
   transient let counter1 = pt.addCounter("counter", "is_stable=\"true\"", true);
 
   // same for gauges:
-  transient let gauge0 = pt.addGauge("gauge", "is_stable=\"false\"", #both, PT.limits(0, 10, 10), false);
-  transient let gauge1 = pt.addGauge("gauge", "is_stable=\"true\"", #both, PT.limits(0, 10, 10), true);
+  transient let gauge0 = pt.addGauge("gauge", "is_stable=\"false\"", #both, PT.limits(100, 10, 10), false);
+  transient let gauge1 = pt.addGauge("gauge", "is_stable=\"true\"", #both, PT.limits(100, 10, 10), true);
 
   // and heatmaps:
   transient let heatmap0 = pt.addHeatmap("heatmap", "is_stable=\"false\"", false);
   transient let heatmap1 = pt.addHeatmap("heatmap", "is_stable=\"true\"", true);
 
-  public func incCounter(n : Nat) : () {
+  public func incCounter(n : Nat) {
     counter0.add(n);
     counter1.add(n);
   };
 
-  public func addToHeatmap(v : Nat) : () {
+  public func addToHeatmap(v : Nat) {
     heatmap0.addEntry(v);
     heatmap1.addEntry(v);
   };
@@ -51,12 +43,17 @@ persistent actor Main {
     let now = (Prim.time() / 1000000).toNat();
     switch (last_time) {
       case (?last) {
-        gauge0.update(now - last : Nat);
-        gauge1.update(now - last : Nat);
+        let v : Nat = now - last;
+        gauge0.update(v);
+        gauge1.update(v);
+        heatmap0.addEntry(v);
+        heatmap1.addEntry(v);
       };
       case (_) {};
     };
     last_time := ?now;
+    counter0.add(1);
+    counter1.add(1);
   };
 
   // Expose the `/metrics` endpoint
