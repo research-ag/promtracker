@@ -1,5 +1,10 @@
 # PromTracker changelog
 
+## 0.7.1
+
+* Update examples
+* Fix documentation
+
 ## 0.7.0
 
 * Add `http_request` function to `PromTracker` class
