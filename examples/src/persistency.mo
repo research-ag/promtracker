@@ -1,7 +1,7 @@
 import Cycles "mo:core/Cycles";
 import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
-import PT "../src";
+import PT "../../src";
 
 /// This canister shows how to setup the metrics to preserve values through the canister upgrades
 persistent actor Main {
