@@ -24,18 +24,22 @@ jobs:
       - name: run tests
         run: mops test
 
-      - name: Build simple example
+      - name: Build minimal example
         working-directory: ./examples
-        run: icp build simple
+        run: icp build minimal
 
-      - name: Build persistency example
+      - name: Build main example
         working-directory: ./examples
-        run: icp build persistency
+        run: icp build main
 
-      - name: Build mixin example
+      - name: Build advanced example
         working-directory: ./examples
-        run: icp build mixin
+        run: icp build advanced
 
-      - name: Build mixin-base example
+      - name: Build heatmap example
         working-directory: ./examples
-        run: icp build mixin-base
+        run: icp build heatmap
+
+      - name: Build http example
+        working-directory: ./examples
+        run: icp build http

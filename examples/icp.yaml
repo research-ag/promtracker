@@ -1,31 +1,39 @@
 # yaml-language-server: $schema=https://github.com/dfinity/icp-cli/raw/refs/tags/v0.1.0-beta.2/docs/schemas/icp-yaml-schema.json
 
 canisters:
-  - name: simple
+  - name: minimal
     build:
       steps:
         - type: script
           commands:
             - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/simple.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
-  - name: persistency
+            - $(mops toolchain bin moc) src/minimal.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+  - name: main
     build:
       steps:
         - type: script
           commands:
             - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/persistency.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
-  - name: mixin
+            - $(mops toolchain bin moc) src/main.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+  - name: advanced
     build:
       steps:
         - type: script
           commands:
             - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/mixin.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
-  - name: mixin-base
+            - $(mops toolchain bin moc) src/advanced.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+  - name: heatmap
     build:
       steps:
         - type: script
           commands:
             - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/mixin-base.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+            - $(mops toolchain bin moc) src/heatmap.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+
+  - name: http
+    build:
+      steps:
+        - type: script
+          commands:
+            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
+            - $(mops toolchain bin moc) src/http.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
