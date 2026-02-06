@@ -18,5 +18,4 @@ persistent actor Main {
   public query func http_request(req : HttpReq) : async HttpResp {
     pt.http_request(req);
   };
-
 };
