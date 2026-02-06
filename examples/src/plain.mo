@@ -5,7 +5,7 @@ import PT "../../src";
 // This example shows how to use PromTracker in plain mode, without mixins.
 persistent actor Main {
   transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
-  var ptStableData = pt.share();
+  var ptStableData : PT.StableData = null;
   system func preupgrade() { ptStableData := pt.share() };
   system func postupgrade() { pt.unshare(ptStableData) };
 

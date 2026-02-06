@@ -16,7 +16,7 @@ import PT "../";
 /// * withSystemValues: if true, system values (CPU, memory, cycles) are added to the tracker
 mixin(self : actor {}, withSystemValues : Bool) {
   transient let pt = PT.PromTracker(PT.canisterLabel(self), 65);
-  var ptStableData = pt.share();
+  var ptStableData : PT.StableData = null;
 
   if (withSystemValues) pt.addSystemValues();
 

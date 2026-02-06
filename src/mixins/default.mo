@@ -15,12 +15,12 @@ import PT "../";
 /// * withSystemValues: if true, system values (CPU, memory, cycles) are added to the tracker
 mixin(self : actor {}, withSystemValues : Bool) {
   transient let pt = PT.PromTracker(PT.canisterLabel(self), 65);
+  var ptStableData : PT.StableData = null;
 
-  var pt_stableData = pt.share();
   if (withSystemValues) pt.addSystemValues();
 
-  func pt_preupgrade() = pt_stableData := pt.share();
-  func pt_postupgrade() = pt.unshare(pt_stableData);
+  func pt_preupgrade() = ptStableData := pt.share();
+  func pt_postupgrade() = pt.unshare(ptStableData);
   // Expose the `/metrics` endpoint
   public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
     pt.http_request(req);
