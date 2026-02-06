@@ -17,9 +17,9 @@ These values are explicitly updated by events in canister code.
 
 A counter is normally an ever-increasing counter such as the number of total requests received. The scraper only sees its last value. The values between scraping events are considered not important. 
 
-A gauge is a more frequently changing and normally fluctuating value such as the size of the last request, time between last two events, etc. The values between scraping events are considered important. That's why a gauge value allows to automatically track the high and low watermark between scraping events as well as a histogram. It also allowst to export histograms taken over time can be used to create heatmaps.
+A gauge captures a more frequently changing and normally fluctuating value such as the size of the last request, time between last two events, etc. The values between (as opposed to at) scraping events are considered important. That's why a gauge value allows to automatic tracking of the high and low watermark between scraping events as well as a histogram. It also allows exporting histograms (captured over time) that can be used to create heatmaps in Grafana.
 
-The third value type is the `PullValue` which is stateless version of a counter. 
+The third value type is the `PullValue` which is a stateless version of a counter. 
 It is not explicitly updated by events in canister code.
 Instead, the value is calculated on the fly when the scraping happens. 
 This type is convenient for exposing a canister's system state such a cycle balance and memory size because those are already tracked by the runtime or management canister and canister code does not need to update them explicitly.

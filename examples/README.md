@@ -33,7 +33,7 @@ You can watch the metrics from a browser at a URL like this:
 http://txyno-ch777-77776-aaaaq-cai.raw.localhost:8000/metrics
 where `txyno-ch777-77776-aaaaq-cai` is replaced by the canister id
 that is shown during `icp deploy`.
-Refresh the page to see how the metrics have changed in the meantime.
+Refresh the page to see how the metrics have changed since then.
 
 ## Minimal
 
@@ -44,7 +44,7 @@ Very useful already for minimal health monitoring which every canister in produc
 It requires only one code line.
 
 Metrics render like this:
-```
+```text
 cycles_balance{canister="tl4x7"} 1497180100444 1770400321653
 canister_version{canister="tl4x7"} 2 1770400321653
 rts_memory_size{canister="tl4x7"} 5308416 1770400321653
@@ -72,7 +72,7 @@ In the case of Gauges it shows how to define buckets so that the Gauge can produ
 It also shows how to persist Counter and Gauge across canister upgrades.
 
 Metrics render like this:
-```
+```text
 cycles{canister="tz2ag"} 1453739534899 1770400540297
 heartbeats{canister="tz2ag",is_stable="false"} 120 1770400540297
 heartbeats{canister="tz2ag",is_stable="true"} 120 1770400540297
@@ -105,7 +105,7 @@ to track:
 * size of call arguments delivered to other update calls
 
 The metrics render like this:
-```
+```text
 instructions_last{canister="tc74d"} 7573 1770400881392
 instructions_sum{canister="tc74d"} 297487 1770400881392
 instructions_count{canister="tc74d"} 38 1770400881392
@@ -142,7 +142,7 @@ Uses `mixin/default`.
 Demonstrates the Heatmap metric type which is similar to a Gauge but has automated (exponential) bucket creation built in.
 
 The metrics render like this:
-```
+```text
 cycles_balance{canister="t63gs"} 1408810709859 1770401064297
 canister_version{canister="t63gs"} 17105 1770401064297
 rts_memory_size{canister="t63gs"} 15597568 1770401064297
@@ -183,7 +183,7 @@ This example shows how to use promtracker if the canister wants to simultaneousl
 It shows how to define the custom `http_request` handler to which other routes can be added.
 
 The metrics render like this:
-```
+```text
 counter{canister="tm5rl"} 6056 1770401117142
 ```
 
@@ -195,6 +195,6 @@ Shows how to use PromTracker without mixins, including manual sharing of stable
 state across upgrades and a custom `http_request` handler.
 
 The metrics render like this:
-```
+```text
 counter{canister="tf62x"} 6321 1770401156396
 ```
