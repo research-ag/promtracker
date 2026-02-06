@@ -17,9 +17,9 @@ These values are explicitly updated by events in canister code.
 
 A counter is normally an ever-increasing counter such as the number of total requests received. The scraper only sees its last value. The values between scraping events are considered not important. 
 
-A gauge is a more frequently changing and normally fluctuating value such as the size of the last request, time between last two events, etc. The values between scraping events are considered important. That's why a gauge value allows to automatically track the high and low watermark between scraping events as well as a histogram. It also allowst to export histograms taken over time can be used to create heatmaps.
+A gauge captures a more frequently changing and normally fluctuating value such as the size of the last request, time between last two events, etc. The values between (as opposed to at) scraping events are considered important. That's why a gauge value allows to automatic tracking of the high and low watermark between scraping events as well as a histogram. It also allows exporting histograms (captured over time) that can be used to create heatmaps in Grafana.
 
-The third value type is the `PullValue` which is stateless version of a counter. 
+The third value type is the `PullValue` which is a stateless version of a counter. 
 It is not explicitly updated by events in canister code.
 Instead, the value is calculated on the fly when the scraping happens. 
 This type is convenient for exposing a canister's system state such a cycle balance and memory size because those are already tracked by the runtime or management canister and canister code does not need to update them explicitly.
@@ -58,7 +58,7 @@ This value is a GaugeValue and it allows us to see the high and low watermarks a
 ### The PromTracker class
 Create tracker instance like this:
 ```motoko
-let tracker = PT.PromTracker("", 65);
+transient let tracker = PT.PromTracker("", 65);
 ```
 65 seconds is the recommended interval if prometheus pulls stats with interval 60 seconds. This value used to clear high 
 and low watermarks in gauge values, so each highest and lowest value during your canister lifecycle will
@@ -66,10 +66,10 @@ be reflected in the prometheus data.
 
 Add some values:
 ```motoko
-let successfulHeartbeats = tracker.addCounter("successful_heartbeats", "", true);
-let failedHeartbeats = tracker.addCounter("failed_heartbeats", "", true);
-let heartbeats = tracker.addPullValue("heartbeats", "", func() = successfulHeartbeats.value() + failedHeartbeats.value());
-let heartbeatDuration = tracker.addGauge("heartbeat_duration", "", #both, [1,2,3,5,10], false);
+transient let successfulHeartbeats = tracker.addCounter("successful_heartbeats", "", true);
+transient let failedHeartbeats = tracker.addCounter("failed_heartbeats", "", true);
+transient let heartbeats = tracker.addPullValue("heartbeats", "", func() = successfulHeartbeats.value() + failedHeartbeats.value());
+transient let heartbeatDuration = tracker.addGauge("heartbeat_duration", "", #both, [1,2,3,5,10], false);
 ```
 
 Update values:
@@ -83,34 +83,30 @@ heartbeatDuration.update(14);
 
 Get prometheus exposition:
 ```motoko
-let text : Text = tracker.renderStats();
+let text : Text = tracker.renderExposition("");
 ```
 
 Make stats surviving canister upgrades:
 ```motoko
-stable var statsData : PT.StableData = null;
+var statsData : PT.StableData = null;
 
-system func preupgrade() {
-  statsData := tracker.share();
-};
+system func preupgrade() { statsData := tracker.share() };
 
-system func postupgrade() {
-  tracker.unshare(statsData);
-};
+system func postupgrade() { tracker.unshare(statsData) };
   
 ```
 
 ### PullValue
 A stateless value interface, which runs the provided getter function on demand.
 ```motoko
-let storageSize = tracker.addPullValue("storage_size", "", func() = storage.size());
+transient let storageSize = tracker.addPullValue("storage_size", "", func() = storage.size());
 ```
 
 ### CounterValue
-An accumulating counter value interface. Second argument is a flag whether you want to save the state of this value
+An accumulating counter value interface. Third argument is a flag whether you want to save the state of this value
 to stable data using share/unshare api
 ```motoko
-    let requestsAmount = tracker.addCounter("requests_amount", "", false);
+    transient let requestsAmount = tracker.addCounter("requests_amount", "", false);
     // now it will output 0
     requestsAmount.add(3);
     // it will output 3
@@ -126,14 +122,13 @@ set on tracker instance and ability to bucket the values for histogram output. O
 pushed values, amount of pushes, lowest value during interval, highest value during interval, histogram buckets. 
 4th argument accepts edge values for buckets
 ```motoko
-    let requestDuration = tracker.addGauge("request_duration", "", #both, [50, 110], false);
+    transient let requestDuration = tracker.addGauge("request_duration", "", #both, [50, 110], false);
     requestDuration.update(123);
     requestDuration.update(101);
     // now it will output stats: 
     // request_duration_sum: 224
     // request_duration_count: 2
     // request_duration_high_watermark: 123
-    // request_duration_low_watermark: 101
     // request_duration_low_watermark: 101
     // request_duration_bucket{le="50"}: 0
     // request_duration_bucket{le="110"}: 1
@@ -142,7 +137,9 @@ pushed values, amount of pushes, lowest value during interval, highest value dur
 
 ### System metrics
 PromTracker has the ability to extend your prometheus exposition output with these pull values:
-1) `cycles_balance` // Cycles.balance()
+
+1) `cycles_balance` // Prim.cyclesBalance()
+1) `canister_version` // Prim.canisterVersion()
 1) `rts_memory_size` // Prim.rts_memory_size()
 1) `rts_heap_size` // Prim.rts_heap_size()
 1) `rts_total_allocation` // Prim.rts_total_allocation()
@@ -156,16 +153,15 @@ PromTracker has the ability to extend your prometheus exposition output with the
 1) `rts_upgrade_instructions` // Prim.rts_upgrade_instructions()
 1) `rts_stable_memory_size` // Prim.rts_stable_memory_size()
 1) `rts_logical_stable_memory_size` // Prim.rts_logical_stable_memory_size()
-1) `canister_version` // Prim.canisterVersion()
 
 To register them, call function:
 ```motoko
-metrics.addSystemValues();
+tracker.addSystemValues();
 ```
 
 ## Copyright
 
-MR Research AG, 2023 - 2025
+MR Research AG, 2023 - 2026
 
 ## Authors
 

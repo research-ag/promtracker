@@ -1,5 +1,4 @@
 import Array "mo:core/Array";
-import Cycles "mo:core/Cycles";
 import List "mo:core/List";
 import Nat_ "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
@@ -306,10 +305,14 @@ module {
       };
     };
 
-    /// Add system metrics, such as cycle balance, memory size, heap size etc.
+    /// Add system metrics, such as:
+    ///
+    /// * Cycle balance
+    /// * Canister version (state nonce)
+    /// * All numerical `rts_` values (memory, heap sizes, etc.)
     public func addSystemValues() {
-      ignore addPullValue("cycles_balance", "", func() = Cycles.balance());
-
+      ignore addPullValue("cycles_balance", "", func() = Prim.cyclesBalance());
+      ignore addPullValue("canister_version", "", func() = Prim.canisterVersion().toNat());
       ignore addPullValue("rts_memory_size", "", func() = Prim.rts_memory_size());
       ignore addPullValue("rts_heap_size", "", func() = Prim.rts_heap_size());
       ignore addPullValue("rts_total_allocation", "", func() = Prim.rts_total_allocation());
@@ -323,8 +326,6 @@ module {
       ignore addPullValue("rts_upgrade_instructions", "", func() = Prim.rts_upgrade_instructions());
       ignore addPullValue("rts_stable_memory_size", "", func() = Prim.rts_stable_memory_size());
       ignore addPullValue("rts_logical_stable_memory_size", "", func() = Prim.rts_logical_stable_memory_size());
-
-      ignore addPullValue("canister_version", "", func() = Prim.canisterVersion().toNat());
     };
 
     func removeValueById_(id : Nat) : () = values.put(id, null);
