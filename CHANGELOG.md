@@ -1,5 +1,11 @@
 # PromTracker changelog
 
+## 0.9.0
+
+* Add mixins/default
+* Add mixins/base
+* Add comprehensive examples
+
 ## 0.8.0
 
 * Add mixins/PtMixin
