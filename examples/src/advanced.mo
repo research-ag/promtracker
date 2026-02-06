@@ -12,9 +12,6 @@ import Util "../../src";
 /// A canister, which exposes Prometheus metrics via HTTP at route `/metrics`
 /// It provides the following metrics:
 ///
-/// - cycles: a pull value of the cycles balance
-/// - counter: a heartbeat counter 
-/// - time: a gauge of the time between heartbeats
 /// - instructions: a gauge of the cycles used to parse the last call arguments
 /// - bytes: a gauge of the size of the last call arguments
 persistent actor Main {
@@ -28,7 +25,7 @@ persistent actor Main {
 
   // Example of a Gauge: instructions used to pass the last call arguments
   // Register a gauge with 15 buckets (plus the +Inf bucket)
-  // Bucket limits are: 2200, 2300, 2400, ..., 3400, 3500
+  // Bucket limits are: 2300, 2400, 2500, ..., 3600, 3700
   // Note: For mainnet deployment use `Util.limits(4600, 10, 200)`
   // Argument `false` means that the gauge is reset on canister upgrade
   transient let instrGauge = pt.addGauge("instructions", "", #both, Util.limits(2200, 15, 100), false);

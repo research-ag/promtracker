@@ -12,7 +12,7 @@ persistent actor Main {
   system func postupgrade() { pt_postupgrade() };
 
   // Heatmap
-  transient let heatmap = pt.addHeatmap("heatmap", "is_stable=\"false\"", true);
+  transient let heatmap = pt.addHeatmap("heatmap", "", true);
 
   transient var last_time : ?Int = null;
   system func heartbeat() : async () {

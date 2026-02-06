@@ -28,7 +28,7 @@ persistent actor Main {
 
   // Examples of Counters: heartbeat counters
   // First counter resets on canister upgrade
-  // Second counter counts persists through upgrades, shows heartbeats since last reinstall
+  // Second counter persists through upgrades, shows heartbeats since last reinstall
   transient let counter0 = pt.addCounter("heartbeats", "is_stable=\"false\"", false);
   transient let counter1 = pt.addCounter("heartbeats", "is_stable=\"true\"", true);
 
