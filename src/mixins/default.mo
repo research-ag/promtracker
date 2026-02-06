@@ -21,7 +21,8 @@ mixin(self : actor {}, withSystemValues : Bool) {
 
   func pt_preupgrade() = ptStableData := pt.share();
   func pt_postupgrade() = pt.unshare(ptStableData);
-  // Expose the `/metrics` endpoint
+
+  /// Expose the `/metrics` endpoint
   public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
     pt.http_request(req);
   };
