@@ -33,11 +33,13 @@ persistent actor Main {
   transient let counter1 = pt.addCounter("heartbeats", "is_stable=\"true\"", true);
 
   // Example of a Gauge: time between heartbeats 
-  // Register a gauge with 12 buckets (plus the +Inf bucket)
-  // Bucket limits are: 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600
+  // Register a gauge with 10 buckets (plus the +Inf bucket)
+  // Bucket limits are: 110, 120, 130, .., 200 
   // Argument `#both` enables high and low watermarks for the gauge
   // Argument `true` means that the gauge persists across canister upgrade
-  transient let timeGauge = pt.addGauge("time", "", #both, Util.limits(400, 12, 100), true);
+  // Note that the bucket limits are chosen for local deployment. On mainnet
+  // we would use larger values.
+  transient let timeGauge = pt.addGauge("time", "", #both, Util.limits(100, 10, 10), true);
 
   // We update a gauge in heartbeat
   // gauge value = time delta between last two heartbeats in milliseconds

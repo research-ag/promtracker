@@ -24,11 +24,10 @@ persistent actor Main {
   system func postupgrade() { pt_postupgrade() };
 
   // Example of a Gauge: instructions used to pass the last call arguments
-  // Register a gauge with 15 buckets (plus the +Inf bucket)
-  // Bucket limits are: 2300, 2400, 2500, ..., 3600, 3700
-  // Note: For mainnet deployment use `Util.limits(4600, 10, 200)`
+  // Register a gauge with 5 buckets (plus the +Inf bucket)
+  // Bucket limits are: 6000, 7000, 8000, 9000, 10000
   // Argument `false` means that the gauge is reset on canister upgrade
-  transient let instrGauge = pt.addGauge("instructions", "", #both, Util.limits(2200, 15, 100), false);
+  transient let instrGauge = pt.addGauge("instructions", "", #both, Util.limits(5000, 5, 1000), false);
 
   // Example of a Gauge: size of the last call arguments
   // Register a gauge with 10 buckets (plus the +Inf bucket)

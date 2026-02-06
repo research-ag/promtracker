@@ -27,8 +27,7 @@ icp deploy
 icp network stop
 ```
 
-Two canisters get deployed called `simple` and `persistency`.
-Their canister ids will get printed.
+The example canisters will get deployed and their canister ids will be printed.
 
 You can watch the metrics from a browser at a URL like this:
 http://txyno-ch777-77776-aaaaq-cai.raw.localhost:8000/metrics
@@ -36,78 +35,166 @@ where `txyno-ch777-77776-aaaaq-cai` is replaced by the canister id
 that is shown during `icp deploy`.
 Refresh the page to see how the metrics have changed in the meantime.
 
-## Simple
+## Minimal
 
-The simple example shows how to configure a PromTracker,
-how to add a PullValue and a Gauge,
-how provide the http endpoint.
+Uses `mixin/default`.
 
-The metrics in the browser will look like this:
+Demonstrates a minimal setup to expose only default system metrics.
+Very useful already for minimal health monitoring which every canister in production should have.
+It requires only one code line.
+
+Metrics render like this:
 ```
-time_last{canister="tz2ag"} 159 1770294366163
-time_sum{canister="tz2ag"} 4150 1770294366163
-time_count{canister="tz2ag"} 29 1770294366163
-time_high_watermark{canister="tz2ag"} 164 1770294366163
-time_low_watermark{canister="tz2ag"} 119 1770294366163
-time_bucket{canister="tz2ag",le="500"} 29 1770294366163
-time_bucket{canister="tz2ag",le="600"} 29 1770294366163
-time_bucket{canister="tz2ag",le="700"} 29 1770294366163
-time_bucket{canister="tz2ag",le="800"} 29 1770294366163
-time_bucket{canister="tz2ag",le="900"} 29 1770294366163
-time_bucket{canister="tz2ag",le="1000"} 29 1770294366163
-time_bucket{canister="tz2ag",le="1100"} 29 1770294366163
-time_bucket{canister="tz2ag",le="1200"} 29 1770294366163
-time_bucket{canister="tz2ag",le="1300"} 29 1770294366163
-time_bucket{canister="tz2ag",le="1400"} 29 1770294366163
-time_bucket{canister="tz2ag",le="1500"} 29 1770294366163
-time_bucket{canister="tz2ag",le="1600"} 29 1770294366163
-time_bucket{canister="tz2ag",le="+Inf"} 29 1770294366163
-cycles{canister="tz2ag"} 1069400377267 1770294366163
-instructions_last{canister="tz2ag"} 7573 1770294366163
-instructions_sum{canister="tz2ag"} 28603 1770294366163
-instructions_count{canister="tz2ag"} 4 1770294366163
-instructions_high_watermark{canister="tz2ag"} 7708 1770294366163
-instructions_low_watermark{canister="tz2ag"} 6661 1770294366163
-instructions_bucket{canister="tz2ag",le="4800"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="5000"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="5200"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="5400"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="5600"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="5800"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="6000"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="6200"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="6400"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="6600"} 0 1770294366163
-instructions_bucket{canister="tz2ag",le="+Inf"} 4 1770294366163
-bytes_last{canister="tz2ag"} 50 1770294366163
-bytes_sum{canister="tz2ag"} 152 1770294366163
-bytes_count{canister="tz2ag"} 4 1770294366163
-bytes_high_watermark{canister="tz2ag"} 50 1770294366163
-bytes_low_watermark{canister="tz2ag"} 26 1770294366163
-bytes_bucket{canister="tz2ag",le="10"} 0 1770294366163
-bytes_bucket{canister="tz2ag",le="20"} 0 1770294366163
-bytes_bucket{canister="tz2ag",le="30"} 2 1770294366163
-bytes_bucket{canister="tz2ag",le="40"} 2 1770294366163
-bytes_bucket{canister="tz2ag",le="50"} 4 1770294366163
-bytes_bucket{canister="tz2ag",le="60"} 4 1770294366163
-bytes_bucket{canister="tz2ag",le="70"} 4 1770294366163
-bytes_bucket{canister="tz2ag",le="80"} 4 1770294366163
-bytes_bucket{canister="tz2ag",le="90"} 4 1770294366163
-bytes_bucket{canister="tz2ag",le="100"} 4 1770294366163
-bytes_bucket{canister="tz2ag",le="+Inf"} 4 1770294366163
+cycles_balance{canister="tl4x7"} 1497180100444 1770400321653
+canister_version{canister="tl4x7"} 2 1770400321653
+rts_memory_size{canister="tl4x7"} 5308416 1770400321653
+rts_heap_size{canister="tl4x7"} 5274976 1770400321653
+rts_total_allocation{canister="tl4x7"} 5275208 1770400321653
+rts_reclaimed{canister="tl4x7"} 0 1770400321653
+rts_max_live_size{canister="tl4x7"} 0 1770400321653
+rts_max_stack_size{canister="tl4x7"} 4194304 1770400321653
+rts_callback_table_count{canister="tl4x7"} 0 1770400321653
+rts_callback_table_size{canister="tl4x7"} 0 1770400321653
+rts_mutator_instructions{canister="tl4x7"} 0 1770400321653
+rts_collector_instructions{canister="tl4x7"} 0 1770400321653
+rts_upgrade_instructions{canister="tl4x7"} 7320 1770400321653
+rts_stable_memory_size{canister="tl4x7"} 0 1770400321653
+rts_logical_stable_memory_size{canister="tl4x7"} 0 1770400321653
 ```
 
-## Persistency
+## Main
 
-The persistency example show additionally how to make the metrics persist across canister upgrades.
-This can be configured selectively, on a per-metric basis.
+Uses `mixin/default`.
 
-While you watch the metrics re-run this command:
-```sh
-icp deploy
+Demonstrates the use of the three main metric types PullValue, Counter and Gauge.
+In the case of Gauges it shows how to define buckets so that the Gauge can produce a heatmap in Grafana.
+
+It also shows how to persist Counter and Gauge across canister upgrades.
+
+Metrics render like this:
 ```
-This will upgrade both canisters.
-You can see in the browser how the metrics of the simple examples have been reset.
-In the persistency example you will see that some metrics reset
-and some didn't,
-just as they were configured to do.
+cycles{canister="tz2ag"} 1453739534899 1770400540297
+heartbeats{canister="tz2ag",is_stable="false"} 120 1770400540297
+heartbeats{canister="tz2ag",is_stable="true"} 120 1770400540297
+time_last{canister="tz2ag"} 180 1770400540297
+time_sum{canister="tz2ag"} 18017 1770400540297
+time_count{canister="tz2ag"} 119 1770400540297
+time_high_watermark{canister="tz2ag"} 220 1770400540297
+time_low_watermark{canister="tz2ag"} 126 1770400540297
+time_bucket{canister="tz2ag",le="110"} 0 1770400540297
+time_bucket{canister="tz2ag",le="120"} 0 1770400540297
+time_bucket{canister="tz2ag",le="130"} 3 1770400540297
+time_bucket{canister="tz2ag",le="140"} 31 1770400540297
+time_bucket{canister="tz2ag",le="150"} 66 1770400540297
+time_bucket{canister="tz2ag",le="160"} 94 1770400540297
+time_bucket{canister="tz2ag",le="170"} 105 1770400540297
+time_bucket{canister="tz2ag",le="180"} 114 1770400540297
+time_bucket{canister="tz2ag",le="190"} 116 1770400540297
+time_bucket{canister="tz2ag",le="200"} 118 1770400540297
+time_bucket{canister="tz2ag",le="+Inf"} 119 1770400540297
+```
+
+## Advanced
+
+Uses `mixin/default`.
+
+Focuses on Gauges and shows advanced usage of them
+to track:
+
+* amount of instructions used by other update calls
+* size of call arguments delivered to other update calls
+
+The metrics render like this:
+```
+instructions_last{canister="tc74d"} 7573 1770400881392
+instructions_sum{canister="tc74d"} 297487 1770400881392
+instructions_count{canister="tc74d"} 38 1770400881392
+instructions_high_watermark{canister="tc74d"} 9453 1770400881392
+instructions_low_watermark{canister="tc74d"} 6312 1770400881392
+instructions_bucket{canister="tc74d",le="6000"} 0 1770400881392
+instructions_bucket{canister="tc74d",le="7000"} 6 1770400881392
+instructions_bucket{canister="tc74d",le="8000"} 20 1770400881392
+instructions_bucket{canister="tc74d",le="9000"} 33 1770400881392
+instructions_bucket{canister="tc74d",le="10000"} 38 1770400881392
+instructions_bucket{canister="tc74d",le="+Inf"} 38 1770400881392
+bytes_last{canister="tc74d"} 50 1770400881392
+bytes_sum{canister="tc74d"} 2036 1770400881392
+bytes_count{canister="tc74d"} 38 1770400881392
+bytes_high_watermark{canister="tc74d"} 90 1770400881392
+bytes_low_watermark{canister="tc74d"} 18 1770400881392
+bytes_bucket{canister="tc74d",le="10"} 0 1770400881392
+bytes_bucket{canister="tc74d",le="20"} 2 1770400881392
+bytes_bucket{canister="tc74d",le="30"} 5 1770400881392
+bytes_bucket{canister="tc74d",le="40"} 10 1770400881392
+bytes_bucket{canister="tc74d",le="50"} 19 1770400881392
+bytes_bucket{canister="tc74d",le="60"} 25 1770400881392
+bytes_bucket{canister="tc74d",le="70"} 29 1770400881392
+bytes_bucket{canister="tc74d",le="80"} 33 1770400881392
+bytes_bucket{canister="tc74d",le="90"} 38 1770400881392
+bytes_bucket{canister="tc74d",le="100"} 38 1770400881392
+bytes_bucket{canister="tc74d",le="+Inf"} 38 1770400881392
+```
+
+## Heatmap
+
+Uses `mixin/default`.
+
+Demonstrates the Heatmap metric type which is similar to a Gauge but has automated (exponential) bucket creation built in.
+
+The metrics render like this:
+```
+cycles_balance{canister="t63gs"} 1408810709859 1770401064297
+canister_version{canister="t63gs"} 17105 1770401064297
+rts_memory_size{canister="t63gs"} 15597568 1770401064297
+rts_heap_size{canister="t63gs"} 15539984 1770401064297
+rts_total_allocation{canister="t63gs"} 15540216 1770401064297
+rts_reclaimed{canister="t63gs"} 0 1770401064297
+rts_max_live_size{canister="t63gs"} 0 1770401064297
+rts_max_stack_size{canister="t63gs"} 4194304 1770401064297
+rts_callback_table_count{canister="t63gs"} 0 1770401064297
+rts_callback_table_size{canister="t63gs"} 256 1770401064297
+rts_mutator_instructions{canister="t63gs"} 3303 1770401064297
+rts_collector_instructions{canister="t63gs"} 330 1770401064297
+rts_upgrade_instructions{canister="t63gs"} 7320 1770401064297
+rts_stable_memory_size{canister="t63gs"} 0 1770401064297
+rts_logical_stable_memory_size{canister="t63gs"} 0 1770401064297
+heatmap{canister="t63gs",le="0"} 0 1770401064297
+heatmap{canister="t63gs",le="1"} 0 1770401064297
+heatmap{canister="t63gs",le="2"} 0 1770401064297
+heatmap{canister="t63gs",le="4"} 0 1770401064297
+heatmap{canister="t63gs",le="8"} 0 1770401064297
+heatmap{canister="t63gs",le="16"} 0 1770401064297
+heatmap{canister="t63gs",le="32"} 0 1770401064297
+heatmap{canister="t63gs",le="64"} 0 1770401064297
+heatmap{canister="t63gs",le="128"} 197 1770401064297
+heatmap{canister="t63gs",le="256"} 5695 1770401064297
+heatmap{canister="t63gs",le="512"} 5700 1770401064297
+heatmap_count{canister="t63gs"} 5700 1770401064297
+heatmap_sum{canister="t63gs"} 865284 1770401064297
+```
+
+## Http
+
+Uses `mixin/base`.
+
+The `default` mixin assumes that the prometheus endpoint `/metrics` is the only route that the canister serves.
+
+This examples shows how to use promtracker if the canister wants to simultaneously serve other routes from other parts of the canister code.
+It shows how to define the custom `http_request` handler to which other routes can be added.
+
+The metrics render like this:
+```
+counter{canister="tm5rl"} 6056 1770401117142
+```
+
+## Plain
+
+Without `mixin`.
+
+Shows how to use PromTracker without mixins, including manual sharing of stable
+state across upgrades and a custom `http_request` handler.
+
+The metrics render like this:
+```
+counter{canister="tf62x"} 6321 1770401156396
+```
