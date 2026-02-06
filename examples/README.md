@@ -179,7 +179,7 @@ Uses `mixin/base`.
 
 The `default` mixin assumes that the prometheus endpoint `/metrics` is the only route that the canister serves.
 
-This examples shows how to use promtracker if the canister wants to simultaneously serve other routes from other parts of the canister code.
+This example shows how to use promtracker if the canister wants to simultaneously serve other routes from other parts of the canister code.
 It shows how to define the custom `http_request` handler to which other routes can be added.
 
 The metrics render like this:

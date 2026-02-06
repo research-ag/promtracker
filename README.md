@@ -83,7 +83,7 @@ heartbeatDuration.update(14);
 
 Get prometheus exposition:
 ```motoko
-let text : Text = tracker.renderStats();
+let text : Text = tracker.renderExposition("");
 ```
 
 Make stats surviving canister upgrades:
@@ -103,7 +103,7 @@ transient let storageSize = tracker.addPullValue("storage_size", "", func() = st
 ```
 
 ### CounterValue
-An accumulating counter value interface. Second argument is a flag whether you want to save the state of this value
+An accumulating counter value interface. Third argument is a flag whether you want to save the state of this value
 to stable data using share/unshare api
 ```motoko
     transient let requestsAmount = tracker.addCounter("requests_amount", "", false);
@@ -129,7 +129,6 @@ pushed values, amount of pushes, lowest value during interval, highest value dur
     // request_duration_sum: 224
     // request_duration_count: 2
     // request_duration_high_watermark: 123
-    // request_duration_low_watermark: 101
     // request_duration_low_watermark: 101
     // request_duration_bucket{le="50"}: 0
     // request_duration_bucket{le="110"}: 1
@@ -157,7 +156,7 @@ PromTracker has the ability to extend your prometheus exposition output with the
 
 To register them, call function:
 ```motoko
-metrics.addSystemValues();
+tracker.addSystemValues();
 ```
 
 ## Copyright
