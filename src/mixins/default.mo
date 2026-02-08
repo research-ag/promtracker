@@ -5,7 +5,7 @@ import PT "../";
 /// Defines:
 /// 
 /// * transient let pt : PT.PromTracker
-/// * var pt_stableData : PT.StableData
+/// * var ptStableData : PT.StableData
 /// * func pt_preupgrade() 
 /// * func pt_postupgrade()
 /// * public query func http_request(req : Http.Request) : async Http.Response

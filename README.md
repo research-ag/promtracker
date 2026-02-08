@@ -8,7 +8,7 @@
 `PromTracker` is a `mixin` which adds Prometheus metrics to your canisters.
 By including the mixin,
 the canister exports real-time metrics in the Prometheus exposition format at the `http` route `/metrics`.
-From the endpoint the metrics can be scraped by a Grafana scraper.
+From the endpoint the metrics can be scraped by a Prometheus scraper.
 
 The list of exported metrics is initially empty.
 The canister has to register the values it wants to export with the tracker.
@@ -25,7 +25,7 @@ The two main such value types are `CounterValue` and `GaugeValue`.
 A `CounterValue` is normally an ever-increasing counter such as the number of total requests received. The scraper only sees its last value. The values between scraping events are not visible.
 
 A `GaugeValue` captures a frequently changing, fluctuating value such as the size of the last request, time between last two events, etc.
-The values of occur _between_ the scraping events (not at the scraping event). 
+The values of interest occur _between_ the scraping events (not at the scraping event). 
 A gauge value automatically tracks the high and low watermarks between scraping events plus a histogram in which all values are captured.
 The histogram can be used to create heatmaps in Grafana.
 
@@ -105,6 +105,8 @@ The default system metrics are all `PullValue`s.
 A `PullValue` is added like this:
 
 ```motoko
+import Cycles "mo:core/Cycles";
+
 transient let _cycleBalance = pt.addPullValue("cycles", "", Cycles.balance);
 ```
 and will render as:
@@ -115,7 +117,7 @@ cycles{canister="tz2ag"} 1453739534899 1770400540297
 
 Here, `Cycles.balance` can be replaced by any function `() -> Nat` that returns the value.
 
-The `pt : Promtracker` instance is already available because it is created by the `mixin`.
+The `pt : PromTracker` instance is already available because it is created by the `mixin`.
 
 ### Labels
 
@@ -124,7 +126,7 @@ All value registration functions have as their first argument the metric name.
 The tracker automatically adds the `canister=".."` label to each metric.
 
 Additional per-metric labels can be added with the second argument in the registration function.  
-For examle, passing `"mylabel1=value1,mylabel2=value2"` instead of `""`
+For example, passing `"mylabel1=value1,mylabel2=value2"` instead of `""`
 will make the metric render as
 
 ```text
@@ -151,7 +153,7 @@ Of course, arbitrary other code can be freely added to the function bodies befor
 ### CounterValue
 
 A `CounterValue` can be demonstrated by a heartbeat counter.
-In this example one hearbeat counter resets on canister upgrade,
+In this example one heartbeat counter resets on canister upgrade,
 the other one persists across upgrades.
 
 ```motoko
@@ -211,7 +213,7 @@ That way, a Grafana agent that scrapes at a 1 minute interval cannot miss a wate
 It might see the same watermark twice but that is usually not a problem.
 
 The `GaugeValue` also creates a histogram with 10 buckets (plus the +Inf bucket)
-where the bucket limit are: 110, 120, 130, .., 200.
+where the bucket limits are: 110, 120, 130, .., 200.
 
 The metrics render like this:
 ```text
@@ -285,7 +287,7 @@ heatmap_sum{canister="t63gs"} 865284 1770401064297
 
 ### Additional http routes
 
-Most backend canister do not serve http request.
+Most backend canisters do not serve http request.
 However, if we want to serve routes other than `/metrics` with our own code 
 then we need to define the public `http_request` function ourselves.
 This can be done with the `base` mixin.
@@ -324,6 +326,7 @@ persistent actor Main {
 It is possible to use the `PromTracker` class directly without depending on a `mixin`.
 
 ```motoko
+import Http "mo:promtracker/Http";
 import PT "mo:promtracker";
 
 persistent actor Main {
@@ -336,7 +339,7 @@ persistent actor Main {
 
   system func heartbeat() : async () { counter.add(1) };
 
-  public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
+  public query func http_request(req : Http.Request) : async Http.Response {
     pt.http_request(req);
   };
 };
@@ -347,7 +350,7 @@ We can change the 65 second interval to reset watermarks.
 
 ### Plain mode with additional http routes
 
-Adding additional http routes can be added as follows:
+In the plain mode, additional http routes can be added as follows:
 
 ```motoko
 import Text_ "mo:core/Text";
