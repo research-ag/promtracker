@@ -1,3 +1,4 @@
+import Http "../Http";
 import PT "../";
 
 /// Mixin that adds Prometheus metrics endpoint
@@ -7,7 +8,7 @@ import PT "../";
 /// * var pt_stableData : PT.StableData
 /// * func pt_preupgrade() 
 /// * func pt_postupgrade()
-/// * public query func http_request(req : HttpReq) : async HttpResp
+/// * public query func http_request(req : Http.Request) : async Http.Response
 ///
 /// Arguments:
 ///
@@ -23,7 +24,7 @@ mixin(self : actor {}, withSystemValues : Bool) {
   func pt_postupgrade() = pt.unshare(ptStableData);
 
   /// Expose the `/metrics` endpoint
-  public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
+  public query func http_request(req : Http.Request) : async Http.Response {
     pt.http_request(req);
   };
 };

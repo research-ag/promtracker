@@ -1,9 +1,13 @@
+import Text_ "mo:core/Text";
+import Http "../../src/Http";
 import PromTracker "../../src/mixins/base";
 // In production use this instead:
+// import Http "mo:promtracker/Http";
 // import PromTracker "mo:promtracker/mixins/base";
 
-// The `base` mixin does not define the public http_request function.
-// We have to define it ourselves.
+// The `base` mixin does not define the public http_request function
+// so that we can define it ourselves.
+// For that purpose the mixin puts the `Http` module in scope.
 
 persistent actor Main {
   include PromTracker(Main, false);
@@ -15,7 +19,16 @@ persistent actor Main {
   system func heartbeat() : async () { counter.add(1) };
 
   // Expose the `/metrics` endpoint
-  public query func http_request(req : HttpReq) : async HttpResp {
-    pt.http_request(req);
+  public query func http_request(req : Http.Request) : async Http.Response {
+    let ?path = req.url.split(#char '?').next() else return Http.render400();
+    switch (req.method, path) {
+      case ("GET", "/metrics") {
+        Http.renderPlainText(pt.renderExposition(""));
+      };
+      case ("GET", "/hello") {
+        Http.renderPlainText("Hello, world!");
+      };
+      case (_) Http.render400();
+    };
   };
 };

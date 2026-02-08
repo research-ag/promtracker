@@ -66,7 +66,7 @@ rts_logical_stable_memory_size{canister="tl4x7"} 0 1770400321653
 
 Uses `mixin/default`.
 
-Demonstrates the use of the three main metric types PullValue, Counter and Gauge.
+Demonstrates the use of the three main metric types `PullValue`, `CounterValue` and `GaugeValue`.
 In the case of Gauges it shows how to define buckets so that the Gauge can produce a heatmap in Grafana.
 
 It also shows how to persist Counter and Gauge across canister upgrades.
@@ -139,25 +139,10 @@ bytes_bucket{canister="tc74d",le="+Inf"} 38 1770400881392
 
 Uses `mixin/default`.
 
-Demonstrates the Heatmap metric type which is similar to a Gauge but has automated (exponential) bucket creation built in.
+Demonstrates the `Heatmap` metric type which is similar to a Gauge but has automated (exponential) bucket creation built in.
 
 The metrics render like this:
 ```text
-cycles_balance{canister="t63gs"} 1408810709859 1770401064297
-canister_version{canister="t63gs"} 17105 1770401064297
-rts_memory_size{canister="t63gs"} 15597568 1770401064297
-rts_heap_size{canister="t63gs"} 15539984 1770401064297
-rts_total_allocation{canister="t63gs"} 15540216 1770401064297
-rts_reclaimed{canister="t63gs"} 0 1770401064297
-rts_max_live_size{canister="t63gs"} 0 1770401064297
-rts_max_stack_size{canister="t63gs"} 4194304 1770401064297
-rts_callback_table_count{canister="t63gs"} 0 1770401064297
-rts_callback_table_size{canister="t63gs"} 256 1770401064297
-rts_mutator_instructions{canister="t63gs"} 3303 1770401064297
-rts_collector_instructions{canister="t63gs"} 330 1770401064297
-rts_upgrade_instructions{canister="t63gs"} 7320 1770401064297
-rts_stable_memory_size{canister="t63gs"} 0 1770401064297
-rts_logical_stable_memory_size{canister="t63gs"} 0 1770401064297
 heatmap{canister="t63gs",le="0"} 0 1770401064297
 heatmap{canister="t63gs",le="1"} 0 1770401064297
 heatmap{canister="t63gs",le="2"} 0 1770401064297
@@ -180,7 +165,7 @@ Uses `mixin/base`.
 The `default` mixin assumes that the prometheus endpoint `/metrics` is the only route that the canister serves.
 
 This example shows how to use promtracker if the canister wants to simultaneously serve other routes from other parts of the canister code.
-It shows how to define the custom `http_request` handler to which other routes can be added.
+It shows how to define the custom `http_request` handler with other routes added.
 
 The metrics render like this:
 ```text
@@ -198,3 +183,15 @@ The metrics render like this:
 ```text
 counter{canister="tf62x"} 6321 1770401156396
 ```
+
+## Plain-http
+
+Without `mixin`.
+
+Shows how to add additional http routes in the Plain example.
+
+The metrics render like this:
+```text
+counter{canister="tf62x"} 6321 1770401156396
+```
+and another `/hello` route is served.

@@ -7,8 +7,7 @@ import PT "../";
 /// * var ptStableData : PT.StableData
 /// * func pt_preupgrade() 
 /// * func pt_postupgrade()
-/// * type HttpReq
-/// * type HttpResp
+/// * module Http
 ///
 /// Arguments:
 ///
@@ -22,7 +21,4 @@ mixin(self : actor {}, withSystemValues : Bool) {
 
   func pt_preupgrade() = ptStableData := pt.share();
   func pt_postupgrade() = pt.unshare(ptStableData);
-
-  type HttpReq = PT.HttpReq;
-  type HttpResp = PT.HttpResp;
 };

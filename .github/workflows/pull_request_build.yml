@@ -47,3 +47,7 @@ jobs:
       - name: Build plain example
         working-directory: ./examples
         run: icp build plain
+
+      - name: Build plain-http example
+        working-directory: ./examples
+        run: icp build plain-http

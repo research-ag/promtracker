@@ -6,7 +6,7 @@ import PromTracker "../../src/mixins/default";
 
 /// This canister shows how to setup the metrics to preserve values through the canister upgrades
 persistent actor Main {
-  include PromTracker(Main, true);
+  include PromTracker(Main, false);
   // Hook up pre/postupgrade (optional)
   system func preupgrade() { pt_preupgrade() };
   system func postupgrade() { pt_postupgrade() };

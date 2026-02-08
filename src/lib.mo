@@ -9,7 +9,7 @@ import Types "mo:core/Types";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
-import Http "internal/tiny_http";
+import Http "Http";
 
 module {
   /// Helper function to get the first 5 characters of the canister's
@@ -97,14 +97,6 @@ module {
     updateEntry : (oldValue : Nat, newValue : Nat) -> ();
     remove : () -> ();
   };
-
-  /// Type for HTTP requests.
-  /// This type is used to declare the canister's http_request query function.
-  public type HttpReq = Http.Request;
-
-  /// Type for HTTP responses.
-  /// This type is used to declare the canister's http_request query function.
-  public type HttpResp = Http.Response;
 
   /// Value tracker, designed specifically for use as a source for Prometheus.
   ///
