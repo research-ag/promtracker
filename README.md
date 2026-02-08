@@ -209,7 +209,7 @@ Here, the heartbeat intervals are measured in milliseconds.
 The `GaugeValue` stores the last recorded value
 and keeps a high watermark and low watermark.
 Watermarks get reset every 65 seconds.
-That way, a Grafana agent that scrapes at a 1 minute interval cannot miss a watermark.
+That way, a Grafana agent that scrapes at a 1-minute interval cannot miss a watermark.
 It might see the same watermark twice but that is usually not a problem.
 
 The `GaugeValue` also creates a histogram with 10 buckets (plus the +Inf bucket)
@@ -346,7 +346,7 @@ persistent actor Main {
 ```
 
 In plain mode we get control over the global `canister="..."` label and can modify it or remove it.
-We can change the 65 second interval to reset watermarks.
+We can change the 65-second interval to reset watermarks.
 
 ### Plain mode with additional http routes
 

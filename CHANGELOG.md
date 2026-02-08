@@ -1,5 +1,10 @@
 # PromTracker changelog
 
+## 0.10.0
+
+* Rewrite README
+* Refactor code
+
 ## 0.9.0
 
 * Add mixins/default
