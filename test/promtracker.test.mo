@@ -12,7 +12,8 @@ var mockedTime : Nat64 = 123_000_000_000_000;
 // Re-define the default value for the implicit `now` parameter in the PromTracker constructor
 func now() : Nat64 = mockedTime; 
 
-var tracker = PT.PromTracker("", 5);
+var tracker = PT.PromTracker("");
+tracker.setWatermarkHoldPeriod(5);
 
 /* --------------------------------------- */
 let testValue = tracker.addPullValue("test_val_0", "", func() = 150);
@@ -344,7 +345,8 @@ stableCounter2.remove();
 stableCounterDuplicatedKeyFoo.remove();
 stableCounterDuplicatedKeyBar.remove();
 
-let newTracker = PT.PromTracker("", 5);
+let newTracker = PT.PromTracker("");
+newTracker.setWatermarkHoldPeriod(5);
 // the same gauge, state should be the same
 ignore newTracker.addGauge("stable_gauge1", "", #none, [150, 200], true);
 // gauge with changed buckets, buckets should be overwritten by stable data

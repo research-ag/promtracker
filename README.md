@@ -209,8 +209,9 @@ system func heartbeat() : async () {
 Here, the heartbeat intervals are measured in milliseconds.
 The `GaugeValue` stores the last recorded value
 and keeps a high watermark and low watermark.
-Watermarks get reset every 65 seconds.
-That way, a Grafana agent that scrapes at a 1-minute interval cannot miss a watermark.
+Watermarks by default get held for 305 seconds
+before they can be overwritten by values "under" the mark.
+That way, a Grafana agent that scrapes at a 5-minute interval cannot miss a watermark.
 It might see the same watermark twice but that is usually not a problem.
 
 The `GaugeValue` also creates a histogram with 10 buckets (plus the +Inf bucket)
@@ -331,7 +332,7 @@ import PT "mo:promtracker";
 import Http "mo:promtracker/mixins/http";
 
 persistent actor Main {
-  transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
+  transient let pt = PT.PromTracker(PT.canisterLabel(Main));
   include Http(pt, "/metrics");
 
   var ptStableData : PT.StableData = null;
@@ -345,7 +346,13 @@ persistent actor Main {
 ```
 
 In plain mode we get control over the global `canister="..."` label and can modify it or remove it.
-We can also change the 65-second interval to reset watermarks.
+We can also change the 305-second interval to reset watermarks:
+
+```motoko
+pt.setWatermarkHoldPeriod(65);
+```
+
+A value of 65 seconds is recommended for a 1-minute scraping interval.
 
 ## Default system metrics
 

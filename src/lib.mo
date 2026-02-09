@@ -56,7 +56,7 @@ module {
   // The two components of the watermark environment are:
   // - the interval after which the watermarks are reset in seconds as Nat
   // - the function that returns the current time in nanoseconds as Nat64
-  type WatermarkEnvironment = (Nat64, () -> Nat64);
+  type WatermarkEnvironment = (() -> Nat64, () -> Nat64);
 
   /// The access interface for pull values
   public type PullValue = {
@@ -100,8 +100,7 @@ module {
   ///
   /// Example:
   /// ```motoko
-  /// let tracker = PromTracker.PromTracker("", 65);
-  /// // 65 seconds is the recommended interval if prometheus pulls stats with interval 60 seconds
+  /// let tracker = PromTracker.PromTracker("");
   /// ....
   /// let successfulHeartbeats = tracker.addCounter("successful_heartbeats", true);
   /// let failedHeartbeats = tracker.addCounter("failed_heartbeats", true);
@@ -143,13 +142,15 @@ module {
   /// For executable examples see the various examples in `examples/`.
   public class PromTracker(
     globalLabels : Text,
-    watermarkResetIntervalSeconds : Nat,
+//    watermarkResetIntervalSeconds : Nat,
     now : (implicit : () -> Nat64),
   ) {
-    let env : WatermarkEnvironment = (
-      watermarkResetIntervalSeconds.toNat64() * 1_000_000_000,
+    var env : WatermarkEnvironment = (
+      func _ = 305_000_000_000,
+//      watermarkResetIntervalSeconds.toNat64() * 1_000_000_000,
       now,
     );
+
     type IValue = {
       prefix : Text;
       labels : Text;
@@ -159,6 +160,16 @@ module {
     };
 
     let values : List.List<?IValue> = List.empty();
+
+    /// Set the hold-down period for watermarks in seconds.
+    ///
+    /// A high watermark with a 5-minute hold-down period means: once set,
+    /// the watermark cannot be replaced by a lower value for at least five
+    /// minutes, though higher values may replace it immediately.
+    public func setWatermarkHoldPeriod(holdSeconds : Nat) {
+      let interval = holdSeconds.toNat64() * 1_000_000_000; 
+      env := (func _ = interval, env.1);
+    };
 
     /// Register a PullValue in the tracker.
     /// A PullValue is stateless.
@@ -435,12 +446,12 @@ module {
   class WatermarkTracker<T>(
     initialMark : T,
     isHigher : (new : T, old : T) -> Bool,
-    resetInterval : Nat64,
+    holdPeriod : () -> Nat64,
   ) {
     var lastMarkTime : Nat64 = 0;
     public var mark : T = initialMark;
     public func update(value : T, time : Nat64) {
-      if (isHigher(value, mark) or time > lastMarkTime + resetInterval) {
+      if (isHigher(value, mark) or time > lastMarkTime + holdPeriod()) {
         mark := value;
         lastMarkTime := time;
       };
@@ -458,14 +469,14 @@ module {
     public let prefix = prefix_;
     public let labels = labels_;
 
-    let (resetInterval, now) = env;
+    let (holdPeriod, now) = env;
 
     public var count : Nat = 0;
     public var sum : Nat = 0;
     var limits = limits_;
     public var counters : [var Nat] = VarArray.repeat<Nat>(0, limits.size());
-    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new > old, resetInterval);
-    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new < old, resetInterval);
+    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new > old, holdPeriod);
+    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new < old, holdPeriod);
     public var lastValue : Nat = 0;
 
     public func update(current : Nat) {

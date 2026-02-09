@@ -6,7 +6,7 @@ import Http "../../src/mixins/http";
 
 /// This example shows how to use PromTracker class without mixin.
 persistent actor Main {
-  transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
+  transient let pt = PT.PromTracker(PT.canisterLabel(Main));
   include Http(pt, "/metrics");
 
   var ptStableData : PT.StableData = null;
