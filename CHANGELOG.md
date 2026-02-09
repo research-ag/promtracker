@@ -1,11 +1,12 @@
 # PromTracker changelog
 
-## 0.10.0
+## 1.0.0
 
-* Rewrite README
-* Refactor code
-* Remove label argument from `renderExposition`
-* Split `default` mixin into `base, http`
+* Redesign mixin interfaces
+* Mixins `tracker, http`
+* Labels argument from `renderExposition` removed
+* Watermark hold period can change dynamically
+* New README
 
 ## 0.9.0
 
