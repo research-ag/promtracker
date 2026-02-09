@@ -5,10 +5,11 @@
 
 ## Overview
 
-`PromTracker` is a `mixin` which adds Prometheus metrics to your canisters.
+The `mo:promtracker/mixins/tracker` mixin (often imported as `PromTracker`) adds Prometheus metrics to your canisters.
 By including the mixin,
 the canister exports real-time metrics in the Prometheus exposition format at the HTTP route `/metrics`.
 From the endpoint the metrics can be scraped by a Prometheus scraper.
+The library also exposes a `PT.PromTracker` class (see `src/lib.mo`), but most users will only need the `tracker` mixin (and optionally the `mo:promtracker/mixins/http` mixin for HTTP integration).
 
 The list of exported metrics is initially empty.
 The canister has to register the values it wants to export with the tracker.

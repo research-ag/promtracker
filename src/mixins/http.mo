@@ -4,7 +4,7 @@ import PT "../";
 
 /// Mixin that adds Prometheus `/metrics` endpoint
 /// Defines:
-/// 
+///
 /// * public query func http_request(req : Http.Request) : async Http.Response
 ///
 /// Arguments:
