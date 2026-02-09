@@ -310,7 +310,7 @@ persistent actor Main {
     let ?path = req.url.split(#char '?').next() else return Http.render400();
     switch (req.method, path) {
       case ("GET", "/metrics") {
-        Http.renderPlainText(pt.renderExposition(""));
+        Http.renderPlainText(pt.renderExposition());
       };
       case ("GET", "/hello") {
         Http.renderPlainText("Hello, world!");
@@ -371,7 +371,7 @@ persistent actor Main {
     let ?path = req.url.split(#char '?').next() else return Http.render400();
     switch (req.method, path) {
       case ("GET", "/metrics") {
-        Http.renderPlainText(pt.renderExposition(""));
+        Http.renderPlainText(pt.renderExposition());
       };
       case ("GET", "/hello") {
         Http.renderPlainText("Hello, world!");

@@ -4,6 +4,7 @@
 
 * Rewrite README
 * Refactor code
+* Remove label argument from `renderExposition`
 
 ## 0.9.0
 

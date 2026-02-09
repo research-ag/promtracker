@@ -132,7 +132,7 @@ module {
   /// heartbeat_duration_low_watermark{} 10 1698842860811
   /// ```
   ///
-  /// The first argument `staticGlobalLabels` is a text that will be added as global labels to each metric.
+  /// The first argument `globalLabels` is a text that will be added as global labels to each metric.
   /// For example, if you want to add `canister="my_name"` as a label to each metric.
   ///
   /// The second argument `watermarkResetIntervalSeconds` specifies the interval in seconds after which
@@ -144,7 +144,7 @@ module {
   ///
   /// For executable examples see the various examples in `examples/`.
   public class PromTracker(
-    staticGlobalLabels : Text,
+    globalLabels : Text,
     watermarkResetIntervalSeconds : Nat,
     now : (implicit : () -> Nat64),
   ) {
@@ -357,11 +357,8 @@ module {
     };
 
     /// Render all current metrics to prometheus exposition format
-    /// The argument `dynamicGlobalLabels` is a text that will be added as labels globally to each metric.
-    /// The provided labels are added on top of the global labels provided in the constructor.
-    public func renderExposition(dynamicGlobalLabels : Text) : Text {
+    public func renderExposition() : Text {
       let timeStr = (now() / 1_000_000).toText();
-      let globalLabels = concat(staticGlobalLabels, dynamicGlobalLabels);
       let lines = Array.map<Metric, Text>(
         dump(),
         func(m) = renderMetric(m, globalLabels, timeStr),
@@ -423,7 +420,7 @@ module {
       let ?path = req.url.split(#char '?').next() else return Http.render400();
       switch (req.method, path) {
         case ("GET", "/metrics") {
-          Http.renderPlainText(renderExposition(""));
+          Http.renderPlainText(renderExposition());
         };
         case (_) Http.render400();
       };
