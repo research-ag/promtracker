@@ -1,14 +1,14 @@
 import Text_ "mo:core/Text";
+import PromTracker "../../src/mixins/tracker";
 import Http "../../src/Http";
-import PromTracker "../../src/mixins/base";
 // In production use this instead:
+// import PromTracker "mo:promtracker/mixins/tracker";
 // import Http "mo:promtracker/Http";
-// import PromTracker "mo:promtracker/mixins/base";
 
 // Example showing how to define `http_request` manually,
 // without the `http` mixin.
 persistent actor Main {
-  include PromTracker(Main, false);
+  include PromTracker(Main);
   system func preupgrade() { pt_preupgrade() };
   system func postupgrade() { pt_postupgrade() };
 

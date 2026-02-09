@@ -66,18 +66,21 @@ For instructions how to run them see: [examples/README.md](examples/README.md).
 The minimal code to use `promtracker` is:
 
 ```motoko
+import PromTracker "mo:promtracker/mixins/tracker";
 import Http "mo:promtracker/mixins/http";
-import PromTracker "mo:promtracker/mixins/base";
 
 persistent actor Main {
-  include PromTracker(Main, true);
-  include Http(pt);
+  include PromTracker(Main);
+  include Http(pt, "/metrics");
+  pt.addSystemValues();
 };
 ```
 
-The argument `true` configures the tracker to expose
+The `pt.addSystemValues()` command registers
 a default set of system metrics including cycle balance
 and memory stats. 
+Without this command the metrics would be empty without further code.
+The default system metrics are all `PullValue`s.
 
 Metrics render like this:
 ```text
@@ -97,10 +100,6 @@ rts_upgrade_instructions{canister="tl4x7"} 7320 1770400321653
 rts_stable_memory_size{canister="tl4x7"} 0 1770400321653
 rts_logical_stable_memory_size{canister="tl4x7"} 0 1770400321653
 ```
-
-Argument `false` disables the default system metrics and the metrics would be empty without further code.
-
-The default system metrics are all `PullValue`s.
 
 ### PullValue
 
@@ -147,7 +146,7 @@ system func preupgrade() { pt_preupgrade() };
 system func postupgrade() { pt_postupgrade() };
 ```
 
-The `pt_preupgrade, pt_postupgrade` are already defined by the `base` mixin.
+The `pt_preupgrade, pt_postupgrade` are already defined by the `tracker` mixin.
 
 Arbitrary other code can be freely added to the system function bodies before or after the 
 `pt_preupgrade(), pt_postupgrade()` calls.
@@ -296,11 +295,11 @@ We import the `http` module for this, not the `http` mixin.
 
 ```motoko
 import Text_ "mo:core/Text";
+import PromTracker "mo:promtracker/mixins/tracker";
 import Http "mo:promtracker/Http";
-import PromTracker "mo:promtracker/mixins/base";
 
 persistent actor Main {
-  include PromTracker(Main, false);
+  include PromTracker(Main);
 
   transient let counter = pt.addCounter("counter", "", true);
 
@@ -322,17 +321,19 @@ persistent actor Main {
 };
 ```
 
-### Plain mode (without `base` mixin)
+### Plain mode (without `tracker` mixin)
 
-It is possible to use the `PromTracker` class directly without the `base` mixin.
+It is possible to use the `PromTracker` class directly without the `tracker` mixin.
 The `http` mixin can still be used for serving the `/metrics` endpoint.
 
 ```motoko
-import Http "mo:promtracker/mixins/http";
 import PT "mo:promtracker";
+import Http "mo:promtracker/mixins/http";
 
 persistent actor Main {
   transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
+  include Http(pt, "/metrics");
+
   var ptStableData : PT.StableData = null;
   system func preupgrade() { ptStableData := pt.share() };
   system func postupgrade() { pt.unshare(ptStableData) };
@@ -340,8 +341,6 @@ persistent actor Main {
   transient let counter = pt.addCounter("counter", "", true);
 
   system func heartbeat() : async () { counter.add(1) };
-
-  include Http(pt);
 };
 ```
 

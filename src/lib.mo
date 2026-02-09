@@ -9,8 +9,6 @@ import Types "mo:core/Types";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
-import Http "Http";
-
 module {
   /// Helper function to get the first 5 characters of the canister's
   /// own canister id (by passing itself to this function).
@@ -398,31 +396,6 @@ module {
           };
           case (_) {};
         };
-      };
-    };
-
-    /// Drop-in `http_request` function to handle "/metrics" endpoint.
-    /// If your canister serves no other http endpoints except `/metrics` then
-    /// you can use this function as is. Just connect it to an async query
-    /// function of your canister as follows:
-    ///
-    /// ```motoko
-    /// import Http "mo:promtracker/Http";
-    /// public query func http_request(req : Http.Request) : async Http.Response {
-    ///   pt.http_request(req);
-    /// };
-    /// ```
-    /// 
-    /// If you want to serve other endpoints as well then you have to write
-    /// your own `http_request` function and call `renderExposition` inside it.
-    /// See the `plain-http` example for details.
-    public func http_request(req : Http.Request) : Http.Response {
-      let ?path = req.url.split(#char '?').next() else return Http.render400();
-      switch (req.method, path) {
-        case ("GET", "/metrics") {
-          Http.renderPlainText(renderExposition());
-        };
-        case (_) Http.render400();
       };
     };
   };

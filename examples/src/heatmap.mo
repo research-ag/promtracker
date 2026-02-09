@@ -1,20 +1,19 @@
 import Int "mo:core/Int";
 import Time "mo:core/Time";
 
+import PromTracker "../../src/mixins/tracker";
 import Http "../../src/mixins/http";
-import PromTracker "../../src/mixins/base";
 // In production:
+// import PromTracker "mo:promtracker/mixins/tracker";
 // import Http "mo:promtracker/mixins/http";
-// import PromTracker "mo:promtracker/mixins/base";
 
-/// This canister shows how to setup the metrics to preserve values through the canister upgrades
+/// This canister shows how to use the `Heatmap` value.
 persistent actor Main {
-  include PromTracker(Main, false);
-  include Http(pt);
+  include PromTracker(Main);
+  include Http(pt, "/metrics");
   system func preupgrade() { pt_preupgrade() };
   system func postupgrade() { pt_postupgrade() };
 
-  // Heatmap
   transient let heatmap = pt.addHeatmap("heatmap", "", true);
 
   transient var last_time : ?Int = null;
