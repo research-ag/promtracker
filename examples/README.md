@@ -184,15 +184,3 @@ The metrics render like this:
 ```text
 counter{canister="tf62x"} 6321 1770401156396
 ```
-
-## Plain-http
-
-Without `mixin`.
-
-Shows how to add additional HTTP routes in the Plain example.
-
-The metrics render like this:
-```text
-counter{canister="tf62x"} 6321 1770401156396
-```
-and another `/hello` route is served.

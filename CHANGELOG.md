@@ -5,6 +5,7 @@
 * Rewrite README
 * Refactor code
 * Remove label argument from `renderExposition`
+* Split `default` mixin into `base, http`
 
 ## 0.9.0
 
