@@ -7,7 +7,6 @@ import PT "../";
 /// * var ptStableData : PT.StableData
 /// * func pt_preupgrade() 
 /// * func pt_postupgrade()
-/// * module Http
 ///
 /// Arguments:
 ///

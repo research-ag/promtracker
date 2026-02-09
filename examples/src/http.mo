@@ -5,10 +5,8 @@ import PromTracker "../../src/mixins/base";
 // import Http "mo:promtracker/Http";
 // import PromTracker "mo:promtracker/mixins/base";
 
-// The `base` mixin does not define the public http_request function
-// so that we can define it ourselves.
-// For that purpose the mixin puts the `Http` module in scope.
-
+// Example showing how to define `http_request` manually,
+// without the `http` mixin.
 persistent actor Main {
   include PromTracker(Main, false);
   system func preupgrade() { pt_preupgrade() };

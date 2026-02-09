@@ -7,7 +7,7 @@
 
 `PromTracker` is a `mixin` which adds Prometheus metrics to your canisters.
 By including the mixin,
-the canister exports real-time metrics in the Prometheus exposition format at the `http` route `/metrics`.
+the canister exports real-time metrics in the Prometheus exposition format at the HTTP route `/metrics`.
 From the endpoint the metrics can be scraped by a Prometheus scraper.
 
 The list of exported metrics is initially empty.
@@ -66,10 +66,12 @@ For instructions how to run them see: [examples/README.md](examples/README.md).
 The minimal code to use `promtracker` is:
 
 ```motoko
-import PromTracker "mo:promtracker/mixins/default";
+import Http "mo:promtracker/mixins/http";
+import PromTracker "mo:promtracker/mixins/base";
 
 persistent actor Main {
   include PromTracker(Main, true);
+  include Http(pt);
 };
 ```
 
@@ -145,9 +147,9 @@ system func preupgrade() { pt_preupgrade() };
 system func postupgrade() { pt_postupgrade() };
 ```
 
-The `pt_preupgrade, pt_postupgrade` are already defined by the `mixin`.
+The `pt_preupgrade, pt_postupgrade` are already defined by the `base` mixin.
 
-Of course, arbitrary other code can be freely added to the function bodies before or after the 
+Arbitrary other code can be freely added to the system function bodies before or after the 
 `pt_preupgrade(), pt_postupgrade()` calls.
 
 ### CounterValue
@@ -285,13 +287,12 @@ heatmap_count{canister="t63gs"} 5700 1770401064297
 heatmap_sum{canister="t63gs"} 865284 1770401064297
 ```
 
-### Additional http routes
+### Additional HTTP routes
 
-Most backend canisters do not serve http request.
+Most backend canisters do not serve HTTP request.
 However, if we want to serve routes other than `/metrics` with our own code 
 then we need to define the public `http_request` function ourselves.
-This can be done with the `base` mixin.
-The `base` mixin does not define `http_request` (so we can).
+We import the `http` module for this, not the `http` mixin.
 
 ```motoko
 import Text_ "mo:core/Text";
@@ -321,12 +322,13 @@ persistent actor Main {
 };
 ```
 
-### Plain mode (without mixin)
+### Plain mode (without `base` mixin)
 
-It is possible to use the `PromTracker` class directly without depending on a `mixin`.
+It is possible to use the `PromTracker` class directly without the `base` mixin.
+The `http` mixin can still be used for serving the `/metrics` endpoint.
 
 ```motoko
-import Http "mo:promtracker/Http";
+import Http "mo:promtracker/mixins/http";
 import PT "mo:promtracker";
 
 persistent actor Main {
@@ -339,50 +341,14 @@ persistent actor Main {
 
   system func heartbeat() : async () { counter.add(1) };
 
-  public query func http_request(req : Http.Request) : async Http.Response {
-    pt.http_request(req);
-  };
+  include Http(pt);
 };
 ```
 
 In plain mode we get control over the global `canister="..."` label and can modify it or remove it.
-We can change the 65-second interval to reset watermarks.
+We can also change the 65-second interval to reset watermarks.
 
-### Plain mode with additional http routes
-
-In the plain mode, additional http routes can be added as follows:
-
-```motoko
-import Text_ "mo:core/Text";
-import Http "mo:promtracker/Http";
-import PT "mo:promtracker";
-
-persistent actor Main {
-  transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
-  var ptStableData : PT.StableData = null;
-  system func preupgrade() { ptStableData := pt.share() };
-  system func postupgrade() { pt.unshare(ptStableData) };
-
-  transient let counter = pt.addCounter("counter", "", true);
-
-  system func heartbeat() : async () { counter.add(1) };
-
-  public query func http_request(req : Http.Request) : async Http.Response {
-    let ?path = req.url.split(#char '?').next() else return Http.render400();
-    switch (req.method, path) {
-      case ("GET", "/metrics") {
-        Http.renderPlainText(pt.renderExposition());
-      };
-      case ("GET", "/hello") {
-        Http.renderPlainText("Hello, world!");
-      };
-      case (_) Http.render400();
-    };
-  };
-};
-```
-
-## The PromTracker class
+## Default system metrics
 
 The system metrics consist of the following
 

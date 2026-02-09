@@ -1,6 +1,8 @@
-import PromTracker "../../src/mixins/default";
+import Http "../../src/mixins/http";
+import PromTracker "../../src/mixins/base";
 // In production:
-// import PromTracker "mo:promtracker/mixins/default";
+// import Http "mo:promtracker/mixins/http";
+// import PromTracker "mo:promtracker/mixins/base";
 
 /// A minimal canister exposing various system values as Prometheus system metrics.
 /// Values include cycle balance, canister state nonce ("version"), memory size, heap size, etc.
@@ -9,4 +11,5 @@ import PromTracker "../../src/mixins/default";
 /// because all system values are pulled on-demand, hence don't require persisting.
 persistent actor Main {
   include PromTracker(Main, true);
+  include Http(pt);
 };

@@ -118,7 +118,7 @@ module {
   /// heartbeatDuration.update(14);
   /// ....
   /// // get prometheus metrics:
-  /// let text = tracker.renderExposition("");
+  /// let text = tracker.renderExposition();
   /// ```
   ///
   /// Expected output is:
@@ -402,7 +402,7 @@ module {
     };
 
     /// Drop-in `http_request` function to handle "/metrics" endpoint.
-    /// If your canister serves no other http endpoints expcept `/metrics` then
+    /// If your canister serves no other http endpoints except `/metrics` then
     /// you can use this function as is. Just connect it to an async query
     /// function of your canister as follows:
     ///

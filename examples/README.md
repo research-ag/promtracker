@@ -37,7 +37,7 @@ Refresh the page to see how the metrics have changed since then.
 
 ## Minimal
 
-Uses `mixin/default`.
+Uses `mixin/base, mixin/http`.
 
 Demonstrates a minimal setup to expose only default system metrics.
 Very useful already for minimal health monitoring which every canister in production should have.
@@ -64,7 +64,7 @@ rts_logical_stable_memory_size{canister="tl4x7"} 0 1770400321653
 
 ## Main
 
-Uses `mixin/default`.
+Uses `mixin/base, mixin/http`.
 
 Demonstrates the use of the three main metric types `PullValue`, `CounterValue` and `GaugeValue`.
 In the case of Gauges it shows how to define buckets so that the Gauge can produce a heatmap in Grafana.
@@ -96,7 +96,7 @@ time_bucket{canister="tz2ag",le="+Inf"} 119 1770400540297
 
 ## Advanced
 
-Uses `mixin/default`.
+Uses `mixin/base, mixin/http`.
 
 Focuses on Gauges and shows advanced usage of them
 to track:
@@ -137,7 +137,7 @@ bytes_bucket{canister="tc74d",le="+Inf"} 38 1770400881392
 
 ## Heatmap
 
-Uses `mixin/default`.
+Uses `mixin/base, mixin/http`.
 
 Demonstrates the `Heatmap` metric type which is similar to a Gauge but has automated (exponential) bucket creation built in.
 
@@ -162,7 +162,7 @@ heatmap_sum{canister="t63gs"} 865284 1770401064297
 
 Uses `mixin/base`.
 
-The `default` mixin assumes that the prometheus endpoint `/metrics` is the only route that the canister serves.
+The `http` mixin assumes that the prometheus endpoint `/metrics` is the only route that the canister serves.
 
 This example shows how to use promtracker if the canister wants to simultaneously serve other routes from other parts of the canister code.
 It shows how to define the custom `http_request` handler with other routes added.
@@ -171,13 +171,14 @@ The metrics render like this:
 ```text
 counter{canister="tm5rl"} 6056 1770401117142
 ```
+and another `/hello` route is served.
 
 ## Plain
 
-Without `mixin`.
+Uses `mixin/http`.
 
-Shows how to use PromTracker without mixins, including manual sharing of stable
-state across upgrades and a custom `http_request` handler.
+Shows how to define `PromTracker` without the `base` mixin,
+including manual sharing of stable state across upgrades.
 
 The metrics render like this:
 ```text
@@ -188,7 +189,7 @@ counter{canister="tf62x"} 6321 1770401156396
 
 Without `mixin`.
 
-Shows how to add additional http routes in the Plain example.
+Shows how to add additional HTTP routes in the Plain example.
 
 The metrics render like this:
 ```text

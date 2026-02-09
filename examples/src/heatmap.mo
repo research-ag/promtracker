@@ -1,12 +1,16 @@
 import Int "mo:core/Int";
 import Time "mo:core/Time";
-import PromTracker "../../src/mixins/default";
+
+import Http "../../src/mixins/http";
+import PromTracker "../../src/mixins/base";
 // In production:
-// import PromTracker "mo:promtracker/mixins/default";
+// import Http "mo:promtracker/mixins/http";
+// import PromTracker "mo:promtracker/mixins/base";
 
 /// This canister shows how to setup the metrics to preserve values through the canister upgrades
 persistent actor Main {
   include PromTracker(Main, false);
+  include Http(pt);
   system func preupgrade() { pt_preupgrade() };
   system func postupgrade() { pt_postupgrade() };
 

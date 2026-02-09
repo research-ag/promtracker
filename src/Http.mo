@@ -18,7 +18,7 @@ module TinyHttp {
 
   /// Create a 400 response
   public func render400() : Response = {
-    status_code : Nat16 = 400;
+    status_code = 400;
     headers : [(Text, Text)] = [];
     body : Blob = "Invalid request";
   };

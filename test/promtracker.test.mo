@@ -19,7 +19,7 @@ let testValue = tracker.addPullValue("test_val_0", "", func() = 150);
 run(
   test(
     "pull value output",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_val_0{} 150 123000000\n")),
   )
 );
@@ -29,7 +29,7 @@ testValue.remove();
 run(
   test(
     "value removed",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("")),
   )
 );
@@ -39,7 +39,7 @@ let testValue1 = tracker.addPullValue("test_val_1", "foo=\"bar\"", func() = 270)
 run(
   test(
     "pull value labels",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_val_1{foo=\"bar\"} 270 123000000\n")),
   )
 );
@@ -50,7 +50,7 @@ let counter = tracker.addCounter("test_counter", "", false);
 run(
   test(
     "initial counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 0 123000000\n")),
   )
 );
@@ -58,7 +58,7 @@ counter.add(3);
 run(
   test(
     "counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 3 123000000\n")),
   )
 );
@@ -66,7 +66,7 @@ counter.add(4);
 run(
   test(
     "counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 7 123000000\n")),
   )
 );
@@ -74,7 +74,7 @@ counter.sub(2);
 run(
   test(
     "counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 5 123000000\n")),
   )
 );
@@ -82,7 +82,7 @@ counter.set(2);
 run(
   test(
     "counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 2 123000000\n")),
   )
 );
@@ -93,7 +93,7 @@ let counter1 = tracker.addCounter("test_counter_1", "foo=\"bar\"", false);
 run(
   test(
     "counter labels",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter_1{foo=\"bar\"} 0 123000000\n")),
   )
 );
@@ -107,7 +107,7 @@ run(
     [
       test(
         "initial gauge exposition",
-        tracker.renderExposition(""),
+        tracker.renderExposition(),
         M.equals(T.text("test_gauge_last{} 0 123000000
 test_gauge_sum{} 0 123000000
 test_gauge_count{} 0 123000000
@@ -136,7 +136,7 @@ run(
     [
       test(
         "gauge state exposition",
-        tracker.renderExposition(""),
+        tracker.renderExposition(),
         M.equals(T.text("test_gauge_last{} 160 123000000
 test_gauge_sum{} 1240 123000000
 test_gauge_count{} 6 123000000
@@ -159,7 +159,7 @@ let gaugeWithBuckets = tracker.addGauge("buckets_gauge", "", #both, [10, 20, 50,
 run(
   test(
     "initial gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 0 123000000
 buckets_gauge_sum{} 0 123000000
 buckets_gauge_count{} 0 123000000
@@ -184,7 +184,7 @@ gaugeWithBuckets.update(999999);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 999999 123000000
 buckets_gauge_sum{} 1000301 123000000
 buckets_gauge_count{} 6 123000000
@@ -208,7 +208,7 @@ gauge2.update(90);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 90 123000000
 buckets_gauge_sum{} 1000 123000000
 buckets_gauge_count{} 3 123000000
@@ -224,7 +224,7 @@ gauge2.update(180);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 180 123001000
 buckets_gauge_sum{} 2000 123001000
 buckets_gauge_count{} 6 123001000
@@ -240,7 +240,7 @@ gauge2.update(180);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 180 123006000
 buckets_gauge_sum{} 3000 123006000
 buckets_gauge_count{} 9 123006000
@@ -257,7 +257,7 @@ gaugeWithoutWatermarks.update(30);
 run(
   test(
     "gauge without watermarks",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("dry_gauge_last{} 30 123006000
 dry_gauge_sum{} 50 123006000
 dry_gauge_count{} 2 123006000\n")),
@@ -272,7 +272,7 @@ gaugeWithLowWatermark.update(30);
 run(
   test(
     "gauge with only low watermark",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("half_dry_gauge_last{} 30 123006000
 half_dry_gauge_sum{} 50 123006000
 half_dry_gauge_count{} 2 123006000
@@ -288,7 +288,7 @@ gaugeWithHighWatermark.update(30);
 run(
   test(
     "gauge with only low watermark",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("half_wet_gauge_last{} 30 123006000
 half_wet_gauge_sum{} 50 123006000
 half_wet_gauge_count{} 2 123006000
@@ -302,7 +302,7 @@ let gaugeWithLabels = tracker.addGauge("labels_gauge", "foo=\"bar\"", #both, [10
 run(
   test(
     "gauge with bucket labels",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("labels_gauge_last{foo=\"bar\"} 0 123006000
 labels_gauge_sum{foo=\"bar\"} 0 123006000
 labels_gauge_count{foo=\"bar\"} 0 123006000
@@ -362,7 +362,7 @@ newTracker.unshare(sharedData);
 run(
   test(
     "exposition from unshared tracker",
-    newTracker.renderExposition(""),
+    newTracker.renderExposition(),
     M.equals(T.text("stable_gauge1_last{} 180 123006000
 stable_gauge1_sum{} 1000 123006000
 stable_gauge1_count{} 3 123006000
@@ -390,7 +390,7 @@ run(
     [
       test(
         "initial heatmap exposition",
-        tracker.renderExposition(""),
+        tracker.renderExposition(),
         M.equals(T.text("test_heatmap_count{} 0 123006000
 test_heatmap_sum{} 0 123006000\n")),
       ),
@@ -419,7 +419,7 @@ run(
     [
       test(
         "heatmap state exposition",
-        tracker.renderExposition(""),
+        tracker.renderExposition(),
         M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
 test_heatmap{le=\"1\"} 1 123006000
 test_heatmap{le=\"2\"} 1 123006000
@@ -444,7 +444,7 @@ run(
     [
       test(
         "heatmap state exposition",
-        tracker.renderExposition(""),
+        tracker.renderExposition(),
         M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
 test_heatmap{le=\"1\"} 1 123006000
 test_heatmap{le=\"2\"} 1 123006000
@@ -470,7 +470,7 @@ run(
     [
       test(
         "heatmap state exposition",
-        tracker.renderExposition(""),
+        tracker.renderExposition(),
         M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
 test_heatmap{le=\"1\"} 1 123006000
 test_heatmap{le=\"2\"} 1 123006000
