@@ -133,7 +133,7 @@ module {
   /// For example, if you want to add `canister="my_name"` as a label to each metric.
   ///
   /// The second argument `watermarkResetIntervalSeconds` specifies the interval in seconds after which
-  /// watermarks are reset. 
+  /// watermarks are reset.
   /// The interval should be slightly larger than the scraping interval used by your Prometheus scraper.
   ///
   /// The third argument `now` should not be provided because it is implicit and has a default value.
@@ -142,12 +142,10 @@ module {
   /// For executable examples see the various examples in `examples/`.
   public class PromTracker(
     globalLabels : Text,
-//    watermarkResetIntervalSeconds : Nat,
     now : (implicit : () -> Nat64),
   ) {
     var env : WatermarkEnvironment = (
       func _ = 305_000_000_000,
-//      watermarkResetIntervalSeconds.toNat64() * 1_000_000_000,
       now,
     );
 
@@ -167,7 +165,7 @@ module {
     /// the watermark cannot be replaced by a lower value for at least five
     /// minutes, though higher values may replace it immediately.
     public func setWatermarkHoldPeriod(holdSeconds : Nat) {
-      let interval = holdSeconds.toNat64() * 1_000_000_000; 
+      let interval = holdSeconds.toNat64() * 1_000_000_000;
       env := (func _ = interval, env.1);
     };
 
@@ -243,7 +241,7 @@ module {
       let l = bucketLimits;
       var i = 1;
       while (i < l.size()) {
-        if (l[i - 1] >= l[i]) Prim.trap("Bucket limits have to be strictly increasing"); 
+        if (l[i - 1] >= l[i]) Prim.trap("Bucket limits have to be strictly increasing");
         i += 1;
       };
       // create and register the value

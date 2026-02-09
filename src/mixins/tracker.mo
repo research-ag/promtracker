@@ -2,10 +2,10 @@ import PT "../";
 
 /// Mixin that adds Prometheus tracker (without metrics endpoint)
 /// Defines:
-/// 
+///
 /// * transient let pt : PT.PromTracker
 /// * var ptStableData : PT.StableData
-/// * func pt_preupgrade() 
+/// * func pt_preupgrade()
 /// * func pt_postupgrade()
 ///
 /// Arguments:

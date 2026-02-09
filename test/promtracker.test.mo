@@ -10,7 +10,7 @@ let { run; test; suite } = Suite;
 var mockedTime : Nat64 = 123_000_000_000_000;
 
 // Re-define the default value for the implicit `now` parameter in the PromTracker constructor
-func now() : Nat64 = mockedTime; 
+func now() : Nat64 = mockedTime;
 
 var tracker = PT.PromTracker("");
 tracker.setWatermarkHoldPeriod(5);

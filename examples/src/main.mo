@@ -14,7 +14,7 @@ import Util "../../src";
 /// It provides the following metrics:
 ///
 /// - cycles: a pull value of the cycles balance
-/// - counter: a heartbeat counter 
+/// - counter: a heartbeat counter
 /// - time: a gauge of the time between heartbeats
 persistent actor Main {
   // The second argument `false` disables the default set of system metrics
@@ -35,9 +35,9 @@ persistent actor Main {
   transient let counter0 = pt.addCounter("heartbeats", "is_stable=\"false\"", false);
   transient let counter1 = pt.addCounter("heartbeats", "is_stable=\"true\"", true);
 
-  // Example of a Gauge: time between heartbeats 
+  // Example of a Gauge: time between heartbeats
   // Register a gauge with 10 buckets (plus the +Inf bucket)
-  // Bucket limits are: 110, 120, 130, .., 200 
+  // Bucket limits are: 110, 120, 130, .., 200
   // Argument `#both` enables high and low watermarks for the gauge
   // Argument `true` means that the gauge persists across canister upgrade
   // Note that the bucket limits are chosen for local deployment. On mainnet
