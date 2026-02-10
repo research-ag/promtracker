@@ -54,8 +54,8 @@ module {
   type Metric = (Text, Text, Nat);
 
   // The two components of the watermark environment are:
-  // - the hold period in nanoseconds as `Nat64`
-  // - the function that returns the current time in nanoseconds as `Nat64`
+  // - a function returning the hold period in nanoseconds as `Nat64`
+  // - a function returning the current time in nanoseconds as `Nat64`
   // After the hold period has passed, the watermark can be updated to any (lower) value.
   type WatermarkEnvironment = (() -> Nat64, () -> Nat64);
 

@@ -134,7 +134,9 @@ The `pt : PromTracker` instance is already available because it is created by th
 
 All value registration functions have as their first argument the metric name.
 
-The tracker automatically adds the `canister=".."` label to each metric.
+The `tracker` mixin automatically adds the `canister=".."` label to each metric.
+
+The `PromTracker` class accepts an arbitrary label string in the constructor.
 
 Additional per-metric labels can be added with the second argument in the registration function.  
 For example, passing `"mylabel1=\"value1\",mylabel2=\"value2\""` instead of `""`
@@ -189,8 +191,8 @@ and expose it through a `PullValue` like this:
 ```motoko
 transient var counter0 = 0;
 var counter1 = 0;
-transient let _ctr = pt.addPullValue("counter", "is_stable=\"false\"", func() = counter0);
-transient let _ctr = pt.addPullValue("counter", "is_stable=\"true\"", func() = counter1);
+transient let _ctr0 = pt.addPullValue("counter", "is_stable=\"false\"", func() = counter0);
+transient let _ctr1 = pt.addPullValue("counter", "is_stable=\"true\"", func() = counter1);
 ```
 
 ### GaugeValue
@@ -201,6 +203,7 @@ This makes for an interesting heatmap in Grafana.
 
 ```motoko
 import Int "mo:core/Int";
+import Time "mo:core/Time";
 import Util "mo:promtracker";
 
 transient let timeGauge = pt.addGauge("time", "", #both, Util.limits(100, 10, 10), false);
