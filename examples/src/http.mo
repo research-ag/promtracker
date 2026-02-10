@@ -1,7 +1,9 @@
 import Text_ "mo:core/Text";
+import PT_ "../../src";
 import PromTracker "../../src/mixins/tracker";
 import Http "../../src/Http";
 // In production use this instead:
+// import PT "mo:promtracker";
 // import PromTracker "mo:promtracker/mixins/tracker";
 // import Http "mo:promtracker/Http";
 

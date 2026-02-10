@@ -1,9 +1,11 @@
 import Int "mo:core/Int";
 import Time "mo:core/Time";
 
+import PT_ "../../src";
 import PromTracker "../../src/mixins/tracker";
 import Http "../../src/mixins/http";
 // In production:
+// import PT "mo:promtracker";
 // import PromTracker "mo:promtracker/mixins/tracker";
 // import Http "mo:promtracker/mixins/http";
 

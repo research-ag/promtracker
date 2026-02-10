@@ -138,274 +138,286 @@ module {
   /// Resetting it is reserved for internal testing purposes.
   ///
   /// For executable examples see the various examples in `examples/`.
-  public class PromTracker(
-    globalLabels : Text,
+
+  type IValue = {
+    prefix : Text;
+    labels : Text;
+    dump : () -> [Metric];
+    share : () -> ?StableDataItem;
+    unshare : (StableDataItem) -> ();
+  };
+
+  public type Tracker = {
+    globalLabels : Text;
+    var holdPeriod : Nat64;
+    values : List.List<?IValue>;
+  };
+
+  // By default the PromTracker is configured for a 5-minute scraping interval
+  // The watermark hold-down period is therefore 5 minutes plus a 5 second margin
+  public func new(labels : Text) : Tracker = {
+    globalLabels = labels;
+    var holdPeriod = 305_000_000_000;
+    values = List.empty();
+  };
+
+  /*
     now : (implicit : () -> Nat64),
-  ) {
-    // By default the PromTracker is configured for a 5-minute scraping interval
-    // The watermark hold-down period is therefore 5 minutes plus a 5 second margin
-    var holdPeriod : Nat64 = 305_000_000_000;
 
     let env : WatermarkEnvironment = (
       func _ = holdPeriod,
       now,
     );
+    */
 
-    type IValue = {
-      prefix : Text;
-      labels : Text;
-      dump : () -> [Metric];
-      share : () -> ?StableDataItem;
-      unshare : (StableDataItem) -> ();
+  /// Set the hold-down period for watermarks in seconds.
+  ///
+  /// A high watermark with a 5-minute hold-down period means: once set,
+  /// the watermark cannot be replaced by a lower value for at least five
+  /// minutes, though higher values may replace it immediately.
+  public func setWatermarkHoldPeriod(self : Tracker, holdSeconds : Nat) {
+    self.holdPeriod := holdSeconds.toNat64() * 1_000_000_000;
+  };
+
+  /// Register a PullValue in the tracker.
+  /// A PullValue is stateless.
+  /// It is calculated dynamically by calling the `pull` function that is provided as a constructor argument.
+  ///
+  /// Example:
+  /// ```motoko
+  /// let storageSize = tracker.addPullValue("storage_size", "", func() = storage.size());
+  /// ```
+  public func addPullValue(self : Tracker, prefix : Text, labels : Text, pull : () -> Nat) : PullValue {
+    // create and register the value
+    let id = self.values.size();
+    let value = PullValueClass(prefix, labels, pull);
+    self.values.add(?value);
+    // return the interface
+    {
+      value = pull;
+      remove = func() = removeValueById_(self, id);
     };
+  };
 
-    let values : List.List<?IValue> = List.empty();
-
-    /// Set the hold-down period for watermarks in seconds.
-    ///
-    /// A high watermark with a 5-minute hold-down period means: once set,
-    /// the watermark cannot be replaced by a lower value for at least five
-    /// minutes, though higher values may replace it immediately.
-    public func setWatermarkHoldPeriod(holdSeconds : Nat) {
-      holdPeriod := holdSeconds.toNat64() * 1_000_000_000;
+  /// Register a CounterValue in the tracker.
+  /// A CounterValue is stateful. It is either set to a concrete value or incremented by a delta.
+  ///
+  /// A CounterValue can be declared stable by setting the third argument to `true`.
+  /// In this case it will be preserved across canister upgrades.
+  ///
+  /// Example:
+  /// ```motoko
+  /// let requestsAmount = tracker.addCounter("requests_amount", "", true);
+  /// ....
+  /// requestsAmount.add(3);
+  /// requestsAmount.add(1);
+  /// ```
+  public func addCounter(self : Tracker, prefix : Text, labels : Text, isStable : Bool) : Counter {
+    // create and register the value
+    let id = self.values.size();
+    let value = CounterValueClass(prefix, labels, isStable);
+    self.values.add(?value);
+    // return the interface
+    {
+      value = func() = value.value;
+      set = value.set;
+      add = value.add;
+      sub = value.sub;
+      remove = func() = removeValueById_(self, id);
     };
+  };
 
-    /// Register a PullValue in the tracker.
-    /// A PullValue is stateless.
-    /// It is calculated dynamically by calling the `pull` function that is provided as a constructor argument.
-    ///
-    /// Example:
-    /// ```motoko
-    /// let storageSize = tracker.addPullValue("storage_size", "", func() = storage.size());
-    /// ```
-    public func addPullValue(prefix : Text, labels : Text, pull : () -> Nat) : PullValue {
-      // create and register the value
-      let id = values.size();
-      let value = PullValueClass(prefix, labels, pull);
-      values.add(?value);
-      // return the interface
-      {
-        value = pull;
-        remove = func() = removeValueById_(id);
-      };
+  /// Register a GaugeValue in the tracker.
+  /// A GaugeValue is stateful. Its value can be updated by overwriting its previous value.
+  /// A GaugeValue keeps some information about its history such as high and low watermarks
+  /// and histogram buckets counters that can be used to create heatmaps.
+  ///
+  /// If the 4-th argument is an empty list then no histogram buckets are tracked.
+  /// ```motoko
+  /// let requestDuration = tracker.addGauge("request_duration", "", #both, [50, 110], false);
+  /// requestDuration.update(123);
+  /// requestDuration.update(101);
+  /// // now it will output stats:
+  /// // request_duration_sum: 224
+  /// // request_duration_count: 2
+  /// // request_duration_high_watermark: 123
+  /// // request_duration_low_watermark: 101
+  /// // request_duration_bucket{le="50"}: 0
+  /// // request_duration_bucket{le="110"}: 1
+  /// // request_duration_bucket{le="+Inf"} 2
+  /// ```
+  public func addGauge(self : Tracker, prefix : Text, labels : Text, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat], isStable : Bool, now : (implicit : () -> Nat64)) : Gauge {
+    // check order of buckets
+    let l = bucketLimits;
+    var i = 1;
+    while (i < l.size()) {
+      if (l[i - 1] >= l[i]) Prim.trap("Bucket limits have to be strictly increasing");
+      i += 1;
     };
-
-    /// Register a CounterValue in the tracker.
-    /// A CounterValue is stateful. It is either set to a concrete value or incremented by a delta.
-    ///
-    /// A CounterValue can be declared stable by setting the third argument to `true`.
-    /// In this case it will be preserved across canister upgrades.
-    ///
-    /// Example:
-    /// ```motoko
-    /// let requestsAmount = tracker.addCounter("requests_amount", "", true);
-    /// ....
-    /// requestsAmount.add(3);
-    /// requestsAmount.add(1);
-    /// ```
-    public func addCounter(prefix : Text, labels : Text, isStable : Bool) : Counter {
-      // create and register the value
-      let id = values.size();
-      let value = CounterValueClass(prefix, labels, isStable);
-      values.add(?value);
-      // return the interface
-      {
-        value = func() = value.value;
-        set = value.set;
-        add = value.add;
-        sub = value.sub;
-        remove = func() = removeValueById_(id);
-      };
+    // create and register the value
+    let gaugeId = self.values.size();
+    let (lowWM, highWM) = switch (watermarks) {
+      case (#none) (false, false);
+      case (#low) (true, false);
+      case (#high) (false, true);
+      case (#both) (true, true);
     };
-
-    /// Register a GaugeValue in the tracker.
-    /// A GaugeValue is stateful. Its value can be updated by overwriting its previous value.
-    /// A GaugeValue keeps some information about its history such as high and low watermarks
-    /// and histogram buckets counters that can be used to create heatmaps.
-    ///
-    /// If the 4-th argument is an empty list then no histogram buckets are tracked.
-    /// ```motoko
-    /// let requestDuration = tracker.addGauge("request_duration", "", #both, [50, 110], false);
-    /// requestDuration.update(123);
-    /// requestDuration.update(101);
-    /// // now it will output stats:
-    /// // request_duration_sum: 224
-    /// // request_duration_count: 2
-    /// // request_duration_high_watermark: 123
-    /// // request_duration_low_watermark: 101
-    /// // request_duration_bucket{le="50"}: 0
-    /// // request_duration_bucket{le="110"}: 1
-    /// // request_duration_bucket{le="+Inf"} 2
-    /// ```
-    public func addGauge(prefix : Text, labels : Text, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat], isStable : Bool) : Gauge {
-      // check order of buckets
-      let l = bucketLimits;
-      var i = 1;
-      while (i < l.size()) {
-        if (l[i - 1] >= l[i]) Prim.trap("Bucket limits have to be strictly increasing");
-        i += 1;
-      };
-      // create and register the value
-      let gaugeId = values.size();
-      let (lowWM, highWM) = switch (watermarks) {
-        case (#none) (false, false);
-        case (#low) (true, false);
-        case (#high) (false, true);
-        case (#both) (true, true);
-      };
-      let gaugeValue = GaugeValueClass(prefix, labels, lowWM, highWM, bucketLimits, env, isStable);
-      values.add(?gaugeValue);
-      // return the interface
-      {
-        value = func() = gaugeValue.lastValue;
-        sum = func() = gaugeValue.sum;
-        count = func() = gaugeValue.count;
-        update = gaugeValue.update;
-        remove = func() = removeValueById_(gaugeId);
-      };
+    let env : WatermarkEnvironment = (
+      func _ = self.holdPeriod,
+      now,
+    );
+    let gaugeValue = GaugeValueClass(prefix, labels, lowWM, highWM, bucketLimits, env, isStable);
+    self.values.add(?gaugeValue);
+    // return the interface
+    {
+      value = func() = gaugeValue.lastValue;
+      sum = func() = gaugeValue.sum;
+      count = func() = gaugeValue.count;
+      update = gaugeValue.update;
+      remove = func() = removeValueById_(self, gaugeId);
     };
+  };
 
-    /// Register a HeatmapValue in the tracker.
-    /// A HeatmapValue is stateful. Its values can be updated by adding/removing/updating particular entries.
-    /// A HeatmapValue does not store entries themselves. It is the responsibility of client code to update/remove them correctly.
-    /// A HeatmapValue stores histogram buckets counters with limits 0 and powers of 2. Buckets amount increases automatically
-    /// when big entry is added and never shrinks.
-    ///
-    /// Entry values have to be in Nat64 range [0;2^64-1]
-    ///
-    /// ```motoko
-    /// let payloadSizes = tracker.addHeatmap("payload_sizes", "", false);
-    /// payloadSizes.addEntry(50);
-    /// payloadSizes.addEntry(20);
-    /// // now it will output stats:
-    /// // payload_sizes{le="0"}: 0
-    /// // payload_sizes{le="1"}: 0
-    /// // payload_sizes{le="2"}: 0
-    /// // payload_sizes{le="4"}: 0
-    /// // payload_sizes{le="8"}: 0
-    /// // payload_sizes{le="16"}: 0
-    /// // payload_sizes{le="32"}: 1
-    /// // payload_sizes{le="64"}: 2
-    /// // payload_sizes_count: 2
-    /// // payload_sizes_sum: 70
-    /// ```
-    public func addHeatmap(prefix : Text, labels : Text, isStable : Bool) : Heatmap {
-      // create and register the value
-      let heatmapId = values.size();
-      let heatmapValue = HeatmapValueClass(prefix, labels, isStable);
-      values.add(?heatmapValue);
-      // return the interface
-      {
-        sum = func() = heatmapValue.sum;
-        count = func() = heatmapValue.count;
-        addEntry = heatmapValue.addEntry;
-        removeEntry = heatmapValue.removeEntry;
-        updateEntry = heatmapValue.updateEntry;
-        remove = func() = removeValueById_(heatmapId);
-      };
+  /// Register a HeatmapValue in the tracker.
+  /// A HeatmapValue is stateful. Its values can be updated by adding/removing/updating particular entries.
+  /// A HeatmapValue does not store entries themselves. It is the responsibility of client code to update/remove them correctly.
+  /// A HeatmapValue stores histogram buckets counters with limits 0 and powers of 2. Buckets amount increases automatically
+  /// when big entry is added and never shrinks.
+  ///
+  /// Entry values have to be in Nat64 range [0;2^64-1]
+  ///
+  /// ```motoko
+  /// let payloadSizes = tracker.addHeatmap("payload_sizes", "", false);
+  /// payloadSizes.addEntry(50);
+  /// payloadSizes.addEntry(20);
+  /// // now it will output stats:
+  /// // payload_sizes{le="0"}: 0
+  /// // payload_sizes{le="1"}: 0
+  /// // payload_sizes{le="2"}: 0
+  /// // payload_sizes{le="4"}: 0
+  /// // payload_sizes{le="8"}: 0
+  /// // payload_sizes{le="16"}: 0
+  /// // payload_sizes{le="32"}: 1
+  /// // payload_sizes{le="64"}: 2
+  /// // payload_sizes_count: 2
+  /// // payload_sizes_sum: 70
+  /// ```
+  public func addHeatmap(self : Tracker, prefix : Text, labels : Text, isStable : Bool) : Heatmap {
+    // create and register the value
+    let heatmapId = self.values.size();
+    let heatmapValue = HeatmapValueClass(prefix, labels, isStable);
+    self.values.add(?heatmapValue);
+    // return the interface
+    {
+      sum = func() = heatmapValue.sum;
+      count = func() = heatmapValue.count;
+      addEntry = heatmapValue.addEntry;
+      removeEntry = heatmapValue.removeEntry;
+      updateEntry = heatmapValue.updateEntry;
+      remove = func() = removeValueById_(self, heatmapId);
     };
+  };
 
-    /// Add system metrics, such as:
-    ///
-    /// * Cycle balance
-    /// * Canister version (state nonce)
-    /// * All numerical `rts_` values (memory, heap sizes, etc.)
-    public func addSystemValues() {
-      ignore addPullValue("cycles_balance", "", func() = Prim.cyclesBalance());
-      ignore addPullValue("canister_version", "", func() = Prim.canisterVersion().toNat());
-      ignore addPullValue("rts_memory_size", "", func() = Prim.rts_memory_size());
-      ignore addPullValue("rts_heap_size", "", func() = Prim.rts_heap_size());
-      ignore addPullValue("rts_total_allocation", "", func() = Prim.rts_total_allocation());
-      ignore addPullValue("rts_reclaimed", "", func() = Prim.rts_reclaimed());
-      ignore addPullValue("rts_max_live_size", "", func() = Prim.rts_max_live_size());
-      ignore addPullValue("rts_max_stack_size", "", func() = Prim.rts_max_stack_size());
-      ignore addPullValue("rts_callback_table_count", "", func() = Prim.rts_callback_table_count());
-      ignore addPullValue("rts_callback_table_size", "", func() = Prim.rts_callback_table_size());
-      ignore addPullValue("rts_mutator_instructions", "", func() = Prim.rts_mutator_instructions());
-      ignore addPullValue("rts_collector_instructions", "", func() = Prim.rts_collector_instructions());
-      ignore addPullValue("rts_upgrade_instructions", "", func() = Prim.rts_upgrade_instructions());
-      ignore addPullValue("rts_stable_memory_size", "", func() = Prim.rts_stable_memory_size());
-      ignore addPullValue("rts_logical_stable_memory_size", "", func() = Prim.rts_logical_stable_memory_size());
-    };
+  /// Add system metrics, such as:
+  ///
+  /// * Cycle balance
+  /// * Canister version (state nonce)
+  /// * All numerical `rts_` values (memory, heap sizes, etc.)
+  public func addSystemValues(self : Tracker) {
+    ignore addPullValue(self, "cycles_balance", "", func() = Prim.cyclesBalance());
+    ignore addPullValue(self, "canister_version", "", func() = Prim.canisterVersion().toNat());
+    ignore addPullValue(self, "rts_memory_size", "", func() = Prim.rts_memory_size());
+    ignore addPullValue(self, "rts_heap_size", "", func() = Prim.rts_heap_size());
+    ignore addPullValue(self, "rts_total_allocation", "", func() = Prim.rts_total_allocation());
+    ignore addPullValue(self, "rts_reclaimed", "", func() = Prim.rts_reclaimed());
+    ignore addPullValue(self, "rts_max_live_size", "", func() = Prim.rts_max_live_size());
+    ignore addPullValue(self, "rts_max_stack_size", "", func() = Prim.rts_max_stack_size());
+    ignore addPullValue(self, "rts_callback_table_count", "", func() = Prim.rts_callback_table_count());
+    ignore addPullValue(self, "rts_callback_table_size", "", func() = Prim.rts_callback_table_size());
+    ignore addPullValue(self, "rts_mutator_instructions", "", func() = Prim.rts_mutator_instructions());
+    ignore addPullValue(self, "rts_collector_instructions", "", func() = Prim.rts_collector_instructions());
+    ignore addPullValue(self, "rts_upgrade_instructions", "", func() = Prim.rts_upgrade_instructions());
+    ignore addPullValue(self, "rts_stable_memory_size", "", func() = Prim.rts_stable_memory_size());
+    ignore addPullValue(self, "rts_logical_stable_memory_size", "", func() = Prim.rts_logical_stable_memory_size());
+  };
 
-    func removeValueById_(id : Nat) : () = values.put(id, null);
+  func removeValueById_(self : Tracker, id : Nat) : () = self.values.put(id, null);
 
-    /// Remove a previously added value by its prefix and labels
-    /// (both must match).
-    public func removeValue(prefix : Text, labels : Text) {
-      for ((id, value) in values.enumerate()) {
-        switch (value) {
-          case (?v) {
-            if (v.prefix == prefix and v.labels == labels) {
-              removeValueById_(id);
-              return;
-            };
+  /// Remove a previously added value by its prefix and labels
+  /// (both must match).
+  public func removeValue(self : Tracker, prefix : Text, labels : Text) {
+    for ((id, value) in self.values.enumerate()) {
+      switch (value) {
+        case (?v) {
+          if (v.prefix == prefix and v.labels == labels) {
+            removeValueById_(self, id);
+            return;
           };
-          case (null) {};
         };
+        case (null) {};
       };
     };
+  };
 
-    /// Dump all current metrics to an array
-    public func dump() : [Metric] {
-      let result = List.empty<Metric>();
-      for (v in values.values()) {
-        switch (v) {
-          case (?value) result.addAll(value.dump().vals());
-          case (null) {};
-        };
+  /// Dump all current metrics to an array
+  public func dump(self : Tracker) : [Metric] {
+    let result = List.empty<Metric>();
+    for (v in self.values.values()) {
+      switch (v) {
+        case (?value) result.addAll(value.dump().vals());
+        case (null) {};
       };
-      result.toArray();
     };
+    result.toArray();
+  };
 
-    func renderMetric(m : Metric, globalLabels : Text, time : Text) : Text {
-      let (metricName, metricLabels, natValue) = m;
-      metricName # "{" # concat(globalLabels, metricLabels) # "} "
-      # natValue.toText() # " " # time # "\n";
-    };
+  func renderMetric(m : Metric, globalLabels : Text, time : Text) : Text {
+    let (metricName, metricLabels, natValue) = m;
+    metricName # "{" # concat(globalLabels, metricLabels) # "} "
+    # natValue.toText() # " " # time # "\n";
+  };
 
-    /// Render all current metrics to prometheus exposition format
-    public func renderExposition() : Text {
-      let timeStr = (now() / 1_000_000).toText();
-      let lines = Array.map<Metric, Text>(
-        dump(),
-        func(m) = renderMetric(m, globalLabels, timeStr),
-      );
-      lines.vals().join("");
-    };
+  /// Render all current metrics to prometheus exposition format
+  public func renderExposition(self : Tracker, now : (implicit : () -> Nat64)) : Text {
+    let timeStr = (now() / 1_000_000).toText();
+    let lines = Array.map<Metric, Text>(
+      dump(self),
+      func(m) = renderMetric(m, self.globalLabels, timeStr),
+    );
+    lines.vals().join("");
+  };
 
-    private func stablePrefix(v : IValue) : Text = switch (v.labels.size()) {
-      case (0) v.prefix;
-      case (_) v.prefix # "{}" # v.labels;
-    };
+  private func stablePrefix(v : IValue) : Text = switch (v.labels.size()) {
+    case (0) v.prefix;
+    case (_) v.prefix # "{}" # v.labels;
+  };
 
-    /// Export all values, marked as stable, to stable data structure
-    public func share() : StableData {
-      var res : StableData = null;
-      for (value in values.values()) {
-        switch (value) {
-          case (?v) switch (v.share()) {
-            case (?data) {
-              res := res.pushFront((stablePrefix(v), data));
-            };
-            case (_) {};
-          };
-          case (null) {};
-        };
-      };
-      res;
-    };
-
-    /// Restore all values from stable data
-    public func unshare(data : StableData) : () {
-      for (value in values.values()) {
-        switch (value) {
-          case (?v) switch (data.find(func x = x.0 == stablePrefix(v))) {
-            case (?data) v.unshare(data.1);
-            case (_) {};
+  /// Export all values, marked as stable, to stable data structure
+  public func share(self : Tracker) : StableData {
+    var res : StableData = null;
+    for (value in self.values.values()) {
+      switch (value) {
+        case (?v) switch (v.share()) {
+          case (?data) {
+            res := res.pushFront((stablePrefix(v), data));
           };
           case (_) {};
         };
+        case (null) {};
+      };
+    };
+    res;
+  };
+
+  /// Restore all values from stable data
+  public func unshare(self : Tracker, data : StableData) : () {
+    for (value in self.values.values()) {
+      switch (value) {
+        case (?v) switch (data.find(func x = x.0 == stablePrefix(v))) {
+          case (?data) v.unshare(data.1);
+          case (_) {};
+        };
+        case (_) {};
       };
     };
   };

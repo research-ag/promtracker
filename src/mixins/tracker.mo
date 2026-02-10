@@ -12,7 +12,7 @@ import PT "../";
 ///
 /// * self: the actor to which the mixin is applied, is used to derive a label with the canister id
 mixin(self : actor {}) {
-  transient let pt = PT.PromTracker(PT.canisterLabel(self));
+  transient let pt = PT.new(PT.canisterLabel(self));
   var ptStableData : PT.StableData = null;
 
   func pt_preupgrade() = ptStableData := pt.share();

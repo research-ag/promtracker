@@ -1,4 +1,5 @@
 import PromTracker "../../src/mixins/tracker";
+import PT_ "../../src/";
 import Http "../../src/mixins/http";
 // In production:
 // import PromTracker "mo:promtracker/mixins/tracker";
