@@ -233,7 +233,8 @@ buckets_gauge_high_watermark{} 900 123001000
 buckets_gauge_low_watermark{} 10 123001000\n")),
   )
 );
-// emulate that 5 more seconds passed and watermarks invalidated (in tracker we set 5 seconds as TTL for watermarks)
+// emulate that 5 more seconds passed and watermarks invalidated
+// (in tracker we set 5 seconds as hold period)
 mockedTime += 5_000_000_000;
 gauge2.update(20);
 gauge2.update(800);
@@ -249,6 +250,25 @@ buckets_gauge_high_watermark{} 800 123006000
 buckets_gauge_low_watermark{} 20 123006000\n")),
   )
 );
+// reduce watermark holding period to 1 second
+tracker.setWatermarkHoldPeriod(1);
+// emulate that 2 more seconds passed and watermarks invalidate
+mockedTime += 2_000_000_000;
+gauge2.update(30);
+gauge2.update(700);
+gauge2.update(200);
+run(
+  test(
+    "gauge state",
+    tracker.renderExposition(),
+    M.equals(T.text("buckets_gauge_last{} 200 123008000
+buckets_gauge_sum{} 3930 123008000
+buckets_gauge_count{} 12 123008000
+buckets_gauge_high_watermark{} 700 123008000
+buckets_gauge_low_watermark{} 30 123008000\n")),
+  )
+);
+
 gauge2.remove();
 
 /* --------------------------------------- */
@@ -259,9 +279,9 @@ run(
   test(
     "gauge without watermarks",
     tracker.renderExposition(),
-    M.equals(T.text("dry_gauge_last{} 30 123006000
-dry_gauge_sum{} 50 123006000
-dry_gauge_count{} 2 123006000\n")),
+    M.equals(T.text("dry_gauge_last{} 30 123008000
+dry_gauge_sum{} 50 123008000
+dry_gauge_count{} 2 123008000\n")),
   )
 );
 gaugeWithoutWatermarks.remove();
@@ -274,10 +294,10 @@ run(
   test(
     "gauge with only low watermark",
     tracker.renderExposition(),
-    M.equals(T.text("half_dry_gauge_last{} 30 123006000
-half_dry_gauge_sum{} 50 123006000
-half_dry_gauge_count{} 2 123006000
-half_dry_gauge_low_watermark{} 20 123006000\n")),
+    M.equals(T.text("half_dry_gauge_last{} 30 123008000
+half_dry_gauge_sum{} 50 123008000
+half_dry_gauge_count{} 2 123008000
+half_dry_gauge_low_watermark{} 20 123008000\n")),
   )
 );
 gaugeWithLowWatermark.remove();
@@ -290,10 +310,10 @@ run(
   test(
     "gauge with only low watermark",
     tracker.renderExposition(),
-    M.equals(T.text("half_wet_gauge_last{} 30 123006000
-half_wet_gauge_sum{} 50 123006000
-half_wet_gauge_count{} 2 123006000
-half_wet_gauge_high_watermark{} 30 123006000\n")),
+    M.equals(T.text("half_wet_gauge_last{} 30 123008000
+half_wet_gauge_sum{} 50 123008000
+half_wet_gauge_count{} 2 123008000
+half_wet_gauge_high_watermark{} 30 123008000\n")),
   )
 );
 gaugeWithHighWatermark.remove();
@@ -304,17 +324,17 @@ run(
   test(
     "gauge with bucket labels",
     tracker.renderExposition(),
-    M.equals(T.text("labels_gauge_last{foo=\"bar\"} 0 123006000
-labels_gauge_sum{foo=\"bar\"} 0 123006000
-labels_gauge_count{foo=\"bar\"} 0 123006000
-labels_gauge_high_watermark{foo=\"bar\"} 0 123006000
-labels_gauge_low_watermark{foo=\"bar\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"10\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"20\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"50\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"120\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"180\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"+Inf\"} 0 123006000\n")),
+    M.equals(T.text("labels_gauge_last{foo=\"bar\"} 0 123008000
+labels_gauge_sum{foo=\"bar\"} 0 123008000
+labels_gauge_count{foo=\"bar\"} 0 123008000
+labels_gauge_high_watermark{foo=\"bar\"} 0 123008000
+labels_gauge_low_watermark{foo=\"bar\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"10\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"20\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"50\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"120\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"180\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"+Inf\"} 0 123008000\n")),
   )
 );
 gaugeWithLabels.remove();
@@ -365,22 +385,22 @@ run(
   test(
     "exposition from unshared tracker",
     newTracker.renderExposition(),
-    M.equals(T.text("stable_gauge1_last{} 180 123006000
-stable_gauge1_sum{} 1000 123006000
-stable_gauge1_count{} 3 123006000
-stable_gauge1_bucket{le=\"150\"} 1 123006000
-stable_gauge1_bucket{le=\"200\"} 2 123006000
-stable_gauge1_bucket{le=\"+Inf\"} 3 123006000
-stable_gauge2_last{} 180 123006000
-stable_gauge2_sum{} 1000 123006000
-stable_gauge2_count{} 3 123006000
-stable_gauge2_bucket{le=\"150\"} 1 123006000
-stable_gauge2_bucket{le=\"200\"} 2 123006000
-stable_gauge2_bucket{le=\"+Inf\"} 3 123006000
-stable_counter1{} 5 123006000
-stable_counter2{} 0 123006000
-stable_counter_duplicated_key{keyId=\"foo\"} 123 123006000
-stable_counter_duplicated_key{keyId=\"bar\"} 456 123006000\n")),
+    M.equals(T.text("stable_gauge1_last{} 180 123008000
+stable_gauge1_sum{} 1000 123008000
+stable_gauge1_count{} 3 123008000
+stable_gauge1_bucket{le=\"150\"} 1 123008000
+stable_gauge1_bucket{le=\"200\"} 2 123008000
+stable_gauge1_bucket{le=\"+Inf\"} 3 123008000
+stable_gauge2_last{} 180 123008000
+stable_gauge2_sum{} 1000 123008000
+stable_gauge2_count{} 3 123008000
+stable_gauge2_bucket{le=\"150\"} 1 123008000
+stable_gauge2_bucket{le=\"200\"} 2 123008000
+stable_gauge2_bucket{le=\"+Inf\"} 3 123008000
+stable_counter1{} 5 123008000
+stable_counter2{} 0 123008000
+stable_counter_duplicated_key{keyId=\"foo\"} 123 123008000
+stable_counter_duplicated_key{keyId=\"bar\"} 456 123008000\n")),
   )
 );
 
@@ -393,8 +413,8 @@ run(
       test(
         "initial heatmap exposition",
         tracker.renderExposition(),
-        M.equals(T.text("test_heatmap_count{} 0 123006000
-test_heatmap_sum{} 0 123006000\n")),
+        M.equals(T.text("test_heatmap_count{} 0 123008000
+test_heatmap_sum{} 0 123008000\n")),
       ),
       test(
         "initial heatmap sum",
@@ -422,17 +442,17 @@ run(
       test(
         "heatmap state exposition",
         tracker.renderExposition(),
-        M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
-test_heatmap{le=\"1\"} 1 123006000
-test_heatmap{le=\"2\"} 1 123006000
-test_heatmap{le=\"4\"} 2 123006000
-test_heatmap{le=\"8\"} 2 123006000
-test_heatmap{le=\"16\"} 2 123006000
-test_heatmap{le=\"32\"} 2 123006000
-test_heatmap{le=\"64\"} 3 123006000
-test_heatmap{le=\"128\"} 4 123006000
-test_heatmap_count{} 4 123006000
-test_heatmap_sum{} 167 123006000\n")),
+        M.equals(T.text("test_heatmap{le=\"0\"} 1 123008000
+test_heatmap{le=\"1\"} 1 123008000
+test_heatmap{le=\"2\"} 1 123008000
+test_heatmap{le=\"4\"} 2 123008000
+test_heatmap{le=\"8\"} 2 123008000
+test_heatmap{le=\"16\"} 2 123008000
+test_heatmap{le=\"32\"} 2 123008000
+test_heatmap{le=\"64\"} 3 123008000
+test_heatmap{le=\"128\"} 4 123008000
+test_heatmap_count{} 4 123008000
+test_heatmap_sum{} 167 123008000\n")),
       ),
     ],
   )
@@ -447,17 +467,17 @@ run(
       test(
         "heatmap state exposition",
         tracker.renderExposition(),
-        M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
-test_heatmap{le=\"1\"} 1 123006000
-test_heatmap{le=\"2\"} 1 123006000
-test_heatmap{le=\"4\"} 1 123006000
-test_heatmap{le=\"8\"} 1 123006000
-test_heatmap{le=\"16\"} 1 123006000
-test_heatmap{le=\"32\"} 1 123006000
-test_heatmap{le=\"64\"} 2 123006000
-test_heatmap{le=\"128\"} 4 123006000
-test_heatmap_count{} 4 123006000
-test_heatmap_sum{} 267 123006000\n")),
+        M.equals(T.text("test_heatmap{le=\"0\"} 1 123008000
+test_heatmap{le=\"1\"} 1 123008000
+test_heatmap{le=\"2\"} 1 123008000
+test_heatmap{le=\"4\"} 1 123008000
+test_heatmap{le=\"8\"} 1 123008000
+test_heatmap{le=\"16\"} 1 123008000
+test_heatmap{le=\"32\"} 1 123008000
+test_heatmap{le=\"64\"} 2 123008000
+test_heatmap{le=\"128\"} 4 123008000
+test_heatmap_count{} 4 123008000
+test_heatmap_sum{} 267 123008000\n")),
       ),
     ],
   )
@@ -473,17 +493,17 @@ run(
       test(
         "heatmap state exposition",
         tracker.renderExposition(),
-        M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
-test_heatmap{le=\"1\"} 1 123006000
-test_heatmap{le=\"2\"} 1 123006000
-test_heatmap{le=\"4\"} 1 123006000
-test_heatmap{le=\"8\"} 1 123006000
-test_heatmap{le=\"16\"} 1 123006000
-test_heatmap{le=\"32\"} 1 123006000
-test_heatmap{le=\"64\"} 2 123006000
-test_heatmap{le=\"128\"} 2 123006000
-test_heatmap_count{} 2 123006000
-test_heatmap_sum{} 64 123006000\n")),
+        M.equals(T.text("test_heatmap{le=\"0\"} 1 123008000
+test_heatmap{le=\"1\"} 1 123008000
+test_heatmap{le=\"2\"} 1 123008000
+test_heatmap{le=\"4\"} 1 123008000
+test_heatmap{le=\"8\"} 1 123008000
+test_heatmap{le=\"16\"} 1 123008000
+test_heatmap{le=\"32\"} 1 123008000
+test_heatmap{le=\"64\"} 2 123008000
+test_heatmap{le=\"128\"} 2 123008000
+test_heatmap_count{} 2 123008000
+test_heatmap_sum{} 64 123008000\n")),
       ),
     ],
   )

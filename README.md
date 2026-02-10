@@ -5,13 +5,22 @@
 
 ## Overview
 
-The `mo:promtracker/mixins/tracker` mixin (often imported as `PromTracker`) adds Prometheus metrics to your canisters.
-By including the mixin,
-the canister exports real-time metrics in the Prometheus exposition format at the HTTP route `/metrics`.
-From the endpoint the metrics can be scraped by a Prometheus scraper.
-The library also exposes a `PT.PromTracker` class (see `src/lib.mo`), but most users will only need the `tracker` mixin (and optionally the `mo:promtracker/mixins/http` mixin for HTTP integration).
+The `PromTracker` class provides a convenient way 
+to track real-time metrics inside a canister that can 
+be exported and scraped via HTTP by a Prometheus scraper.
+It supports a range of metrics types from simple values
+to histograms.
 
-The list of exported metrics is initially empty.
+The `mo:promtracker/mixins/tracker` mixin is the most
+convenient way to add the class to the canister and to
+integrate it with system functions.
+
+The `mo:promtracker/mixins/http` mixin exports the metrics
+in the Prometheus exposition format via HTTP.
+From the endpoint, normally `/metrics`,
+the metrics can be scraped by a Prometheus scraper.
+
+The list of tracked metrics is initially empty.
 The canister has to register the values it wants to export with the tracker.
 Here, a _value_ corresponds to a single metric which results in one line in the exported exposition format.
 Registration of values is a one-time action
@@ -128,7 +137,7 @@ All value registration functions have as their first argument the metric name.
 The tracker automatically adds the `canister=".."` label to each metric.
 
 Additional per-metric labels can be added with the second argument in the registration function.  
-For example, passing `"mylabel1=value1,mylabel2=value2"` instead of `""`
+For example, passing `"mylabel1=\"value1\",mylabel2=\"value2\""` instead of `""`
 will make the metric render as
 
 ```text

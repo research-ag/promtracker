@@ -54,8 +54,9 @@ module {
   type Metric = (Text, Text, Nat);
 
   // The two components of the watermark environment are:
-  // - the interval after which the watermarks are reset in seconds as Nat
-  // - the function that returns the current time in nanoseconds as Nat64
+  // - the hold period in nanoseconds as `Nat64`
+  // - the function that returns the current time in nanoseconds as `Nat64`
+  // After the hold period has passed, the watermark can be updated to any (lower) value.
   type WatermarkEnvironment = (() -> Nat64, () -> Nat64);
 
   /// The access interface for pull values
@@ -132,20 +133,21 @@ module {
   /// The first argument `globalLabels` is a text that will be added as global labels to each metric.
   /// For example, if you want to add `canister="my_name"` as a label to each metric.
   ///
-  /// The second argument `watermarkResetIntervalSeconds` specifies the interval in seconds after which
-  /// watermarks are reset.
-  /// The interval should be slightly larger than the scraping interval used by your Prometheus scraper.
-  ///
-  /// The third argument `now` should not be provided because it is implicit and has a default value.
-  /// It is only used internally for testing purposes.
+  /// The second argument `now` should not be passed explicitly in normal use.
+  /// It has an implicit default value.
+  /// Resetting it is reserved for internal testing purposes.
   ///
   /// For executable examples see the various examples in `examples/`.
   public class PromTracker(
     globalLabels : Text,
     now : (implicit : () -> Nat64),
   ) {
-    var env : WatermarkEnvironment = (
-      func _ = 305_000_000_000,
+    // By default the PromTracker is configured for a 5-minute scraping interval
+    // The watermark hold-down period is therefore 5 minutes plus a 5 second margin
+    var holdPeriod : Nat64 = 305_000_000_000;
+
+    let env : WatermarkEnvironment = (
+      func _ = holdPeriod,
       now,
     );
 
@@ -165,8 +167,7 @@ module {
     /// the watermark cannot be replaced by a lower value for at least five
     /// minutes, though higher values may replace it immediately.
     public func setWatermarkHoldPeriod(holdSeconds : Nat) {
-      let interval = holdSeconds.toNat64() * 1_000_000_000;
-      env := (func _ = interval, env.1);
+      holdPeriod := holdSeconds.toNat64() * 1_000_000_000;
     };
 
     /// Register a PullValue in the tracker.
