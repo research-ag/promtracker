@@ -1,10 +1,15 @@
 import PT "../../src";
+import Http "../../src/mixins/http";
 // In production use this instead:
 // import PT "mo:promtracker";
+// import Http "mo:promtracker/mixins/http";
 
-// This example shows how to use PromTracker in plain mode, without mixins.
+/// This example shows how to use the PromTracker class instead of
+/// the `tracker` mixin.
 persistent actor Main {
-  transient let pt = PT.PromTracker(PT.canisterLabel(Main), 65);
+  transient let pt = PT.PromTracker(PT.canisterLabel(Main));
+  include Http(pt, "/metrics");
+
   var ptStableData : PT.StableData = null;
   system func preupgrade() { ptStableData := pt.share() };
   system func postupgrade() { pt.unshare(ptStableData) };
@@ -12,9 +17,4 @@ persistent actor Main {
   transient let counter = pt.addCounter("counter", "", true);
 
   system func heartbeat() : async () { counter.add(1) };
-
-  // Expose the `/metrics` endpoint
-  public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
-    pt.http_request(req);
-  };
 };

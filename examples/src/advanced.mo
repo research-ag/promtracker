@@ -3,10 +3,12 @@ import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
 import Prng "mo:prng";
 
-import PromTracker "../../src/mixins/default";
+import PromTracker "../../src/mixins/tracker";
+import Http "../../src/mixins/http";
 import Util "../../src";
 // In production:
-// import PromTracker "mo:promtracker/mixins/default";
+// import PromTracker "mo:promtracker/mixins/tracker";
+// import Http "mo:promtracker/mixins/http";
 // import Util "mo:promtracker";
 
 /// A canister, which exposes Prometheus metrics via HTTP at route `/metrics`
@@ -17,7 +19,8 @@ import Util "../../src";
 persistent actor Main {
   // The second argument `false` disables the default set of system metrics
   // which were already shown in the `minimal` example.
-  include PromTracker(Main, false);
+  include PromTracker(Main);
+  include Http(pt, "/metrics");
 
   // If we are not exclusively using PullValues then we need this:
   system func preupgrade() { pt_preupgrade() };

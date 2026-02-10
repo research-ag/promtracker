@@ -9,8 +9,6 @@ import Types "mo:core/Types";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
-import Http "internal/tiny_http";
-
 module {
   /// Helper function to get the first 5 characters of the canister's
   /// own canister id (by passing itself to this function).
@@ -56,9 +54,10 @@ module {
   type Metric = (Text, Text, Nat);
 
   // The two components of the watermark environment are:
-  // - the interval after which the watermarks are reset in seconds as Nat
-  // - the function that returns the current time in nanoseconds as Nat64
-  type WatermarkEnvironment = (Nat64, () -> Nat64);
+  // - a function returning the hold period in nanoseconds as `Nat64`
+  // - a function returning the current time in nanoseconds as `Nat64`
+  // After the hold period has passed, the watermark can be updated to any (lower) value.
+  type WatermarkEnvironment = (() -> Nat64, () -> Nat64);
 
   /// The access interface for pull values
   public type PullValue = {
@@ -98,20 +97,11 @@ module {
     remove : () -> ();
   };
 
-  /// Type for HTTP requests.
-  /// This type is used to declare the canister's http_request query function.
-  public type HttpReq = Http.Request;
-
-  /// Type for HTTP responses.
-  /// This type is used to declare the canister's http_request query function.
-  public type HttpResp = Http.Response;
-
   /// Value tracker, designed specifically for use as a source for Prometheus.
   ///
   /// Example:
   /// ```motoko
-  /// let tracker = PromTracker.PromTracker("", 65);
-  /// // 65 seconds is the recommended interval if prometheus pulls stats with interval 60 seconds
+  /// let tracker = PromTracker.PromTracker("");
   /// ....
   /// let successfulHeartbeats = tracker.addCounter("successful_heartbeats", true);
   /// let failedHeartbeats = tracker.addCounter("failed_heartbeats", true);
@@ -126,7 +116,7 @@ module {
   /// heartbeatDuration.update(14);
   /// ....
   /// // get prometheus metrics:
-  /// let text = tracker.renderExposition("");
+  /// let text = tracker.renderExposition();
   /// ```
   ///
   /// Expected output is:
@@ -140,26 +130,27 @@ module {
   /// heartbeat_duration_low_watermark{} 10 1698842860811
   /// ```
   ///
-  /// The first argument `staticGlobalLabels` is a text that will be added as global labels to each metric.
+  /// The first argument `globalLabels` is a text that will be added as global labels to each metric.
   /// For example, if you want to add `canister="my_name"` as a label to each metric.
   ///
-  /// The second argument `watermarkResetIntervalSeconds` specifies the interval in seconds after which
-  /// watermarks are reset. 
-  /// The interval should be slightly larger than the scraping interval used by your Prometheus scraper.
-  ///
-  /// The third argument `now` should not be provided because it is implicit and has a default value.
-  /// It is only used internally for testing purposes.
+  /// The second argument `now` should not be passed explicitly in normal use.
+  /// It has an implicit default value.
+  /// Resetting it is reserved for internal testing purposes.
   ///
   /// For executable examples see the various examples in `examples/`.
   public class PromTracker(
-    staticGlobalLabels : Text,
-    watermarkResetIntervalSeconds : Nat,
+    globalLabels : Text,
     now : (implicit : () -> Nat64),
   ) {
+    // By default the PromTracker is configured for a 5-minute scraping interval
+    // The watermark hold-down period is therefore 5 minutes plus a 5 second margin
+    var holdPeriod : Nat64 = 305_000_000_000;
+
     let env : WatermarkEnvironment = (
-      watermarkResetIntervalSeconds.toNat64() * 1_000_000_000,
+      func _ = holdPeriod,
       now,
     );
+
     type IValue = {
       prefix : Text;
       labels : Text;
@@ -169,6 +160,15 @@ module {
     };
 
     let values : List.List<?IValue> = List.empty();
+
+    /// Set the hold-down period for watermarks in seconds.
+    ///
+    /// A high watermark with a 5-minute hold-down period means: once set,
+    /// the watermark cannot be replaced by a lower value for at least five
+    /// minutes, though higher values may replace it immediately.
+    public func setWatermarkHoldPeriod(holdSeconds : Nat) {
+      holdPeriod := holdSeconds.toNat64() * 1_000_000_000;
+    };
 
     /// Register a PullValue in the tracker.
     /// A PullValue is stateless.
@@ -242,7 +242,7 @@ module {
       let l = bucketLimits;
       var i = 1;
       while (i < l.size()) {
-        if (l[i - 1] >= l[i]) Prim.trap("Bucket limits have to be strictly increasing"); 
+        if (l[i - 1] >= l[i]) Prim.trap("Bucket limits have to be strictly increasing");
         i += 1;
       };
       // create and register the value
@@ -365,11 +365,8 @@ module {
     };
 
     /// Render all current metrics to prometheus exposition format
-    /// The argument `dynamicGlobalLabels` is a text that will be added as labels globally to each metric.
-    /// The provided labels are added on top of the global labels provided in the constructor.
-    public func renderExposition(dynamicGlobalLabels : Text) : Text {
+    public func renderExposition() : Text {
       let timeStr = (now() / 1_000_000).toText();
-      let globalLabels = concat(staticGlobalLabels, dynamicGlobalLabels);
       let lines = Array.map<Metric, Text>(
         dump(),
         func(m) = renderMetric(m, globalLabels, timeStr),
@@ -411,29 +408,6 @@ module {
         };
       };
     };
-
-    /// Drop-in `http_request` function to handle "/metrics" endpoint
-    /// If your canister serves no other http endpoints expcept `/metrics` then
-    /// you can use this function as is. Just connect it to an async query
-    /// function of your canister as follows:
-    ///
-    /// ```motoko
-    /// public query func http_request(req : PT.HttpReq) : async PT.HttpResp {
-    ///   pt.http_request(req);
-    /// };
-    /// ```
-    /// 
-    /// If you want to serve other endpoints as well then you have to write
-    /// your own http_request function and call `renderExposition` inside it.
-    public func http_request(req : Http.Request) : Http.Response {
-      let ?path = req.url.split(#char '?').next() else return Http.render400();
-      switch (req.method, path) {
-        case ("GET", "/metrics") {
-          Http.renderPlainText(renderExposition(""));
-        };
-        case (_) Http.render400();
-      };
-    };
   };
 
   class PullValueClass(prefix_ : Text, labels_ : Text, pull : () -> Nat) {
@@ -471,12 +445,12 @@ module {
   class WatermarkTracker<T>(
     initialMark : T,
     isHigher : (new : T, old : T) -> Bool,
-    resetInterval : Nat64,
+    holdPeriod : () -> Nat64,
   ) {
     var lastMarkTime : Nat64 = 0;
     public var mark : T = initialMark;
     public func update(value : T, time : Nat64) {
-      if (isHigher(value, mark) or time > lastMarkTime + resetInterval) {
+      if (isHigher(value, mark) or time > lastMarkTime + holdPeriod()) {
         mark := value;
         lastMarkTime := time;
       };
@@ -494,14 +468,14 @@ module {
     public let prefix = prefix_;
     public let labels = labels_;
 
-    let (resetInterval, now) = env;
+    let (holdPeriod, now) = env;
 
     public var count : Nat = 0;
     public var sum : Nat = 0;
     var limits = limits_;
     public var counters : [var Nat] = VarArray.repeat<Nat>(0, limits.size());
-    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new > old, resetInterval);
-    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new < old, resetInterval);
+    public var highWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new > old, holdPeriod);
+    public var lowWatermark : WatermarkTracker<Nat> = WatermarkTracker<Nat>(0, func(new, old) = new < old, holdPeriod);
     public var lastValue : Nat = 0;
 
     public func update(current : Nat) {

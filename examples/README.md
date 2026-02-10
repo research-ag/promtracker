@@ -37,7 +37,7 @@ Refresh the page to see how the metrics have changed since then.
 
 ## Minimal
 
-Uses `mixin/default`.
+Uses `mixins/tracker, mixins/http`.
 
 Demonstrates a minimal setup to expose only default system metrics.
 Very useful already for minimal health monitoring which every canister in production should have.
@@ -64,9 +64,9 @@ rts_logical_stable_memory_size{canister="tl4x7"} 0 1770400321653
 
 ## Main
 
-Uses `mixin/default`.
+Uses `mixins/tracker, mixins/http`.
 
-Demonstrates the use of the three main metric types PullValue, Counter and Gauge.
+Demonstrates the use of the three main metric types `PullValue`, `CounterValue` and `GaugeValue`.
 In the case of Gauges it shows how to define buckets so that the Gauge can produce a heatmap in Grafana.
 
 It also shows how to persist Counter and Gauge across canister upgrades.
@@ -96,7 +96,7 @@ time_bucket{canister="tz2ag",le="+Inf"} 119 1770400540297
 
 ## Advanced
 
-Uses `mixin/default`.
+Uses `mixins/tracker, mixins/http`.
 
 Focuses on Gauges and shows advanced usage of them
 to track:
@@ -137,27 +137,12 @@ bytes_bucket{canister="tc74d",le="+Inf"} 38 1770400881392
 
 ## Heatmap
 
-Uses `mixin/default`.
+Uses `mixins/tracker, mixins/http`.
 
-Demonstrates the Heatmap metric type which is similar to a Gauge but has automated (exponential) bucket creation built in.
+Demonstrates the `Heatmap` metric type which is similar to a Gauge but has automated (exponential) bucket creation built in.
 
 The metrics render like this:
 ```text
-cycles_balance{canister="t63gs"} 1408810709859 1770401064297
-canister_version{canister="t63gs"} 17105 1770401064297
-rts_memory_size{canister="t63gs"} 15597568 1770401064297
-rts_heap_size{canister="t63gs"} 15539984 1770401064297
-rts_total_allocation{canister="t63gs"} 15540216 1770401064297
-rts_reclaimed{canister="t63gs"} 0 1770401064297
-rts_max_live_size{canister="t63gs"} 0 1770401064297
-rts_max_stack_size{canister="t63gs"} 4194304 1770401064297
-rts_callback_table_count{canister="t63gs"} 0 1770401064297
-rts_callback_table_size{canister="t63gs"} 256 1770401064297
-rts_mutator_instructions{canister="t63gs"} 3303 1770401064297
-rts_collector_instructions{canister="t63gs"} 330 1770401064297
-rts_upgrade_instructions{canister="t63gs"} 7320 1770401064297
-rts_stable_memory_size{canister="t63gs"} 0 1770401064297
-rts_logical_stable_memory_size{canister="t63gs"} 0 1770401064297
 heatmap{canister="t63gs",le="0"} 0 1770401064297
 heatmap{canister="t63gs",le="1"} 0 1770401064297
 heatmap{canister="t63gs",le="2"} 0 1770401064297
@@ -175,24 +160,25 @@ heatmap_sum{canister="t63gs"} 865284 1770401064297
 
 ## Http
 
-Uses `mixin/base`.
+Uses `mixins/tracker`.
 
-The `default` mixin assumes that the prometheus endpoint `/metrics` is the only route that the canister serves.
+The `http` mixin does not allow the canister to serve other routes than the one used for the prometheus endpoint (normally `/metrics`).
 
-This example shows how to use promtracker if the canister wants to simultaneously serve other routes from other parts of the canister code.
-It shows how to define the custom `http_request` handler to which other routes can be added.
+This example shows how to bypass this limitation.
+It shows how to define the custom `http_request` handler with other routes added.
 
 The metrics render like this:
 ```text
 counter{canister="tm5rl"} 6056 1770401117142
 ```
+and another `/hello` route is served.
 
 ## Plain
 
-Without `mixin`.
+Uses `mixins/http`.
 
-Shows how to use PromTracker without mixins, including manual sharing of stable
-state across upgrades and a custom `http_request` handler.
+Shows how to define `PromTracker` without the `tracker` mixin,
+including manual sharing of stable state across upgrades.
 
 The metrics render like this:
 ```text

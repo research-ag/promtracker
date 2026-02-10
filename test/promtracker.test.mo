@@ -10,16 +10,17 @@ let { run; test; suite } = Suite;
 var mockedTime : Nat64 = 123_000_000_000_000;
 
 // Re-define the default value for the implicit `now` parameter in the PromTracker constructor
-func now() : Nat64 = mockedTime; 
+func now() : Nat64 = mockedTime;
 
-var tracker = PT.PromTracker("", 5);
+var tracker = PT.PromTracker("");
+tracker.setWatermarkHoldPeriod(5);
 
 /* --------------------------------------- */
 let testValue = tracker.addPullValue("test_val_0", "", func() = 150);
 run(
   test(
     "pull value output",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_val_0{} 150 123000000\n")),
   )
 );
@@ -29,7 +30,7 @@ testValue.remove();
 run(
   test(
     "value removed",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("")),
   )
 );
@@ -39,7 +40,7 @@ let testValue1 = tracker.addPullValue("test_val_1", "foo=\"bar\"", func() = 270)
 run(
   test(
     "pull value labels",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_val_1{foo=\"bar\"} 270 123000000\n")),
   )
 );
@@ -50,7 +51,7 @@ let counter = tracker.addCounter("test_counter", "", false);
 run(
   test(
     "initial counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 0 123000000\n")),
   )
 );
@@ -58,7 +59,7 @@ counter.add(3);
 run(
   test(
     "counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 3 123000000\n")),
   )
 );
@@ -66,7 +67,7 @@ counter.add(4);
 run(
   test(
     "counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 7 123000000\n")),
   )
 );
@@ -74,7 +75,7 @@ counter.sub(2);
 run(
   test(
     "counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 5 123000000\n")),
   )
 );
@@ -82,7 +83,7 @@ counter.set(2);
 run(
   test(
     "counter state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter{} 2 123000000\n")),
   )
 );
@@ -93,7 +94,7 @@ let counter1 = tracker.addCounter("test_counter_1", "foo=\"bar\"", false);
 run(
   test(
     "counter labels",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("test_counter_1{foo=\"bar\"} 0 123000000\n")),
   )
 );
@@ -107,7 +108,7 @@ run(
     [
       test(
         "initial gauge exposition",
-        tracker.renderExposition(""),
+        tracker.renderExposition(),
         M.equals(T.text("test_gauge_last{} 0 123000000
 test_gauge_sum{} 0 123000000
 test_gauge_count{} 0 123000000
@@ -136,7 +137,7 @@ run(
     [
       test(
         "gauge state exposition",
-        tracker.renderExposition(""),
+        tracker.renderExposition(),
         M.equals(T.text("test_gauge_last{} 160 123000000
 test_gauge_sum{} 1240 123000000
 test_gauge_count{} 6 123000000
@@ -159,7 +160,7 @@ let gaugeWithBuckets = tracker.addGauge("buckets_gauge", "", #both, [10, 20, 50,
 run(
   test(
     "initial gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 0 123000000
 buckets_gauge_sum{} 0 123000000
 buckets_gauge_count{} 0 123000000
@@ -184,7 +185,7 @@ gaugeWithBuckets.update(999999);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 999999 123000000
 buckets_gauge_sum{} 1000301 123000000
 buckets_gauge_count{} 6 123000000
@@ -208,7 +209,7 @@ gauge2.update(90);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 90 123000000
 buckets_gauge_sum{} 1000 123000000
 buckets_gauge_count{} 3 123000000
@@ -224,7 +225,7 @@ gauge2.update(180);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 180 123001000
 buckets_gauge_sum{} 2000 123001000
 buckets_gauge_count{} 6 123001000
@@ -232,7 +233,8 @@ buckets_gauge_high_watermark{} 900 123001000
 buckets_gauge_low_watermark{} 10 123001000\n")),
   )
 );
-// emulate that 5 more seconds passed and watermarks invalidated (in tracker we set 5 seconds as TTL for watermarks)
+// emulate that 5 more seconds passed and watermarks invalidated
+// (in tracker we set 5 seconds as hold period)
 mockedTime += 5_000_000_000;
 gauge2.update(20);
 gauge2.update(800);
@@ -240,7 +242,7 @@ gauge2.update(180);
 run(
   test(
     "gauge state",
-    tracker.renderExposition(""),
+    tracker.renderExposition(),
     M.equals(T.text("buckets_gauge_last{} 180 123006000
 buckets_gauge_sum{} 3000 123006000
 buckets_gauge_count{} 9 123006000
@@ -248,6 +250,25 @@ buckets_gauge_high_watermark{} 800 123006000
 buckets_gauge_low_watermark{} 20 123006000\n")),
   )
 );
+// reduce watermark holding period to 1 second
+tracker.setWatermarkHoldPeriod(1);
+// emulate that 2 more seconds passed and watermarks invalidate
+mockedTime += 2_000_000_000;
+gauge2.update(30);
+gauge2.update(700);
+gauge2.update(200);
+run(
+  test(
+    "gauge state",
+    tracker.renderExposition(),
+    M.equals(T.text("buckets_gauge_last{} 200 123008000
+buckets_gauge_sum{} 3930 123008000
+buckets_gauge_count{} 12 123008000
+buckets_gauge_high_watermark{} 700 123008000
+buckets_gauge_low_watermark{} 30 123008000\n")),
+  )
+);
+
 gauge2.remove();
 
 /* --------------------------------------- */
@@ -257,10 +278,10 @@ gaugeWithoutWatermarks.update(30);
 run(
   test(
     "gauge without watermarks",
-    tracker.renderExposition(""),
-    M.equals(T.text("dry_gauge_last{} 30 123006000
-dry_gauge_sum{} 50 123006000
-dry_gauge_count{} 2 123006000\n")),
+    tracker.renderExposition(),
+    M.equals(T.text("dry_gauge_last{} 30 123008000
+dry_gauge_sum{} 50 123008000
+dry_gauge_count{} 2 123008000\n")),
   )
 );
 gaugeWithoutWatermarks.remove();
@@ -272,11 +293,11 @@ gaugeWithLowWatermark.update(30);
 run(
   test(
     "gauge with only low watermark",
-    tracker.renderExposition(""),
-    M.equals(T.text("half_dry_gauge_last{} 30 123006000
-half_dry_gauge_sum{} 50 123006000
-half_dry_gauge_count{} 2 123006000
-half_dry_gauge_low_watermark{} 20 123006000\n")),
+    tracker.renderExposition(),
+    M.equals(T.text("half_dry_gauge_last{} 30 123008000
+half_dry_gauge_sum{} 50 123008000
+half_dry_gauge_count{} 2 123008000
+half_dry_gauge_low_watermark{} 20 123008000\n")),
   )
 );
 gaugeWithLowWatermark.remove();
@@ -288,11 +309,11 @@ gaugeWithHighWatermark.update(30);
 run(
   test(
     "gauge with only low watermark",
-    tracker.renderExposition(""),
-    M.equals(T.text("half_wet_gauge_last{} 30 123006000
-half_wet_gauge_sum{} 50 123006000
-half_wet_gauge_count{} 2 123006000
-half_wet_gauge_high_watermark{} 30 123006000\n")),
+    tracker.renderExposition(),
+    M.equals(T.text("half_wet_gauge_last{} 30 123008000
+half_wet_gauge_sum{} 50 123008000
+half_wet_gauge_count{} 2 123008000
+half_wet_gauge_high_watermark{} 30 123008000\n")),
   )
 );
 gaugeWithHighWatermark.remove();
@@ -302,18 +323,18 @@ let gaugeWithLabels = tracker.addGauge("labels_gauge", "foo=\"bar\"", #both, [10
 run(
   test(
     "gauge with bucket labels",
-    tracker.renderExposition(""),
-    M.equals(T.text("labels_gauge_last{foo=\"bar\"} 0 123006000
-labels_gauge_sum{foo=\"bar\"} 0 123006000
-labels_gauge_count{foo=\"bar\"} 0 123006000
-labels_gauge_high_watermark{foo=\"bar\"} 0 123006000
-labels_gauge_low_watermark{foo=\"bar\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"10\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"20\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"50\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"120\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"180\"} 0 123006000
-labels_gauge_bucket{foo=\"bar\",le=\"+Inf\"} 0 123006000\n")),
+    tracker.renderExposition(),
+    M.equals(T.text("labels_gauge_last{foo=\"bar\"} 0 123008000
+labels_gauge_sum{foo=\"bar\"} 0 123008000
+labels_gauge_count{foo=\"bar\"} 0 123008000
+labels_gauge_high_watermark{foo=\"bar\"} 0 123008000
+labels_gauge_low_watermark{foo=\"bar\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"10\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"20\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"50\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"120\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"180\"} 0 123008000
+labels_gauge_bucket{foo=\"bar\",le=\"+Inf\"} 0 123008000\n")),
   )
 );
 gaugeWithLabels.remove();
@@ -344,7 +365,8 @@ stableCounter2.remove();
 stableCounterDuplicatedKeyFoo.remove();
 stableCounterDuplicatedKeyBar.remove();
 
-let newTracker = PT.PromTracker("", 5);
+let newTracker = PT.PromTracker("");
+newTracker.setWatermarkHoldPeriod(5);
 // the same gauge, state should be the same
 ignore newTracker.addGauge("stable_gauge1", "", #none, [150, 200], true);
 // gauge with changed buckets, buckets should be overwritten by stable data
@@ -362,23 +384,23 @@ newTracker.unshare(sharedData);
 run(
   test(
     "exposition from unshared tracker",
-    newTracker.renderExposition(""),
-    M.equals(T.text("stable_gauge1_last{} 180 123006000
-stable_gauge1_sum{} 1000 123006000
-stable_gauge1_count{} 3 123006000
-stable_gauge1_bucket{le=\"150\"} 1 123006000
-stable_gauge1_bucket{le=\"200\"} 2 123006000
-stable_gauge1_bucket{le=\"+Inf\"} 3 123006000
-stable_gauge2_last{} 180 123006000
-stable_gauge2_sum{} 1000 123006000
-stable_gauge2_count{} 3 123006000
-stable_gauge2_bucket{le=\"150\"} 1 123006000
-stable_gauge2_bucket{le=\"200\"} 2 123006000
-stable_gauge2_bucket{le=\"+Inf\"} 3 123006000
-stable_counter1{} 5 123006000
-stable_counter2{} 0 123006000
-stable_counter_duplicated_key{keyId=\"foo\"} 123 123006000
-stable_counter_duplicated_key{keyId=\"bar\"} 456 123006000\n")),
+    newTracker.renderExposition(),
+    M.equals(T.text("stable_gauge1_last{} 180 123008000
+stable_gauge1_sum{} 1000 123008000
+stable_gauge1_count{} 3 123008000
+stable_gauge1_bucket{le=\"150\"} 1 123008000
+stable_gauge1_bucket{le=\"200\"} 2 123008000
+stable_gauge1_bucket{le=\"+Inf\"} 3 123008000
+stable_gauge2_last{} 180 123008000
+stable_gauge2_sum{} 1000 123008000
+stable_gauge2_count{} 3 123008000
+stable_gauge2_bucket{le=\"150\"} 1 123008000
+stable_gauge2_bucket{le=\"200\"} 2 123008000
+stable_gauge2_bucket{le=\"+Inf\"} 3 123008000
+stable_counter1{} 5 123008000
+stable_counter2{} 0 123008000
+stable_counter_duplicated_key{keyId=\"foo\"} 123 123008000
+stable_counter_duplicated_key{keyId=\"bar\"} 456 123008000\n")),
   )
 );
 
@@ -390,9 +412,9 @@ run(
     [
       test(
         "initial heatmap exposition",
-        tracker.renderExposition(""),
-        M.equals(T.text("test_heatmap_count{} 0 123006000
-test_heatmap_sum{} 0 123006000\n")),
+        tracker.renderExposition(),
+        M.equals(T.text("test_heatmap_count{} 0 123008000
+test_heatmap_sum{} 0 123008000\n")),
       ),
       test(
         "initial heatmap sum",
@@ -419,18 +441,18 @@ run(
     [
       test(
         "heatmap state exposition",
-        tracker.renderExposition(""),
-        M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
-test_heatmap{le=\"1\"} 1 123006000
-test_heatmap{le=\"2\"} 1 123006000
-test_heatmap{le=\"4\"} 2 123006000
-test_heatmap{le=\"8\"} 2 123006000
-test_heatmap{le=\"16\"} 2 123006000
-test_heatmap{le=\"32\"} 2 123006000
-test_heatmap{le=\"64\"} 3 123006000
-test_heatmap{le=\"128\"} 4 123006000
-test_heatmap_count{} 4 123006000
-test_heatmap_sum{} 167 123006000\n")),
+        tracker.renderExposition(),
+        M.equals(T.text("test_heatmap{le=\"0\"} 1 123008000
+test_heatmap{le=\"1\"} 1 123008000
+test_heatmap{le=\"2\"} 1 123008000
+test_heatmap{le=\"4\"} 2 123008000
+test_heatmap{le=\"8\"} 2 123008000
+test_heatmap{le=\"16\"} 2 123008000
+test_heatmap{le=\"32\"} 2 123008000
+test_heatmap{le=\"64\"} 3 123008000
+test_heatmap{le=\"128\"} 4 123008000
+test_heatmap_count{} 4 123008000
+test_heatmap_sum{} 167 123008000\n")),
       ),
     ],
   )
@@ -444,18 +466,18 @@ run(
     [
       test(
         "heatmap state exposition",
-        tracker.renderExposition(""),
-        M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
-test_heatmap{le=\"1\"} 1 123006000
-test_heatmap{le=\"2\"} 1 123006000
-test_heatmap{le=\"4\"} 1 123006000
-test_heatmap{le=\"8\"} 1 123006000
-test_heatmap{le=\"16\"} 1 123006000
-test_heatmap{le=\"32\"} 1 123006000
-test_heatmap{le=\"64\"} 2 123006000
-test_heatmap{le=\"128\"} 4 123006000
-test_heatmap_count{} 4 123006000
-test_heatmap_sum{} 267 123006000\n")),
+        tracker.renderExposition(),
+        M.equals(T.text("test_heatmap{le=\"0\"} 1 123008000
+test_heatmap{le=\"1\"} 1 123008000
+test_heatmap{le=\"2\"} 1 123008000
+test_heatmap{le=\"4\"} 1 123008000
+test_heatmap{le=\"8\"} 1 123008000
+test_heatmap{le=\"16\"} 1 123008000
+test_heatmap{le=\"32\"} 1 123008000
+test_heatmap{le=\"64\"} 2 123008000
+test_heatmap{le=\"128\"} 4 123008000
+test_heatmap_count{} 4 123008000
+test_heatmap_sum{} 267 123008000\n")),
       ),
     ],
   )
@@ -470,18 +492,18 @@ run(
     [
       test(
         "heatmap state exposition",
-        tracker.renderExposition(""),
-        M.equals(T.text("test_heatmap{le=\"0\"} 1 123006000
-test_heatmap{le=\"1\"} 1 123006000
-test_heatmap{le=\"2\"} 1 123006000
-test_heatmap{le=\"4\"} 1 123006000
-test_heatmap{le=\"8\"} 1 123006000
-test_heatmap{le=\"16\"} 1 123006000
-test_heatmap{le=\"32\"} 1 123006000
-test_heatmap{le=\"64\"} 2 123006000
-test_heatmap{le=\"128\"} 2 123006000
-test_heatmap_count{} 2 123006000
-test_heatmap_sum{} 64 123006000\n")),
+        tracker.renderExposition(),
+        M.equals(T.text("test_heatmap{le=\"0\"} 1 123008000
+test_heatmap{le=\"1\"} 1 123008000
+test_heatmap{le=\"2\"} 1 123008000
+test_heatmap{le=\"4\"} 1 123008000
+test_heatmap{le=\"8\"} 1 123008000
+test_heatmap{le=\"16\"} 1 123008000
+test_heatmap{le=\"32\"} 1 123008000
+test_heatmap{le=\"64\"} 2 123008000
+test_heatmap{le=\"128\"} 2 123008000
+test_heatmap_count{} 2 123008000
+test_heatmap_sum{} 64 123008000\n")),
       ),
     ],
   )
