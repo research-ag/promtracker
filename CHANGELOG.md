@@ -1,6 +1,6 @@
 # PromTracker changelog
 
-## 1.0.0
+## Next
 
 * Redesign mixin interfaces
 * Mixins `tracker, http`
