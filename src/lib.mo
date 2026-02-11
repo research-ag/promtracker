@@ -194,7 +194,7 @@ module {
   /// heartbeat_duration_low_watermark{} 10 1698842860811
   /// ```
   ///
-  /// The first argument `globalLabels` is a list of label pairs (`[(Text, Text)]`) that will be added as global labels to each metric.
+  /// The first argument `initialGlobalLabels` is a list of label pairs (`[(Text, Text)]`) that will be added as global labels to each metric.
   /// For example, pass `PT.canisterLabel(self)` or `[("canister", "my_name")]` to include a `canister="..."` label on every metric.
   ///
   /// The second argument `now` should not be passed explicitly in normal use.
@@ -203,11 +203,11 @@ module {
   ///
   /// For executable examples see the various examples in `examples/`.
   public class PromTracker(
-    globalLabels : Labels,
+    initialGlobalLabels : Labels,
     now : (implicit : () -> Nat64),
   ) {
     // Validate global labels once at construction
-    do { validateLabels_(globalLabels) };
+    do { validateLabels_(initialGlobalLabels) };
 
     // By default the PromTracker is configured for a 5-minute scraping interval
     // The watermark hold-down period is therefore 5 minutes plus a 5 second margin
@@ -217,6 +217,13 @@ module {
       func _ = holdPeriod,
       now,
     );
+
+    var globalLabels_ = initialGlobalLabels;
+
+    public func getGlobalLabels() : Labels = globalLabels_;
+    public func setGlobalLabels(labels : Labels) {
+      globalLabels_ := labels;
+    };
 
     type IValue = {
       prefix : Text;
@@ -433,9 +440,9 @@ module {
       result.toArray();
     };
 
-    func renderMetric(m : Metric, globalLabels : Labels, time : Text) : Text {
+    func renderMetric(m : Metric, time : Text) : Text {
       let (metricName, metricLabels, natValue) = m;
-      let labelsText = renderLabels(mergeLabels(globalLabels, metricLabels));
+      let labelsText = renderLabels(mergeLabels(globalLabels_, metricLabels));
       metricName # "{" # labelsText # "} " # natValue.toText() # " " # time # "\n";
     };
 
@@ -444,7 +451,7 @@ module {
       let timeStr = (now() / 1_000_000).toText();
       let lines = Array.map<Metric, Text>(
         dump(),
-        func(m) = renderMetric(m, globalLabels, timeStr),
+        func(m) = renderMetric(m, timeStr),
       );
       lines.vals().join("");
     };
