@@ -101,6 +101,17 @@ run(
 counter1.remove();
 
 /* --------------------------------------- */
+let escVal = tracker.addPullValue("escape_test", [("lab", "foo\"bar")], func() = 1);
+run(
+  test(
+    "label value double quotes are escaped",
+    tracker.renderExposition(),
+    M.equals(T.text("escape_test{lab=\"foo\\\"bar\"} 1 123000000\n")),
+  )
+);
+escVal.remove();
+
+/* --------------------------------------- */
 let gauge = tracker.addGauge("test_gauge", [], #both, [], false);
 run(
   suite(

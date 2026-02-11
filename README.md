@@ -146,6 +146,17 @@ will make the metric render as
 cycles{canister="tz2ag",mylabel1="value1",mylabel2="value2"} 1453739534899 1770400540297
 ```
 
+#### Naming rules and label values
+
+- Metric names (aliases) and label keys SHOULD match the regex `[A-Za-z_][A-Za-z0-9_]*` for the best experience and compatibility.
+  - In this library, we enforce that rule strictly: only ASCII letters, digits, and underscore are allowed, and names/keys cannot start with a digit.
+- Label values have no restrictions in this library. They are rendered as provided, except that any double quote characters are escaped in the exposition by prefixing them with a backslash.
+
+For more background, see Prometheus Data Model:
+https://prometheus.io/docs/concepts/data_model/
+- "Label names SHOULD match the regex [a-zA-Z_][a-zA-Z0-9_]* for the best experience and compatibility"
+- "Metric names SHOULD match the regex [a-zA-Z_][a-zA-Z0-9_]* for the best experience and compatibility"
+
 ### Persistence
 
 If we exclusively use `PullValue`s

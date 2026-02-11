@@ -2,6 +2,7 @@ import Array "mo:core/Array";
 import List "mo:core/List";
 import Nat_ "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
+import Nat32 "mo:core/Nat32";
 import Principal "mo:core/Principal";
 import PureList_ "mo:core/pure/List";
 import Text_ "mo:core/Text";
@@ -37,12 +38,61 @@ module {
   /// Default value for implicit `now` argument in the `PromTracker` constructor
   public let now : () -> Nat64 = Prim.time;
 
+  // Validate that a Text contains only [A-Za-z0-9_]
+  func isAllowedAscii_(t : Text) : Bool {
+    label l for (c in t.chars()) {
+      let n = Nat32.toNat(Prim.charToNat32(c));
+      if (
+        not (
+          (n >= 48 and n <= 57) // 0-9
+          or (n >= 65 and n <= 90) // A-Z
+          or (n >= 97 and n <= 122) // a-z
+          or (n == 95) // _
+        )
+      ) return false;
+    };
+    true;
+  };
+
+  func validateAlias_(name : Text, kind : { #metric; #lbl }) {
+    let msgKind = switch (kind) {
+      case (#metric) "metric name";
+      case (#lbl) "label key";
+    };
+    let ?first = name.chars().next() else Prim.trap("Invalid " # msgKind # ": must match [A-Za-z_][A-Za-z0-9_]*, got empty string");
+    let n = Nat32.toNat(Prim.charToNat32(first));
+    if (n >= 48 and n <= 57) {
+      Prim.trap("Invalid " # msgKind # ": cannot start with a digit, got: \"" # name # "\"");
+    };
+    if (not isAllowedAscii_(name)) {
+      Prim.trap("Invalid " # msgKind # ": only [A-Za-z0-9_] allowed, got: \"" # name # "\"");
+    };
+  };
+
+  func validateLabels_(labels : Labels) {
+    for ((k, _v) in labels.vals()) {
+      validateAlias_(k, #lbl);
+    };
+  };
+
+  func escapeLabelValue_(t : Text) : Text {
+    var out = "";
+    for (c in t.chars()) {
+      if (c == '\"') {
+        out #= "\\\""; // becomes \"
+      } else {
+        out #= Text_.fromChar(c);
+      };
+    };
+    out;
+  };
+
   func renderLabels(labels : Labels) : Text {
     var first = true;
     var out = "";
     for ((k, v) in labels.vals()) {
       if (first) { first := false } else { out #= "," };
-      out #= k # "=\"" # v # "\"";
+      out #= k # "=\"" # escapeLabelValue_(v) # "\"";
     };
     out;
   };
@@ -156,6 +206,9 @@ module {
     globalLabels : Labels,
     now : (implicit : () -> Nat64),
   ) {
+    // Validate global labels once at construction
+    do { validateLabels_(globalLabels) };
+
     // By default the PromTracker is configured for a 5-minute scraping interval
     // The watermark hold-down period is therefore 5 minutes plus a 5 second margin
     var holdPeriod : Nat64 = 305_000_000_000;
@@ -193,6 +246,8 @@ module {
     /// let storageSize = tracker.addPullValue("storage_size", [], func() = storage.size());
     /// ```
     public func addPullValue(prefix : Text, labels : Labels, pull : () -> Nat) : PullValue {
+      validateAlias_(prefix, #metric);
+      validateLabels_(labels);
       // create and register the value
       let id = values.size();
       let value = PullValueClass(prefix, labels, pull);
@@ -218,6 +273,8 @@ module {
     /// requestsAmount.add(1);
     /// ```
     public func addCounter(prefix : Text, labels : Labels, isStable : Bool) : Counter {
+      validateAlias_(prefix, #metric);
+      validateLabels_(labels);
       // create and register the value
       let id = values.size();
       let value = CounterValueClass(prefix, labels, isStable);
@@ -252,6 +309,8 @@ module {
     /// // request_duration_bucket{le="+Inf"} 2
     /// ```
     public func addGauge(prefix : Text, labels : Labels, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat], isStable : Bool) : Gauge {
+      validateAlias_(prefix, #metric);
+      validateLabels_(labels);
       // check order of buckets
       let l = bucketLimits;
       var i = 1;
@@ -304,6 +363,8 @@ module {
     /// // payload_sizes_sum: 70
     /// ```
     public func addHeatmap(prefix : Text, labels : Labels, isStable : Bool) : Heatmap {
+      validateAlias_(prefix, #metric);
+      validateLabels_(labels);
       // create and register the value
       let heatmapId = values.size();
       let heatmapValue = HeatmapValueClass(prefix, labels, isStable);
