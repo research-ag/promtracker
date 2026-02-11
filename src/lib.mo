@@ -116,6 +116,7 @@ module {
 
   // The data in type Metric is (name, labels, value)
   type Metric = (Text, Labels, Nat);
+  public type Exposition = ([Metric], timestamp : Text);
 
   // The two components of the watermark environment are:
   // - a function returning the hold period in nanoseconds as `Nat64`
@@ -446,12 +447,17 @@ module {
       metricName # "{" # labelsText # "} " # natValue.toText() # " " # time # "\n";
     };
 
+    /// Return all current metrics
+    public func getExposition() : Exposition {
+      (dump(), (now() / 1_000_000).toText());
+    };
+
     /// Render all current metrics to prometheus exposition format
     public func renderExposition() : Text {
-      let timeStr = (now() / 1_000_000).toText();
+      let exposition = getExposition();
       let lines = Array.map<Metric, Text>(
-        dump(),
-        func(m) = renderMetric(m, timeStr),
+        exposition.0,
+        func(m) = renderMetric(m, exposition.1),
       );
       lines.vals().join("");
     };
