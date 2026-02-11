@@ -41,7 +41,7 @@ module {
   // Validate that a Text contains only [A-Za-z0-9_]
   func isAllowedAscii_(t : Text) : Bool {
     label l for (c in t.chars()) {
-      let n = Nat32.toNat(Prim.charToNat32(c));
+      let n = Prim.charToNat32(c);
       if (
         not (
           (n >= 48 and n <= 57) // 0-9
@@ -60,7 +60,7 @@ module {
       case (#lbl) "label key";
     };
     let ?first = name.chars().next() else Prim.trap("Invalid " # msgKind # ": must match [A-Za-z_][A-Za-z0-9_]*, got empty string");
-    let n = Nat32.toNat(Prim.charToNat32(first));
+    let n = Prim.charToNat32(first);
     if (n >= 48 and n <= 57) {
       Prim.trap("Invalid " # msgKind # ": cannot start with a digit, got: \"" # name # "\"");
     };
@@ -97,8 +97,10 @@ module {
     out;
   };
 
-  func mergeLabels(a : Labels, b : Labels) : Labels {
-    Array.concat<(Text, Text)>(a, b);
+  func concat(a : Text, b : Text) : Text {
+    if (a == "") return b;
+    if (b == "") return a;
+    return a # "," # b;
   };
 
   func extendLabel(labels : Labels, pair : (Text, Text)) : Labels {
@@ -115,7 +117,7 @@ module {
   public type StableData = Types.Pure.List<(Text, StableDataItem)>;
 
   // The data in type Metric is (name, labels, value)
-  type Metric = (Text, Labels, Nat);
+  public type Metric = (Text, Labels, Nat);
   public type Exposition = ([Metric], timestamp : Text);
 
   // The two components of the watermark environment are:
@@ -441,9 +443,9 @@ module {
       result.toArray();
     };
 
-    func renderMetric(m : Metric, time : Text) : Text {
+    func renderMetric(m : Metric, globalLabelStr : Text, time : Text) : Text {
       let (metricName, metricLabels, natValue) = m;
-      let labelsText = renderLabels(mergeLabels(globalLabels_, metricLabels));
+      let labelsText = concat(globalLabelStr, renderLabels(metricLabels));
       metricName # "{" # labelsText # "} " # natValue.toText() # " " # time # "\n";
     };
 
@@ -454,10 +456,11 @@ module {
 
     /// Render all current metrics to prometheus exposition format
     public func renderExposition() : Text {
-      let exposition = getExposition();
+      let (metrics, time) = getExposition();
+      let globalLabelStr = renderLabels(globalLabels_);
       let lines = Array.map<Metric, Text>(
-        exposition.0,
-        func(m) = renderMetric(m, exposition.1),
+        metrics,
+        func(m) = renderMetric(m, globalLabelStr, time),
       );
       lines.vals().join("");
     };
