@@ -21,8 +21,10 @@ module {
   /// Helper function to create a canister label in the form:
   ///   `canister="abcde"`
   /// if the canister id starts with `abcde-...`.
-  public func canisterLabel(a : actor {}) : Text {
-    "canister=\"" # shortName(a) # "\"";
+  public type Labels = [(Text, Text)];
+
+  public func canisterLabel(a : actor {}) : Labels {
+    [("canister", shortName(a))];
   };
 
   /// Helper function to create a list of bucket limits:
@@ -35,10 +37,22 @@ module {
   /// Default value for implicit `now` argument in the `PromTracker` constructor
   public let now : () -> Nat64 = Prim.time;
 
-  func concat(a : Text, b : Text) : Text {
-    if (a == "") return b;
-    if (b == "") return a;
-    return a # "," # b;
+  func renderLabels(labels : Labels) : Text {
+    var first = true;
+    var out = "";
+    for ((k, v) in labels.vals()) {
+      if (first) { first := false } else { out #= "," };
+      out #= k # "=\"" # v # "\"";
+    };
+    out;
+  };
+
+  func mergeLabels(a : Labels, b : Labels) : Labels {
+    Array.append<(Text, Text)>(a, b);
+  };
+
+  func extendLabel(labels : Labels, pair : (Text, Text)) : Labels {
+    Array.append<(Text, Text)>(labels, [pair]);
   };
 
   type StableDataItem = {
@@ -51,7 +65,7 @@ module {
   public type StableData = Types.Pure.List<(Text, StableDataItem)>;
 
   // The data in type Metric is (name, labels, value)
-  type Metric = (Text, Text, Nat);
+  type Metric = (Text, Labels, Nat);
 
   // The two components of the watermark environment are:
   // - a function returning the hold period in nanoseconds as `Nat64`
@@ -101,12 +115,12 @@ module {
   ///
   /// Example:
   /// ```motoko
-  /// let tracker = PromTracker.PromTracker("");
+  /// let tracker = PromTracker.PromTracker([]);
   /// ....
-  /// let successfulHeartbeats = tracker.addCounter("successful_heartbeats", true);
-  /// let failedHeartbeats = tracker.addCounter("failed_heartbeats", true);
-  /// let heartbeats = tracker.addPullValue("heartbeats", func() = successfulHeartbeats.value() + failedHeartbeats.value());
-  /// let heartbeatDuration = tracker.addGauge("heartbeat_duration", null);
+  /// let successfulHeartbeats = tracker.addCounter("successful_heartbeats", [], true);
+  /// let failedHeartbeats = tracker.addCounter("failed_heartbeats", [], true);
+  /// let heartbeats = tracker.addPullValue("heartbeats", [], func() = successfulHeartbeats.value() + failedHeartbeats.value());
+  /// let heartbeatDuration = tracker.addGauge("heartbeat_duration", [], #both, [], false);
   /// ....
   /// // update values from your code
   /// successfulHeartbeats.add(2);
@@ -130,8 +144,8 @@ module {
   /// heartbeat_duration_low_watermark{} 10 1698842860811
   /// ```
   ///
-  /// The first argument `globalLabels` is a text that will be added as global labels to each metric.
-  /// For example, if you want to add `canister="my_name"` as a label to each metric.
+  /// The first argument `globalLabels` is a list of label pairs (`[(Text, Text)]`) that will be added as global labels to each metric.
+  /// For example, pass `PT.canisterLabel(self)` or `[("canister", "my_name")]` to include a `canister="..."` label on every metric.
   ///
   /// The second argument `now` should not be passed explicitly in normal use.
   /// It has an implicit default value.
@@ -139,7 +153,7 @@ module {
   ///
   /// For executable examples see the various examples in `examples/`.
   public class PromTracker(
-    globalLabels : Text,
+    globalLabels : Labels,
     now : (implicit : () -> Nat64),
   ) {
     // By default the PromTracker is configured for a 5-minute scraping interval
@@ -153,7 +167,7 @@ module {
 
     type IValue = {
       prefix : Text;
-      labels : Text;
+      labels : Labels;
       dump : () -> [Metric];
       share : () -> ?StableDataItem;
       unshare : (StableDataItem) -> ();
@@ -176,9 +190,9 @@ module {
     ///
     /// Example:
     /// ```motoko
-    /// let storageSize = tracker.addPullValue("storage_size", "", func() = storage.size());
+    /// let storageSize = tracker.addPullValue("storage_size", [], func() = storage.size());
     /// ```
-    public func addPullValue(prefix : Text, labels : Text, pull : () -> Nat) : PullValue {
+    public func addPullValue(prefix : Text, labels : Labels, pull : () -> Nat) : PullValue {
       // create and register the value
       let id = values.size();
       let value = PullValueClass(prefix, labels, pull);
@@ -198,12 +212,12 @@ module {
     ///
     /// Example:
     /// ```motoko
-    /// let requestsAmount = tracker.addCounter("requests_amount", "", true);
+    /// let requestsAmount = tracker.addCounter("requests_amount", [], true);
     /// ....
     /// requestsAmount.add(3);
     /// requestsAmount.add(1);
     /// ```
-    public func addCounter(prefix : Text, labels : Text, isStable : Bool) : Counter {
+    public func addCounter(prefix : Text, labels : Labels, isStable : Bool) : Counter {
       // create and register the value
       let id = values.size();
       let value = CounterValueClass(prefix, labels, isStable);
@@ -237,7 +251,7 @@ module {
     /// // request_duration_bucket{le="110"}: 1
     /// // request_duration_bucket{le="+Inf"} 2
     /// ```
-    public func addGauge(prefix : Text, labels : Text, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat], isStable : Bool) : Gauge {
+    public func addGauge(prefix : Text, labels : Labels, watermarks : { #none; #low; #high; #both }, bucketLimits : [Nat], isStable : Bool) : Gauge {
       // check order of buckets
       let l = bucketLimits;
       var i = 1;
@@ -289,7 +303,7 @@ module {
     /// // payload_sizes_count: 2
     /// // payload_sizes_sum: 70
     /// ```
-    public func addHeatmap(prefix : Text, labels : Text, isStable : Bool) : Heatmap {
+    public func addHeatmap(prefix : Text, labels : Labels, isStable : Bool) : Heatmap {
       // create and register the value
       let heatmapId = values.size();
       let heatmapValue = HeatmapValueClass(prefix, labels, isStable);
@@ -311,32 +325,32 @@ module {
     /// * Canister version (state nonce)
     /// * All numerical `rts_` values (memory, heap sizes, etc.)
     public func addSystemValues() {
-      ignore addPullValue("cycles_balance", "", func() = Prim.cyclesBalance());
-      ignore addPullValue("canister_version", "", func() = Prim.canisterVersion().toNat());
-      ignore addPullValue("rts_memory_size", "", func() = Prim.rts_memory_size());
-      ignore addPullValue("rts_heap_size", "", func() = Prim.rts_heap_size());
-      ignore addPullValue("rts_total_allocation", "", func() = Prim.rts_total_allocation());
-      ignore addPullValue("rts_reclaimed", "", func() = Prim.rts_reclaimed());
-      ignore addPullValue("rts_max_live_size", "", func() = Prim.rts_max_live_size());
-      ignore addPullValue("rts_max_stack_size", "", func() = Prim.rts_max_stack_size());
-      ignore addPullValue("rts_callback_table_count", "", func() = Prim.rts_callback_table_count());
-      ignore addPullValue("rts_callback_table_size", "", func() = Prim.rts_callback_table_size());
-      ignore addPullValue("rts_mutator_instructions", "", func() = Prim.rts_mutator_instructions());
-      ignore addPullValue("rts_collector_instructions", "", func() = Prim.rts_collector_instructions());
-      ignore addPullValue("rts_upgrade_instructions", "", func() = Prim.rts_upgrade_instructions());
-      ignore addPullValue("rts_stable_memory_size", "", func() = Prim.rts_stable_memory_size());
-      ignore addPullValue("rts_logical_stable_memory_size", "", func() = Prim.rts_logical_stable_memory_size());
+      ignore addPullValue("cycles_balance", [], func() = Prim.cyclesBalance());
+      ignore addPullValue("canister_version", [], func() = Prim.canisterVersion().toNat());
+      ignore addPullValue("rts_memory_size", [], func() = Prim.rts_memory_size());
+      ignore addPullValue("rts_heap_size", [], func() = Prim.rts_heap_size());
+      ignore addPullValue("rts_total_allocation", [], func() = Prim.rts_total_allocation());
+      ignore addPullValue("rts_reclaimed", [], func() = Prim.rts_reclaimed());
+      ignore addPullValue("rts_max_live_size", [], func() = Prim.rts_max_live_size());
+      ignore addPullValue("rts_max_stack_size", [], func() = Prim.rts_max_stack_size());
+      ignore addPullValue("rts_callback_table_count", [], func() = Prim.rts_callback_table_count());
+      ignore addPullValue("rts_callback_table_size", [], func() = Prim.rts_callback_table_size());
+      ignore addPullValue("rts_mutator_instructions", [], func() = Prim.rts_mutator_instructions());
+      ignore addPullValue("rts_collector_instructions", [], func() = Prim.rts_collector_instructions());
+      ignore addPullValue("rts_upgrade_instructions", [], func() = Prim.rts_upgrade_instructions());
+      ignore addPullValue("rts_stable_memory_size", [], func() = Prim.rts_stable_memory_size());
+      ignore addPullValue("rts_logical_stable_memory_size", [], func() = Prim.rts_logical_stable_memory_size());
     };
 
     func removeValueById_(id : Nat) : () = values.put(id, null);
 
     /// Remove a previously added value by its prefix and labels
     /// (both must match).
-    public func removeValue(prefix : Text, labels : Text) {
+    public func removeValue(prefix : Text, labels : Labels) {
       for ((id, value) in values.enumerate()) {
         switch (value) {
           case (?v) {
-            if (v.prefix == prefix and v.labels == labels) {
+            if (v.prefix == prefix and eqLabels(v.labels, labels)) {
               removeValueById_(id);
               return;
             };
@@ -358,10 +372,10 @@ module {
       result.toArray();
     };
 
-    func renderMetric(m : Metric, globalLabels : Text, time : Text) : Text {
+    func renderMetric(m : Metric, globalLabels : Labels, time : Text) : Text {
       let (metricName, metricLabels, natValue) = m;
-      metricName # "{" # concat(globalLabels, metricLabels) # "} "
-      # natValue.toText() # " " # time # "\n";
+      let labelsText = renderLabels(mergeLabels(globalLabels, metricLabels));
+      metricName # "{" # labelsText # "} " # natValue.toText() # " " # time # "\n";
     };
 
     /// Render all current metrics to prometheus exposition format
@@ -374,9 +388,19 @@ module {
       lines.vals().join("");
     };
 
+    func eqLabels(a : Labels, b : Labels) : Bool {
+      if (a.size() != b.size()) return false;
+      var i = 0;
+      while (i < a.size()) {
+        if (a[i].0 != b[i].0 or a[i].1 != b[i].1) return false;
+        i += 1;
+      };
+      true;
+    };
+
     private func stablePrefix(v : IValue) : Text = switch (v.labels.size()) {
       case (0) v.prefix;
-      case (_) v.prefix # "{}" # v.labels;
+      case (_) v.prefix # "{}" # renderLabels(v.labels);
     };
 
     /// Export all values, marked as stable, to stable data structure
@@ -410,7 +434,7 @@ module {
     };
   };
 
-  class PullValueClass(prefix_ : Text, labels_ : Text, pull : () -> Nat) {
+  class PullValueClass(prefix_ : Text, labels_ : Labels, pull : () -> Nat) {
     public let prefix = prefix_;
     public let labels = labels_;
 
@@ -420,7 +444,7 @@ module {
     public func unshare(_ : StableDataItem) = ();
   };
 
-  class CounterValueClass(prefix_ : Text, labels_ : Text, isStable : Bool) {
+  class CounterValueClass(prefix_ : Text, labels_ : Labels, isStable : Bool) {
     public let prefix = prefix_;
     public let labels = labels_;
 
@@ -458,7 +482,7 @@ module {
   };
   class GaugeValueClass(
     prefix_ : Text,
-    labels_ : Text,
+    labels_ : Labels,
     enableLowWM : Bool,
     enableHighWM : Bool,
     limits_ : [Nat],
@@ -498,7 +522,7 @@ module {
       };
     };
 
-    func metric(suffix : Text, labels : Text, value : Nat) : Metric {
+    func metric(suffix : Text, labels : Labels, value : Nat) : Metric {
       (prefix # "_" # suffix, labels, value);
     };
 
@@ -515,10 +539,10 @@ module {
         all.add(metric("low_watermark", labels, lowWatermark.mark));
       };
       for (i in counters.keys()) {
-        all.add(metric("bucket", concat(labels, "le=\"" # limits[i].toText() # "\""), counters[i]));
+        all.add(metric("bucket", extendLabel(labels, ("le", limits[i].toText())), counters[i]));
       };
       if (counters.size() > 0) {
-        all.add(metric("bucket", concat(labels, "le=\"+Inf\""), count));
+        all.add(metric("bucket", extendLabel(labels, ("le", "+Inf")), count));
       };
       all.toArray();
     };
@@ -539,7 +563,7 @@ module {
       case (_) {};
     };
   };
-  class HeatmapValueClass(prefix_ : Text, labels_ : Text, isStable : Bool) {
+  class HeatmapValueClass(prefix_ : Text, labels_ : Labels, isStable : Bool) {
     public let prefix = prefix_;
     public let labels = labels_;
 
@@ -604,7 +628,7 @@ module {
         func(i) {
           if (i < buckets.size()) {
             aggregatedCounter += buckets[i];
-            (prefix, concat(labels, "le=\"" # (getLimit_(i)).toText() # "\""), aggregatedCounter);
+            (prefix, extendLabel(labels, ("le", (getLimit_(i)).toText())), aggregatedCounter);
           } else if (i == buckets.size()) {
             (prefix # "_count", labels, count);
           } else {

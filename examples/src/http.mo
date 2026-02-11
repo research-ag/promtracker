@@ -12,7 +12,7 @@ persistent actor Main {
   system func preupgrade() { pt_preupgrade() };
   system func postupgrade() { pt_postupgrade() };
 
-  transient let counter = pt.addCounter("counter", "", true);
+  transient let counter = pt.addCounter("counter", [], true);
 
   system func heartbeat() : async () { counter.add(1) };
 

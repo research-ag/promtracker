@@ -27,13 +27,13 @@ persistent actor Main {
   system func postupgrade() { pt_postupgrade() };
 
   // Example of a PullValue: cycle balance
-  transient let _cycleBalance = pt.addPullValue("cycles", "", Cycles.balance);
+  transient let _cycleBalance = pt.addPullValue("cycles", [], Cycles.balance);
 
   // Examples of Counters: heartbeat counters
   // First counter resets on canister upgrade
   // Second counter persists through upgrades, shows heartbeats since last reinstall
-  transient let counter0 = pt.addCounter("heartbeats", "is_stable=\"false\"", false);
-  transient let counter1 = pt.addCounter("heartbeats", "is_stable=\"true\"", true);
+  transient let counter0 = pt.addCounter("heartbeats", [("is_stable","false")], false);
+  transient let counter1 = pt.addCounter("heartbeats", [("is_stable","true")], true);
 
   // Example of a Gauge: time between heartbeats
   // Register a gauge with 10 buckets (plus the +Inf bucket)
@@ -42,7 +42,7 @@ persistent actor Main {
   // Argument `true` means that the gauge persists across canister upgrade
   // Note that the bucket limits are chosen for local deployment. On mainnet
   // we would use larger values.
-  transient let timeGauge = pt.addGauge("time", "", #both, Util.limits(100, 10, 10), true);
+  transient let timeGauge = pt.addGauge("time", [], #both, Util.limits(100, 10, 10), true);
 
   // We update a gauge in heartbeat
   // gauge value = time delta between last two heartbeats in milliseconds

@@ -14,7 +14,7 @@ persistent actor Main {
   system func preupgrade() { pt_preupgrade() };
   system func postupgrade() { pt_postupgrade() };
 
-  transient let heatmap = pt.addHeatmap("heatmap", "", true);
+  transient let heatmap = pt.addHeatmap("heatmap", [], true);
 
   transient var last_time : ?Int = null;
   system func heartbeat() : async () {

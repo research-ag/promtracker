@@ -12,11 +12,11 @@ var mockedTime : Nat64 = 123_000_000_000_000;
 // Re-define the default value for the implicit `now` parameter in the PromTracker constructor
 func now() : Nat64 = mockedTime;
 
-var tracker = PT.PromTracker("");
+var tracker = PT.PromTracker([]);
 tracker.setWatermarkHoldPeriod(5);
 
 /* --------------------------------------- */
-let testValue = tracker.addPullValue("test_val_0", "", func() = 150);
+let testValue = tracker.addPullValue("test_val_0", [], func() = 150);
 run(
   test(
     "pull value output",
@@ -36,7 +36,7 @@ run(
 );
 
 /* --------------------------------------- */
-let testValue1 = tracker.addPullValue("test_val_1", "foo=\"bar\"", func() = 270);
+let testValue1 = tracker.addPullValue("test_val_1", [("foo","bar")], func() = 270);
 run(
   test(
     "pull value labels",
@@ -47,7 +47,7 @@ run(
 testValue1.remove();
 
 /* --------------------------------------- */
-let counter = tracker.addCounter("test_counter", "", false);
+let counter = tracker.addCounter("test_counter", [], false);
 run(
   test(
     "initial counter state",
@@ -90,7 +90,7 @@ run(
 counter.remove();
 
 /* --------------------------------------- */
-let counter1 = tracker.addCounter("test_counter_1", "foo=\"bar\"", false);
+let counter1 = tracker.addCounter("test_counter_1", [("foo","bar")], false);
 run(
   test(
     "counter labels",
@@ -101,7 +101,7 @@ run(
 counter1.remove();
 
 /* --------------------------------------- */
-let gauge = tracker.addGauge("test_gauge", "", #both, [], false);
+let gauge = tracker.addGauge("test_gauge", [], #both, [], false);
 run(
   suite(
     "initial gauge state",
@@ -156,7 +156,7 @@ test_gauge_low_watermark{} 120 123000000\n")),
 gauge.remove();
 
 /* --------------------------------------- */
-let gaugeWithBuckets = tracker.addGauge("buckets_gauge", "", #both, [10, 20, 50, 120, 180], false);
+let gaugeWithBuckets = tracker.addGauge("buckets_gauge", [], #both, [10, 20, 50, 120, 180], false);
 run(
   test(
     "initial gauge state",
@@ -202,7 +202,7 @@ buckets_gauge_bucket{le=\"+Inf\"} 6 123000000\n")),
 gaugeWithBuckets.remove();
 
 /* --------------------------------------- */
-let gauge2 = tracker.addGauge("buckets_gauge", "", #both, [], false);
+let gauge2 = tracker.addGauge("buckets_gauge", [], #both, [], false);
 gauge2.update(10);
 gauge2.update(900);
 gauge2.update(90);
@@ -272,7 +272,7 @@ buckets_gauge_low_watermark{} 30 123008000\n")),
 gauge2.remove();
 
 /* --------------------------------------- */
-let gaugeWithoutWatermarks = tracker.addGauge("dry_gauge", "", #none, [], false);
+let gaugeWithoutWatermarks = tracker.addGauge("dry_gauge", [], #none, [], false);
 gaugeWithoutWatermarks.update(20);
 gaugeWithoutWatermarks.update(30);
 run(
@@ -287,7 +287,7 @@ dry_gauge_count{} 2 123008000\n")),
 gaugeWithoutWatermarks.remove();
 
 /* --------------------------------------- */
-let gaugeWithLowWatermark = tracker.addGauge("half_dry_gauge", "", #low, [], false);
+let gaugeWithLowWatermark = tracker.addGauge("half_dry_gauge", [], #low, [], false);
 gaugeWithLowWatermark.update(20);
 gaugeWithLowWatermark.update(30);
 run(
@@ -303,7 +303,7 @@ half_dry_gauge_low_watermark{} 20 123008000\n")),
 gaugeWithLowWatermark.remove();
 
 /* --------------------------------------- */
-let gaugeWithHighWatermark = tracker.addGauge("half_wet_gauge", "", #high, [], false);
+let gaugeWithHighWatermark = tracker.addGauge("half_wet_gauge", [], #high, [], false);
 gaugeWithHighWatermark.update(20);
 gaugeWithHighWatermark.update(30);
 run(
@@ -319,7 +319,7 @@ half_wet_gauge_high_watermark{} 30 123008000\n")),
 gaugeWithHighWatermark.remove();
 
 /* --------------------------------------- */
-let gaugeWithLabels = tracker.addGauge("labels_gauge", "foo=\"bar\"", #both, [10, 20, 50, 120, 180], false);
+let gaugeWithLabels = tracker.addGauge("labels_gauge", [("foo","bar")], #both, [10, 20, 50, 120, 180], false);
 run(
   test(
     "gauge with bucket labels",
@@ -340,21 +340,21 @@ labels_gauge_bucket{foo=\"bar\",le=\"+Inf\"} 0 123008000\n")),
 gaugeWithLabels.remove();
 
 /* --------------------------------------- */
-let stableGauge1 = tracker.addGauge("stable_gauge1", "", #none, [150, 200], true);
+let stableGauge1 = tracker.addGauge("stable_gauge1", [], #none, [150, 200], true);
 stableGauge1.update(20);
 stableGauge1.update(800);
 stableGauge1.update(180);
-let stableGauge2 = tracker.addGauge("stable_gauge2", "", #none, [150, 200], true);
+let stableGauge2 = tracker.addGauge("stable_gauge2", [], #none, [150, 200], true);
 stableGauge2.update(20);
 stableGauge2.update(800);
 stableGauge2.update(180);
-let stableCounter1 = tracker.addCounter("stable_counter1", "", true);
+let stableCounter1 = tracker.addCounter("stable_counter1", [], true);
 stableCounter1.add(5);
-let stableCounter2 = tracker.addCounter("stable_counter2", "", true);
+let stableCounter2 = tracker.addCounter("stable_counter2", [], true);
 stableCounter2.add(7);
-let stableCounterDuplicatedKeyFoo = tracker.addCounter("stable_counter_duplicated_key", "keyId=\"foo\"", true);
+let stableCounterDuplicatedKeyFoo = tracker.addCounter("stable_counter_duplicated_key", [("keyId","foo")], true);
 stableCounterDuplicatedKeyFoo.add(123);
-let stableCounterDuplicatedKeyBar = tracker.addCounter("stable_counter_duplicated_key", "keyId=\"bar\"", true);
+let stableCounterDuplicatedKeyBar = tracker.addCounter("stable_counter_duplicated_key", [("keyId","bar")], true);
 stableCounterDuplicatedKeyBar.add(456);
 
 let sharedData = tracker.share();
@@ -365,19 +365,19 @@ stableCounter2.remove();
 stableCounterDuplicatedKeyFoo.remove();
 stableCounterDuplicatedKeyBar.remove();
 
-let newTracker = PT.PromTracker("");
+let newTracker = PT.PromTracker([]);
 newTracker.setWatermarkHoldPeriod(5);
 // the same gauge, state should be the same
-ignore newTracker.addGauge("stable_gauge1", "", #none, [150, 200], true);
+ignore newTracker.addGauge("stable_gauge1", [], #none, [150, 200], true);
 // gauge with changed buckets, buckets should be overwritten by stable data
-ignore newTracker.addGauge("stable_gauge2", "", #none, [151, 201, 250], true);
+ignore newTracker.addGauge("stable_gauge2", [], #none, [151, 201, 250], true);
 // the same counter
-ignore newTracker.addCounter("stable_counter1", "", true);
+ignore newTracker.addCounter("stable_counter1", [], true);
 // counter now marked as not stable, should not be unshared
-ignore newTracker.addCounter("stable_counter2", "", false);
+ignore newTracker.addCounter("stable_counter2", [], false);
 // stable counters, duplicated key
-ignore newTracker.addCounter("stable_counter_duplicated_key", "keyId=\"foo\"", true);
-ignore newTracker.addCounter("stable_counter_duplicated_key", "keyId=\"bar\"", true);
+ignore newTracker.addCounter("stable_counter_duplicated_key", [("keyId","foo")], true);
+ignore newTracker.addCounter("stable_counter_duplicated_key", [("keyId","bar")], true);
 
 newTracker.unshare(sharedData);
 
@@ -405,7 +405,7 @@ stable_counter_duplicated_key{keyId=\"bar\"} 456 123008000\n")),
 );
 
 /* --------------------------------------- */
-let heatmap = tracker.addHeatmap("test_heatmap", "", false);
+let heatmap = tracker.addHeatmap("test_heatmap", [], false);
 run(
   suite(
     "initial heatmap state",

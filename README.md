@@ -118,7 +118,7 @@ A `PullValue` is added like this:
 ```motoko
 import Cycles "mo:core/Cycles";
 
-transient let _cycleBalance = pt.addPullValue("cycles", "", Cycles.balance);
+transient let _cycleBalance = pt.addPullValue("cycles", [], Cycles.balance);
 ```
 and will render as:
 
@@ -136,10 +136,10 @@ All value registration functions have as their first argument the metric name.
 
 The `tracker` mixin automatically adds the `canister=".."` label to each metric.
 
-The `PromTracker` class accepts an arbitrary label string in the constructor.
+The `PromTracker` class accepts global labels as a list of `(Text, Text)` pairs in the constructor (see `Labels` type).
 
-Additional per-metric labels can be added with the second argument in the registration function.  
-For example, passing `"mylabel1=\"value1\",mylabel2=\"value2\""` instead of `""`
+Additional per-metric labels can be added with the second argument in the registration function.
+For example, passing [("mylabel1", "value1"), ("mylabel2", "value2")] instead of []
 will make the metric render as
 
 ```text
@@ -170,8 +170,8 @@ In this example one heartbeat counter resets on canister upgrade,
 the other one persists across upgrades.
 
 ```motoko
-transient let counter0 = pt.addCounter("heartbeats", "is_stable=\"false\"", false);
-transient let counter1 = pt.addCounter("heartbeats", "is_stable=\"true\"", true);
+transient let counter0 = pt.addCounter("heartbeats", [("is_stable","false")], false);
+transient let counter1 = pt.addCounter("heartbeats", [("is_stable","true")], true);
 
 system func heartbeat() : async () {
   counter0.add(1);
@@ -191,8 +191,8 @@ and expose it through a `PullValue` like this:
 ```motoko
 transient var counter0 = 0;
 var counter1 = 0;
-transient let _ctr0 = pt.addPullValue("counter", "is_stable=\"false\"", func() = counter0);
-transient let _ctr1 = pt.addPullValue("counter", "is_stable=\"true\"", func() = counter1);
+transient let _ctr0 = pt.addPullValue("counter", [("is_stable","false")], func() = counter0);
+transient let _ctr1 = pt.addPullValue("counter", [("is_stable","true")], func() = counter1);
 ```
 
 ### GaugeValue
@@ -206,7 +206,7 @@ import Int "mo:core/Int";
 import Time "mo:core/Time";
 import Util "mo:promtracker";
 
-transient let timeGauge = pt.addGauge("time", "", #both, Util.limits(100, 10, 10), false);
+transient let timeGauge = pt.addGauge("time", [], #both, Util.limits(100, 10, 10), false);
 
 transient var last_time : ?Int = null;
 system func heartbeat() : async () {
@@ -267,7 +267,7 @@ Instead, it creates exponentially sized buckets automatically on demand.
 ```motoko
 import Int "mo:core/Int";
 
-transient let heatmap = pt.addHeatmap("heatmap", "", false);
+transient let heatmap = pt.addHeatmap("heatmap", [], false);
 
 transient var last_time : ?Int = null;
 system func heartbeat() : async () {
@@ -315,7 +315,7 @@ import Http "mo:promtracker/Http";
 persistent actor Main {
   include PromTracker(Main);
 
-  transient let counter = pt.addCounter("counter", "", true);
+  transient let counter = pt.addCounter("counter", [], true);
 
   system func heartbeat() : async () { counter.add(1) };
 
@@ -352,7 +352,7 @@ persistent actor Main {
   system func preupgrade() { ptStableData := pt.share() };
   system func postupgrade() { pt.unshare(ptStableData) };
 
-  transient let counter = pt.addCounter("counter", "", true);
+  transient let counter = pt.addCounter("counter", [], true);
 
   system func heartbeat() : async () { counter.add(1) };
 };

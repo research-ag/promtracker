@@ -14,7 +14,7 @@ persistent actor Main {
   system func preupgrade() { ptStableData := pt.share() };
   system func postupgrade() { pt.unshare(ptStableData) };
 
-  transient let counter = pt.addCounter("counter", "", true);
+  transient let counter = pt.addCounter("counter", [], true);
 
   system func heartbeat() : async () { counter.add(1) };
 };
