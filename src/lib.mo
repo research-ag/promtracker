@@ -48,11 +48,11 @@ module {
   };
 
   func mergeLabels(a : Labels, b : Labels) : Labels {
-    Array.append<(Text, Text)>(a, b);
+    Array.concat<(Text, Text)>(a, b);
   };
 
   func extendLabel(labels : Labels, pair : (Text, Text)) : Labels {
-    Array.append<(Text, Text)>(labels, [pair]);
+    Array.concat<(Text, Text)>(labels, [pair]);
   };
 
   type StableDataItem = {

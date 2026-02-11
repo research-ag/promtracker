@@ -36,7 +36,7 @@ run(
 );
 
 /* --------------------------------------- */
-let testValue1 = tracker.addPullValue("test_val_1", [("foo","bar")], func() = 270);
+let testValue1 = tracker.addPullValue("test_val_1", [("foo", "bar")], func() = 270);
 run(
   test(
     "pull value labels",
@@ -90,7 +90,7 @@ run(
 counter.remove();
 
 /* --------------------------------------- */
-let counter1 = tracker.addCounter("test_counter_1", [("foo","bar")], false);
+let counter1 = tracker.addCounter("test_counter_1", [("foo", "bar")], false);
 run(
   test(
     "counter labels",
@@ -319,7 +319,7 @@ half_wet_gauge_high_watermark{} 30 123008000\n")),
 gaugeWithHighWatermark.remove();
 
 /* --------------------------------------- */
-let gaugeWithLabels = tracker.addGauge("labels_gauge", [("foo","bar")], #both, [10, 20, 50, 120, 180], false);
+let gaugeWithLabels = tracker.addGauge("labels_gauge", [("foo", "bar")], #both, [10, 20, 50, 120, 180], false);
 run(
   test(
     "gauge with bucket labels",
@@ -352,9 +352,9 @@ let stableCounter1 = tracker.addCounter("stable_counter1", [], true);
 stableCounter1.add(5);
 let stableCounter2 = tracker.addCounter("stable_counter2", [], true);
 stableCounter2.add(7);
-let stableCounterDuplicatedKeyFoo = tracker.addCounter("stable_counter_duplicated_key", [("keyId","foo")], true);
+let stableCounterDuplicatedKeyFoo = tracker.addCounter("stable_counter_duplicated_key", [("keyId", "foo")], true);
 stableCounterDuplicatedKeyFoo.add(123);
-let stableCounterDuplicatedKeyBar = tracker.addCounter("stable_counter_duplicated_key", [("keyId","bar")], true);
+let stableCounterDuplicatedKeyBar = tracker.addCounter("stable_counter_duplicated_key", [("keyId", "bar")], true);
 stableCounterDuplicatedKeyBar.add(456);
 
 let sharedData = tracker.share();
@@ -376,8 +376,8 @@ ignore newTracker.addCounter("stable_counter1", [], true);
 // counter now marked as not stable, should not be unshared
 ignore newTracker.addCounter("stable_counter2", [], false);
 // stable counters, duplicated key
-ignore newTracker.addCounter("stable_counter_duplicated_key", [("keyId","foo")], true);
-ignore newTracker.addCounter("stable_counter_duplicated_key", [("keyId","bar")], true);
+ignore newTracker.addCounter("stable_counter_duplicated_key", [("keyId", "foo")], true);
+ignore newTracker.addCounter("stable_counter_duplicated_key", [("keyId", "bar")], true);
 
 newTracker.unshare(sharedData);
 
