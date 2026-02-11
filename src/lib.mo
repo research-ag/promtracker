@@ -10,26 +10,28 @@ import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 module {
-  /// Helper function to get the first 5 characters of the canister's
-  /// own canister id (by passing itself to this function).
-  public func shortName(a : actor {}) : Text {
-    let s = Principal.fromActor(a).toText();
-    let ?name = s.split(#char '-').next() else Prim.trap("");
-    name;
-  };
+  public module Util {
+    /// Helper function to get the first 5 characters of the canister's
+    /// own canister id (by passing itself to this function).
+    public func shortName(a : actor {}) : Text {
+      let s = Principal.fromActor(a).toText();
+      let ?name = s.split(#char '-').next() else Prim.trap("");
+      name;
+    };
 
-  /// Helper function to create a canister label in the form:
-  ///   `canister="abcde"`
-  /// if the canister id starts with `abcde-...`.
-  public func canisterLabel(a : actor {}) : Text {
-    "canister=\"" # shortName(a) # "\"";
-  };
+    /// Helper function to create a canister label in the form:
+    ///   `canister="abcde"`
+    /// if the canister id starts with `abcde-...`.
+    public func canisterLabel(a : actor {}) : Text {
+      "canister=\"" # shortName(a) # "\"";
+    };
 
-  /// Helper function to create a list of bucket limits:
-  /// `[a + d, .., a + n * d]`
-  /// which represents `n` buckets plus the `+Inf` bucket.
-  public func limits(a : Nat, n : Nat, d : Nat) : [Nat] {
-    Array.tabulate<Nat>(n, func(i) = a + (i + 1) * d);
+    /// Helper function to create a list of bucket limits:
+    /// `[a + d, .., a + n * d]`
+    /// which represents `n` buckets plus the `+Inf` bucket.
+    public func limits(a : Nat, n : Nat, d : Nat) : [Nat] {
+      Array.tabulate<Nat>(n, func(i) = a + (i + 1) * d);
+    };
   };
 
   /// Default value for implicit `now` argument in the `PromTracker` constructor
@@ -97,6 +99,14 @@ module {
     remove : () -> ();
   };
 
+  type IValue = {
+    prefix : Text;
+    labels : Text;
+    dump : () -> [Metric];
+    share : () -> ?StableDataItem;
+    unshare : (StableDataItem) -> ();
+  };
+
   /// Value tracker, designed specifically for use as a source for Prometheus.
   ///
   /// Example:
@@ -138,37 +148,29 @@ module {
   /// Resetting it is reserved for internal testing purposes.
   ///
   /// For executable examples see the various examples in `examples/`.
-
-  type IValue = {
-    prefix : Text;
-    labels : Text;
-    dump : () -> [Metric];
-    share : () -> ?StableDataItem;
-    unshare : (StableDataItem) -> ();
-  };
-
   public type Tracker = {
-    globalLabels : Text;
+    var globalLabels : Text;
     var holdPeriod : Nat64;
     values : List.List<?IValue>;
   };
 
-  // By default the PromTracker is configured for a 5-minute scraping interval
-  // The watermark hold-down period is therefore 5 minutes plus a 5 second margin
-  public func new(labels : Text) : Tracker = {
-    globalLabels = labels;
+  /// By default the PromTracker is configured for a 5-minute scraping interval
+  /// The watermark hold-down period is therefore 5 minutes plus a 5 second margin
+  public func new() : Tracker = {
+    var globalLabels = "";
     var holdPeriod = 305_000_000_000;
     values = List.empty();
   };
 
-  /*
-    now : (implicit : () -> Nat64),
+  /// Add a canister label for a specific canister to the tracker.
+  public func addCanisterLabel(self : Tracker, a : actor {}) {
+    self.globalLabels := concat(self.globalLabels, Util.canisterLabel(a));
+  };
 
-    let env : WatermarkEnvironment = (
-      func _ = holdPeriod,
-      now,
-    );
-    */
+  // Set global labels that will be added to each metric.
+  public func setGlobalLabels(self : Tracker, labels : Text) {
+    self.globalLabels := labels;
+  };
 
   /// Set the hold-down period for watermarks in seconds.
   ///
@@ -341,7 +343,7 @@ module {
     ignore addPullValue(self, "rts_logical_stable_memory_size", "", func() = Prim.rts_logical_stable_memory_size());
   };
 
-  func removeValueById_(self : Tracker, id : Nat) : () = self.values.put(id, null);
+  private func removeValueById_(self : Tracker, id : Nat) : () = self.values.put(id, null);
 
   /// Remove a previously added value by its prefix and labels
   /// (both must match).
@@ -371,7 +373,7 @@ module {
     result.toArray();
   };
 
-  func renderMetric(m : Metric, globalLabels : Text, time : Text) : Text {
+  private func renderMetric(m : Metric, globalLabels : Text, time : Text) : Text {
     let (metricName, metricLabels, natValue) = m;
     metricName # "{" # concat(globalLabels, metricLabels) # "} "
     # natValue.toText() # " " # time # "\n";

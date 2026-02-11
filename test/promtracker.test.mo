@@ -12,7 +12,7 @@ var mockedTime : Nat64 = 123_000_000_000_000;
 // Re-define the default value for the implicit `now` parameter in the PromTracker constructor
 func now() : Nat64 = mockedTime;
 
-var tracker = PT.new("");
+var tracker = PT.new();
 tracker.setWatermarkHoldPeriod(5);
 
 /* --------------------------------------- */
@@ -365,7 +365,7 @@ stableCounter2.remove();
 stableCounterDuplicatedKeyFoo.remove();
 stableCounterDuplicatedKeyBar.remove();
 
-let newTracker = PT.new("");
+let newTracker = PT.new();
 newTracker.setWatermarkHoldPeriod(5);
 // the same gauge, state should be the same
 ignore newTracker.addGauge("stable_gauge1", "", #none, [150, 200], true);

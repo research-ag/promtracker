@@ -5,7 +5,7 @@ import Prng "mo:prng";
 
 import PromTracker "../../src/mixins/tracker";
 import Http "../../src/mixins/http";
-import Util "../../src";
+import PT "../../src";
 // In production:
 // import PromTracker "mo:promtracker/mixins/tracker";
 // import Http "mo:promtracker/mixins/http";
@@ -30,13 +30,13 @@ persistent actor Main {
   // Register a gauge with 5 buckets (plus the +Inf bucket)
   // Bucket limits are: 6000, 7000, 8000, 9000, 10000
   // Argument `false` means that the gauge is reset on canister upgrade
-  transient let instrGauge = pt.addGauge("instructions", "", #both, Util.limits(5000, 5, 1000), false);
+  transient let instrGauge = pt.addGauge("instructions", "", #both, PT.Util.limits(5000, 5, 1000), false);
 
   // Example of a Gauge: size of the last call arguments
   // Register a gauge with 10 buckets (plus the +Inf bucket)
   // Bucket limits are: 10, .., 100
   // Argument `false` means that the gauge is reset on canister upgrade
-  transient let sizeGauge = pt.addGauge("bytes", "", #both, Util.limits(0, 10, 10), false);
+  transient let sizeGauge = pt.addGauge("bytes", "", #both, PT.Util.limits(0, 10, 10), false);
 
   // We make random calls to the following function and measure:
   // - instructions for candid parsing of the arguments

@@ -4,7 +4,7 @@ import Time "mo:core/Time";
 
 import PromTracker "../../src/mixins/tracker";
 import Http "../../src/mixins/http";
-import Util "../../src";
+import PT "../../src";
 // In production:
 // import PromTracker "mo:promtracker/mixins/tracker";
 // import Http "mo:promtracker/mixins/http";
@@ -42,7 +42,7 @@ persistent actor Main {
   // Argument `true` means that the gauge persists across canister upgrade
   // Note that the bucket limits are chosen for local deployment. On mainnet
   // we would use larger values.
-  transient let timeGauge = pt.addGauge("time", "", #both, Util.limits(100, 10, 10), true);
+  transient let timeGauge = pt.addGauge("time", "", #both, PT.Util.limits(100, 10, 10), true);
 
   // We update a gauge in heartbeat
   // gauge value = time delta between last two heartbeats in milliseconds
