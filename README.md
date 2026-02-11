@@ -163,6 +163,14 @@ The `pt_preupgrade, pt_postupgrade` are already defined by the `tracker` mixin.
 Arbitrary other code can be freely added to the system function bodies before or after the 
 `pt_preupgrade(), pt_postupgrade()` calls.
 
+It is advisable to add `PullValue`s only in top-level actor code.
+Only add `PullValue`s dynamically in branched code if you know exactly what you are doing.
+The reason is that the `PullValue`s, being functions,
+cannot be persisted across canister upgrades.
+The ones added in top-level actor will always be there
+because that code runs again after an upgrade.
+But the ones defined dynamically will be gone after an upgrade.
+
 ### CounterValue
 
 A `CounterValue` can be demonstrated by a heartbeat counter.
@@ -194,6 +202,9 @@ var counter1 = 0;
 transient let _ctr0 = pt.addPullValue("counter", "is_stable=\"false\"", func() = counter0);
 transient let _ctr1 = pt.addPullValue("counter", "is_stable=\"true\"", func() = counter1);
 ```
+
+But keep in mind the comment about persistence of `PullValue`s above.
+A `CounterValue` will persist even if added dynamically.
 
 ### GaugeValue
 
