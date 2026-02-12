@@ -319,7 +319,7 @@ gaugeWithHighWatermark.update(20);
 gaugeWithHighWatermark.update(30);
 run(
   test(
-    "gauge with only low watermark",
+    "gauge with only high watermark",
     tracker.renderExposition(),
     M.equals(T.text("half_wet_gauge_last{} 30 123008000
 half_wet_gauge_sum{} 50 123008000

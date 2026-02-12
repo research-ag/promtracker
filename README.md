@@ -154,8 +154,8 @@ cycles{canister="tz2ag",mylabel1="value1",mylabel2="value2"} 1453739534899 17704
 
 For more background, see Prometheus Data Model:
 https://prometheus.io/docs/concepts/data_model/
-- "Label names SHOULD match the regex [a-zA-Z_][a-zA-Z0-9_]* for the best experience and compatibility"
-- "Metric names SHOULD match the regex [a-zA-Z_][a-zA-Z0-9_]* for the best experience and compatibility"
+- "Label names SHOULD match the regex \[a-zA-Z_\]\[a-zA-Z0-9_\]\* for the best experience and compatibility"
+- "Metric names SHOULD match the regex \[a-zA-Z_\]\[a-zA-Z0-9_\]\* for the best experience and compatibility"
 
 ### Persistence
 

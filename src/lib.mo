@@ -77,8 +77,12 @@ module {
   func escapeLabelValue_(t : Text) : Text {
     var out = "";
     for (c in t.chars()) {
-      if (c == '\"') {
-        out #= "\\\""; // becomes \"
+      if (c == '\\') {
+        out #= "\\\\";
+      } else if (c == '\"') {
+        out #= "\\\"";
+      } else if (c == '\n') {
+        out #= "\\n";
       } else {
         out #= Text_.fromChar(c);
       };
@@ -224,6 +228,7 @@ module {
 
     public func getGlobalLabels() : Labels = globalLabels_;
     public func setGlobalLabels(labels : Labels) {
+      validateLabels_(labels);
       globalLabels_ := labels;
     };
 
@@ -305,7 +310,7 @@ module {
     ///
     /// If the 4-th argument is an empty list then no histogram buckets are tracked.
     /// ```motoko
-    /// let requestDuration = tracker.addGauge("request_duration", "", #both, [50, 110], false);
+    /// let requestDuration = tracker.addGauge("request_duration", [], #both, [50, 110], false);
     /// requestDuration.update(123);
     /// requestDuration.update(101);
     /// // now it will output stats:
@@ -356,7 +361,7 @@ module {
     /// Entry values have to be in Nat64 range [0;2^64-1]
     ///
     /// ```motoko
-    /// let payloadSizes = tracker.addHeatmap("payload_sizes", "", false);
+    /// let payloadSizes = tracker.addHeatmap("payload_sizes", [], false);
     /// payloadSizes.addEntry(50);
     /// payloadSizes.addEntry(20);
     /// // now it will output stats:
