@@ -18,11 +18,11 @@ module {
     name;
   };
 
+  public type Labels = [(Text, Text)];
+
   /// Helper function to create a canister label in the form:
   ///   `canister="abcde"`
   /// if the canister id starts with `abcde-...`.
-  public type Labels = [(Text, Text)];
-
   public func canisterLabel(a : actor {}) : Labels {
     [("canister", shortName(a))];
   };
