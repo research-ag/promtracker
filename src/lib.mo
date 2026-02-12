@@ -2,7 +2,6 @@ import Array "mo:core/Array";
 import List "mo:core/List";
 import Nat_ "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
-import Nat32 "mo:core/Nat32";
 import Principal "mo:core/Principal";
 import PureList_ "mo:core/pure/List";
 import Text_ "mo:core/Text";
