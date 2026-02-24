@@ -16,6 +16,8 @@
 //   - Values are static records, user persists them or not with let and transient let declarations
 //   - Values need to be re-registered with Tracker after upgrade
 //   - Same value can be registered multiple times with the Tracker, resulting in multiple lines
+//   - Re-registration is (hopefully) made easy due to bundling. Idea is that with bundling one code 
+//     line may be enough to register a whole set of metrics that comes from a package.
 // - Values can be grouped (bundled) with common labels
 //   - Useful for example in streams when each stream tracks a set of values
 //   - They can be bundled with a common label for the stream id
