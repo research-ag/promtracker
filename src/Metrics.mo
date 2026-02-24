@@ -95,7 +95,7 @@ module {
       var value = 0;
     };
     public func add(self : Counter, n : Nat) { self.value += n };
-    public func metrics(self : Counter) : Value = {
+    public func value(self : Counter) : Value = {
       read = func() = [(self.name, self.labels, self.value)];
     };
   };
@@ -103,7 +103,7 @@ module {
   public module Gauge {
     // Env
     type Env = {
-      var holdDownPeriod : Nat64;
+      var holdDownPeriod : Nat64; // in nanoseconds
     };
     public func env(holdDownSeconds : Nat) : Env = {
       var holdDownPeriod = holdDownSeconds.toNat64() * 1_000_000_000;
@@ -114,7 +114,7 @@ module {
 
     // Watermark
     type Watermark = {
-      var activated : Bool;
+      var activated : Bool; // a watermark is activated after the first update
       var mark : Nat;
       var lastMarkTime : Nat64;
       env : Env;
@@ -125,7 +125,7 @@ module {
       var lastMarkTime = 0;
       env;
     };
-    func updateWM(self : Watermark, value : Nat, time : Nat64, isHigher : (Nat, Nat) -> Bool) {
+    func updateWatermark(self : Watermark, value : Nat, time : Nat64, isHigher : (Nat, Nat) -> Bool) {
       if (
         self.activated and
         not isHigher(value, self.mark) and
@@ -143,8 +143,8 @@ module {
       var lastValue : Nat;
       var count : Nat;
       var sum : Nat;
-      highWatermark : Watermark;
-      lowWatermark : Watermark;
+      high : Watermark;
+      low : Watermark;
     };
     public func new(prefix : Text, labels : Text, env : Env) : Gauge = {
       prefix = prefix;
@@ -152,21 +152,21 @@ module {
       var lastValue = 0;
       var count = 0;
       var sum = 0;
-      highWatermark = newWatermark(env);
-      lowWatermark = newWatermark(env);
+      high = newWatermark(env);
+      low = newWatermark(env);
     };
-    public func metrics(self : Gauge) : Value = {
+    public func value(self : Gauge) : Value = {
       read = func() {
         var metrics = [
           (self.prefix # "_last", self.labels, self.lastValue),
           (self.prefix # "_sum", self.labels, self.sum),
           (self.prefix # "_count", self.labels, self.count),
         ];
-        if (self.highWatermark.activated) {
-          metrics := metrics.concat([(self.prefix # "_high_watermark", self.labels, self.highWatermark.mark)]);
+        if (self.high.activated) {
+          metrics := metrics.concat([(self.prefix # "_high_watermark", self.labels, self.high.mark)]);
         };
-        if (self.lowWatermark.activated) {
-          metrics := metrics.concat([(self.prefix # "_low_watermark", self.labels, self.lowWatermark.mark)]);
+        if (self.low.activated) {
+          metrics := metrics.concat([(self.prefix # "_low_watermark", self.labels, self.low.mark)]);
         };
         metrics;
       };
@@ -175,8 +175,9 @@ module {
       self.lastValue := value;
       self.count += 1;
       self.sum += value;
-      updateWM(self.highWatermark, value, Prim.time(), func(new, old) = new > old);
-      updateWM(self.lowWatermark, value, Prim.time(), func(new, old) = new < old);
+      let now = Prim.time();
+      updateWatermark(self.high, value, now, func(new, old) = new > old);
+      updateWatermark(self.low, value, now, func(new, old) = new < old);
     };
   };
 

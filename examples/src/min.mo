@@ -35,7 +35,8 @@
 // - editing single labels (less use for it because of bundling and common labels)
 // - providing custom time function for testing, hardcoding Prim.time for now
 // - enabling/disabling watermark in Gauges, both are always enabled now
-// - removal (deregistration) of values from Tracker (probably need to reintroduce)
+// - removal (deregistration) of values from Tracker
+//   (needed less because we can remove by upgrading and not re-registering)
 
 // We need to import Metrics only if we want to use the pre-defined pull values
 // such as system metrics or if we want to bundle multiple values under a common
@@ -83,7 +84,7 @@ persistent actor Main {
   let ctr2 = Counter.new("counter", "id=\"2\"");
   
   // Add the counters to the Tracker
-  pt.addMany([ctr1.metrics(), ctr2.metrics()]);
+  pt.addMany([ctr1.value(), ctr2.value()]);
 
   // Define the environment for Gauges, consisting of the hold down period.
   // We set it here to 62 seconds.
@@ -96,7 +97,7 @@ persistent actor Main {
   let gauge2 = Gauge.new("gauge", "id=\"2\"", env);
 
   // Add the gauges to the Tracker
-  pt.addMany([gauge1.metrics(), gauge2.metrics()]);
+  pt.addMany([gauge1.value(), gauge2.value()]);
 
   // Alternative: Bundle with a common label before adding to the Tracker
   // pt.add(Metrics.bundle("streamid=\"1\"", [ctr1.metrics(), gauge1.metrics()]));
@@ -113,6 +114,7 @@ persistent actor Main {
   };
 
   // Change hold down period for all gauges
+  // Useful if the scraping interval of the external scraper changes
   public func setHoldDown(x : Nat) {
     env.setHoldDown(x);
   };
