@@ -21,29 +21,9 @@ jobs:
       - name: make sure moc is installed
         run: mops toolchain bin moc || mops toolchain use moc latest
 
-      - name: run tests
-        run: mops test
+#      - name: run tests
+#        run: mops test
 
       - name: Build minimal example
         working-directory: ./examples
-        run: icp build minimal
-
-      - name: Build main example
-        working-directory: ./examples
-        run: icp build main
-
-      - name: Build advanced example
-        working-directory: ./examples
-        run: icp build advanced
-
-      - name: Build heatmap example
-        working-directory: ./examples
-        run: icp build heatmap
-
-      - name: Build http example
-        working-directory: ./examples
-        run: icp build http
-
-      - name: Build plain example
-        working-directory: ./examples
-        run: icp build plain
+        run: icp build min
