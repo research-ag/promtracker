@@ -7,6 +7,12 @@ module {
   // The data in type Metric is (name, labels, value)
   public type Metric = (Text, Text, Nat);
 
+  public func render(self : Metric, globalLabels : Text, time : Text) : Text {
+    let (metricName, metricLabels, natValue) = self;
+    metricName # "{" # concat(globalLabels, metricLabels) # "} "
+    # natValue.toText() # " " # time # "\n";
+  };
+
   func concat(a : Text, b : Text) : Text {
     if (a == "") return b;
     if (b == "") return a;
