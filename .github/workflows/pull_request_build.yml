@@ -26,4 +26,4 @@ jobs:
 
       - name: Build minimal example
         working-directory: ./examples
-        run: icp build min
+        run: icp build

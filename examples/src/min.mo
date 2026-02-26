@@ -16,12 +16,6 @@
 //   - registration can happen dynamically, yet the values persist across upgrades
 // - the difference between PullValues and other values remains but they are separated cleanly
 // - Watermarks don't render before they get their first value
-//
-// Open problems with the new Tracker:
-// - how do we remove values?
-//   - user code can drop the values with a migration function but they will remain in the Tracker
-//   - this will keep the corresponding metric lines in the exposition with their last values
-//   - their value can no longer be updated
 
 // This is a minimal implementation showing the use of the Tracker in this new approach.
 // Things not yet implemented for simplicity:
@@ -35,6 +29,9 @@
 // - providing custom time function for testing, hardcoding Prim.time for now
 // - enabling/disabling watermark in Gauges, both are always enabled now
 // - removal (deregistration) of values from Tracker
+//   - straight-forward to implement but requires adding an id (nonce) to the values by they can be identified
+//   - then dynamically added values can be dynamically deregistered again
+//   - or they can be removed in a migration function
 
 // This import is required
 // will be "mo:promtracker"
