@@ -28,10 +28,6 @@
 // - storing labels as a key-value map, using raw Text for now
 // - providing custom time function for testing, hardcoding Prim.time for now
 // - enabling/disabling watermark in Gauges, both are always enabled now
-// - removal (deregistration) of values from Tracker
-//   - straight-forward to implement but requires adding an id (nonce) to the values by they can be identified
-//   - then dynamically added values can be dynamically deregistered again
-//   - or they can be removed in a migration function
 
 // This import is required
 // will be "mo:promtracker"
@@ -127,5 +123,11 @@ persistent actor Main {
   var gauges : [PT.Gauge] = [];
   public func addGauge(name : Text) {
     gauges := gauges.concat([pt.newGauge(name, "")]);
+  };
+
+  // Demonstrate how to remove a value from the Tracker
+  // After this removal `ctr1` can be dropped from the actor code via migration.
+  public func remove() {
+    pt.removeValue(ctr1);
   };
 };

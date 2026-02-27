@@ -18,6 +18,23 @@ import { Counter; Gauge } "../../src/lib";
 // Optional: only used in this particular demo code
 import Array_ "mo:core/Array";
 
+/*
+Example on how to remove a value from the Tracker via migration.
+Use this migration function and remove `ctr2` from the actor body below.
+(
+  with migration = func(
+    old : {
+      pt : PT.Tracker;
+      ctr2 : Counter.Counter;
+    }
+  ) : { pt : PT.Tracker } {
+    old.pt.removeValue(old.ctr2);
+    {
+      pt = old.pt;
+    };
+  }
+)
+*/
 persistent actor Main {
   // Required 2 lines:
   //  - create static Tracker (must be declared stable)

@@ -35,6 +35,9 @@ module {
   public func setHoldDown(self : Tracker, seconds : Nat) {
     T.setHoldDown(self, seconds);
   };
+  public func removeValue(self : Tracker, val : { id : Nat }) {
+    T.removeValue(self, val);
+  };
 
   // Helper function to create canister label from an actor reference
   public func canisterLabel(a : actor {}) : Text {

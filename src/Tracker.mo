@@ -47,6 +47,7 @@ module {
     var labels : Text;
     var values : List.List<Value>;
     env : Environment;
+    var nonce : Nat;
   };
 
   public func new() : Tracker {
@@ -54,6 +55,7 @@ module {
       var labels = "";
       var values = List.empty();
       env = { var holdDownPeriod = nanos(302) };
+      var nonce = 0;
     };
     tracker;
   };
@@ -66,6 +68,7 @@ module {
       var labels = labels_;
       var values = List.empty();
       env = { var holdDownPeriod = nanos(seconds) };
+      var nonce = 0;
     };
     addMany(tracker, initialValues);
     tracker;
@@ -94,14 +97,22 @@ module {
     };
   };
   public func newCounter(self : Tracker, name : Text, labels : Text) : Metrics.Counter.Counter {
-    let newCounter = Metrics.Counter.new(name, labels);
+    let newCounter = Metrics.Counter.new(name, labels, self.nonce);
+    self.nonce += 1;
     self.add(#counter newCounter);
     newCounter;
   };
   public func newGauge(self : Tracker, prefix : Text, labels : Text) : Metrics.Gauge.Gauge {
-    let newGauge = Metrics.Gauge.new(prefix, labels, self.env);
+    let newGauge = Metrics.Gauge.new(prefix, labels, self.env, self.nonce);
+    self.nonce += 1;
     self.add(#gauge newGauge);
     newGauge;
+  };
+  public func removeValue(self : Tracker, value : { id : Nat }) {
+    self.values := self.values.filter(func(v) = switch v {
+      case (#counter c) { c.id != value.id };
+      case (#gauge g) { g.id != value.id };
+    });
   };
 
   /// Read all current metrics as a structured array

@@ -93,12 +93,14 @@ module {
       name : Text;
       labels : Text;
       var value : Nat;
+      id : Nat
     };
 
-    public func new(name : Text, labels : Text) : Counter = {
-      name = name;
-      labels = labels;
+    public func new(name : Text, labels : Text, id : Nat) : Counter = {
+      name;
+      labels;
       var value = 0;
+      id;
     };
     public func add(self : Counter, n : Nat) { self.value += n };
     public func value(self : Counter) : Value = {
@@ -151,15 +153,17 @@ module {
       var sum : Nat;
       high : Watermark;
       low : Watermark;
+      id : Nat;
     };
-    public func new(prefix : Text, labels : Text, env : Env) : Gauge = {
-      prefix = prefix;
-      labels = labels;
+    public func new(prefix : Text, labels : Text, env : Env, id : Nat) : Gauge = {
+      prefix;
+      labels;
       var lastValue = 0;
       var count = 0;
       var sum = 0;
       high = newWatermark(env);
       low = newWatermark(env);
+      id;
     };
     public func value(self : Gauge) : Value = {
       read = func() {
