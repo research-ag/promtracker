@@ -29,4 +29,14 @@ module TinyHttp {
     headers = [("content-type", "text/plain")];
     body = text.encodeUtf8();
   };
+  public func renderJson(text : Text) : Response = {
+    status_code = 200;
+    headers = [("content-type", "application/json; charset=utf-8")];
+    body = text.encodeUtf8();
+  };
+  public func renderYaml(text : Text) : Response = {
+    status_code = 200;
+    headers = [("content-type", "application/yaml; charset=utf-8")];
+    body = text.encodeUtf8();
+  };
 };
