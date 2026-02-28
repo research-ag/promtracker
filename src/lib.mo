@@ -32,6 +32,9 @@ module {
   public func newCounter(self : Tracker, name : Text, labels : Text) : Counter {
     T.newCounter(self, name, labels);
   };
+  public func newTracker(self : Tracker, labels : Text) : Tracker {
+    T.newTracker(self, labels);
+  };
   public func setHoldDown(self : Tracker, seconds : Nat) {
     T.setHoldDown(self, seconds);
   };
@@ -84,14 +87,14 @@ module {
     public func read() : [Metrics.Metric] {
       let arr1 = values.map(func(v) = v.read()).reverse().toArray().flatten();
       let arr2 = tracker.read();
-      [arr1, arr2].flatten();
+      [arr1, arr2].flatten().map(func(m) = m.prependLabels(labels));
     };
 
     // Render exposition
     public func renderExposition() : Text {
       let timeStr = (Prim.time() / 1_000_000).toText();
       read().map(
-        func(metric) = metric.render(concat(labels, tracker.labels), timeStr)
+        func(metric) = metric.render(timeStr)
       ).vals().join("");
     };
   };

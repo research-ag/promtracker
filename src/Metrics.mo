@@ -6,11 +6,13 @@ import Prim "mo:prim";
 module {
   // The data in type Metric is (name, labels, value)
   public type Metric = (Text, Text, Nat);
-
-  public func render(self : Metric, globalLabels : Text, time : Text) : Text {
-    let (metricName, metricLabels, natValue) = self;
-    metricName # "{" # concat(globalLabels, metricLabels) # "} "
-    # natValue.toText() # " " # time # "\n";
+  public func prependLabels(self : Metric, newLabels : Text) : Metric {
+    let (name, labels, value) = self;
+    (name, concat(newLabels, labels), value);
+  };
+  public func render(self : Metric, time : Text) : Text {
+    let (name, labels, value) = self;
+    name # "{" # labels # "} " # value.toText() # " " # time # "\n";
   };
 
   func concat(a : Text, b : Text) : Text {

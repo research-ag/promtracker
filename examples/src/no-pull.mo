@@ -16,25 +16,17 @@ import Http "../../src/mixins/http";
 import { Counter; Gauge } "../../src/lib";
 
 // Optional: only used in this particular demo code
-import Array_ "mo:core/Array";
+import Array "mo:core/Array";
+import Nat_ "mo:core/Nat";
 
-/*
-Example on how to remove a value from the Tracker via migration.
-Use this migration function and remove `ctr2` from the actor body below.
-(
-  with migration = func(
-    old : {
-      pt : PT.Tracker;
-      ctr2 : Counter.Counter;
-    }
-  ) : { pt : PT.Tracker } {
-    old.pt.removeValue(old.ctr2);
-    {
-      pt = old.pt;
-    };
-  }
-)
-*/
+// Example on how to remove a top-level value from the Tracker via migration.
+// Using this migration function will cause `ctr2` to be "reset" during an upgrade
+// because the initialization expression in `let ctr2 = ...` will be re-executed.
+// Alternatively, we can drop `let ctr2` from the top-level actor code with this expression.
+//   
+// import { removeCtr2 } "migration";
+// (with migration = removeCtr2)
+
 persistent actor Main {
   // Required 2 lines:
   //  - create static Tracker (must be declared stable)
@@ -68,7 +60,7 @@ persistent actor Main {
   let gauge1 = pt.newGauge("gauge", "id=\"1\"");
   let gauge2 = pt.newGauge("gauge", "id=\"2\"");
 
-  // Demo code follow
+  // Demo code follows
 
   // Increment counters
   ctr1.add(1);
@@ -93,7 +85,49 @@ persistent actor Main {
   // Demonstrate how to dynamically add values
   // This can happen inside a package but the Tracker (pt) needs to be passed down
   var gauges : [PT.Gauge] = [];
-  public func addGauge(name : Text) {
-    gauges := gauges.concat([pt.newGauge(name, "")]);
+  public func addGauge(name : Text, labels : Text) {
+    gauges := gauges.concat([pt.newGauge(name, labels)]);
   };
+
+  // Demonstrate how to use "sub-trackers"
+  // Mock Stream package
+  module Stream {
+    public type Stream = {
+      tracker : PT.Tracker;
+      gauge : PT.Gauge;
+      ctr : PT.Counter;
+    };
+    public func new(tracker : PT.Tracker) : Stream = {
+      tracker;
+      gauge = tracker.newGauge("stream_window_size", "");
+      ctr = tracker.newCounter("stream_length", "");
+    };
+    public func set(self : Stream, length : Nat, windowSize : Nat) {
+      self.ctr.add(length);
+      self.gauge.update(windowSize);
+    };
+  };
+  // Stream manager
+  var streams : [Stream.Stream] = [];
+  public func newStream() {
+    let id = streams.size();
+    // create a sub-tracker for the new stream
+    let subPt = pt.newTracker("streamid=\"" # id.toText() # "\"");
+    // create and add the new stream, pass down sub-tracker
+    streams := streams.concat([Stream.new(subPt)]);
+  };
+  public func updateStream(i : Nat, length : Nat, windowSize : Nat) {
+    streams[i].set(length, windowSize);
+  };
+  public func removeStream(i : Nat) {
+    // Important: remove the stream's sub-tracker from the parent tracker
+    // This removes all of the stream's metrics at once
+    pt.removeValue(streams[i].tracker);
+    // Now remove the stream from the array
+    streams := Array.tabulate<Stream.Stream>(
+      streams.size() - 1,
+      func(j) = if (j < i) streams[j] else streams[j + 1],
+    );
+  };
+
 };

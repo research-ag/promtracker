@@ -28,11 +28,13 @@ module {
   type Value = {
     #counter : Metrics.Counter.Counter;
     #gauge : Metrics.Gauge.Gauge;
+    #tracker : Tracker;
   };
   private func readValue(val : Value) : [Metrics.Metric] {
     switch val {
       case (#counter ctr) { Metrics.Counter.value(ctr).read() };
       case (#gauge g) { Metrics.Gauge.value(g).read() };
+      case (#tracker t) { t.read() };
     };
   };
 
@@ -48,6 +50,7 @@ module {
     var values : List.List<Value>;
     env : Environment;
     var nonce : Nat;
+    id : Nat;
   };
 
   public func new() : Tracker {
@@ -56,6 +59,7 @@ module {
       var values = List.empty();
       env = { var holdDownPeriod = nanos(302) };
       var nonce = 0;
+      id = 0;
     };
     tracker;
   };
@@ -69,6 +73,7 @@ module {
       var values = List.empty();
       env = { var holdDownPeriod = nanos(seconds) };
       var nonce = 0;
+      id = 0;
     };
     addMany(tracker, initialValues);
     tracker;
@@ -108,22 +113,36 @@ module {
     self.add(#gauge newGauge);
     newGauge;
   };
+  public func newTracker(self : Tracker, labels : Text) : Tracker {
+    let newTracker : Tracker = {
+      var labels = labels;
+      var values = List.empty();
+      env = self.env;
+      var nonce = 0;
+      id = self.nonce;
+    }; 
+    self.nonce += 1;
+    self.add(#tracker newTracker);
+    newTracker;
+  };
   public func removeValue(self : Tracker, value : { id : Nat }) {
     self.values := self.values.filter(func(v) = switch v {
       case (#counter c) { c.id != value.id };
       case (#gauge g) { g.id != value.id };
+      case (#tracker t) { t.id != value.id };
     });
   };
 
   /// Read all current metrics as a structured array
   public func read(self : Tracker) : [Metrics.Metric] {
-    self.values.map(func(v) = readValue(v)).reverse().toArray().flatten();
+    let all = self.values.map(func(v) = readValue(v)).reverse().toArray().flatten();
+    all.map(func(m) = m.prependLabels(self.labels));
   };
 
   public func renderExposition(self : Tracker) : Text {
     let timeStr = (Prim.time() / 1_000_000).toText();
     read(self).map(
-      func(metric) = metric.render(self.labels, timeStr)
+      func(metric) = metric.render(timeStr)
     ).vals().join("");
   };
 
