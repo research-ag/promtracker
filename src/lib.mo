@@ -1,12 +1,13 @@
 import Array_ "mo:core/Array";
 import List "mo:core/pure/List";
 import Nat64_ "mo:core/Nat64";
-import Principal "mo:core/Principal";
 import Text_ "mo:core/Text";
 import Prim "mo:prim";
 import Metrics "Metrics";
 import T "Tracker";
+import Label "Label";
 
+/// Module contains the Renderer and passes through the Tracker
 module {
   // Type passthrough
   public type Tracker = T.Tracker;
@@ -26,13 +27,13 @@ module {
 
   // Constructor and other functions passthrough
   public func new() : Tracker = T.new();
-  public func newGauge(self : Tracker, name : Text, labels : Text) : Gauge {
+  public func newGauge(self : Tracker, name : Text, labels : [Label.Label]) : Gauge {
     T.newGauge(self, name, labels);
   };
-  public func newCounter(self : Tracker, name : Text, labels : Text) : Counter {
+  public func newCounter(self : Tracker, name : Text, labels : [Label.Label]) : Counter {
     T.newCounter(self, name, labels);
   };
-  public func newTracker(self : Tracker, labels : Text) : Tracker {
+  public func newTracker(self : Tracker, labels : [Label.Label]) : Tracker {
     T.newTracker(self, labels);
   };
   public func setHoldDown(self : Tracker, seconds : Nat) {
@@ -42,33 +43,27 @@ module {
     T.removeValue(self, val);
   };
 
-  // Helper function to create canister label from an actor reference
-  public func canisterLabel(a : actor {}) : Text {
-    let s = Principal.fromActor(a).toText();
-    let ?name = s.split(#char '-').next() else Prim.trap("");
-    return "canister=\"" # name # "\"";
-  };
-
-  func concat(a : Text, b : Text) : Text {
-    if (a == "") return b;
-    if (b == "") return a;
-    return a # "," # b;
-  };
-
-  // Renderer class, wrapper around the static Tracker
+  /// Renderer class, wrapper around the static Tracker
+  /// 
+  /// The Renderer is defined in the top-level actor code and exists only once.
+  /// The Renderer references the static, stable Tracker but is transient itself.
+  /// Labels and pull values have to be (re-)added to the Renderer in the top-level actor code.
   public class Renderer(tracker : Tracker) {
     // Global labels managed by the Renderer
     var labels : Text = "";
-    public func setLabels(labels_ : Text) {
-      labels := labels_;
-    };
+
+    /// This function should not be needed because are cleared on upgrade.
+    /// But just in case they ever need to be cleared outside upgrades we provide this function.
+    public func clearLabels() { labels := "" };
+
+    /// Add a label
     public func addLabel(key : Text, value : Text) {
-      labels := concat(labels, key # "=\"" # value # "\"");
+      labels := Label.concat(labels, Label.renderLabel(key, value));
     };
+
+    /// Add the canister="id" label with short form canister id
     public func addCanisterLabel(a : actor {}) {
-      let s = Principal.fromActor(a).toText();
-      let ?name = s.split(#char '-').next() else Prim.trap("");
-      addLabel("canister", name);
+      addLabel(Label.canisterLabel(a));
     };
 
     // Transient values managed by the Renderer

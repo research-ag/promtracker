@@ -6,6 +6,7 @@ import Principal "mo:core/Principal";
 import Text_ "mo:core/Text";
 import Prim "mo:prim";
 import Metrics "Metrics";
+import Label "Label";
 
 module {
   // Type passthrough
@@ -13,15 +14,11 @@ module {
   public type Gauge = Metrics.Gauge.Gauge;
 
   // Helper functions
-  func concat(a : Text, b : Text) : Text {
-    if (a == "") return b;
-    if (b == "") return a;
-    return a # "," # b;
-  };
-  public func canisterLabel(a : actor {}) : Text {
+  public func canisterLabel(a : actor {}) : Label.Label {
     let s = Principal.fromActor(a).toText();
     let ?name = s.split(#char '-').next() else Prim.trap("");
-    return "canister=\"" # name # "\"";
+    return ("canister", name);
+//    return Label.renderLabel("canister", name);
   };
 
   // Value variant type
@@ -82,16 +79,15 @@ module {
   public func setHoldDown(self : Tracker, seconds : Nat) {
     self.env.holdDownPeriod := nanos(seconds);
   };
-  public func setLabels(self : Tracker, labels : Text) {
-    self.labels := labels;
+  public func setLabels(self : Tracker, labels : [Label.Label]) {
+    self.labels := Label.renderLabels(labels);
   };
   public func addLabel(self : Tracker, key : Text, value : Text) {
-    self.labels := concat(self.labels, key # "=\"" # value # "\"");
+    self.labels := Label.concat(self.labels, Label.renderLabel(key, value));
   };
   public func addCanisterLabel(self : Tracker, a : actor {}) {
-    let s = Principal.fromActor(a).toText();
-    let ?name = s.split(#char '-').next() else Prim.trap("Should not happen: actor principal cannot be parsed");
-    addLabel(self, "canister", name);
+    let (k, v) = Label.canisterLabel(a);
+    addLabel(self, k, v);
   };
   public func add(self : Tracker, val : Value) {
     self.values := self.values.pushFront(val);
@@ -101,21 +97,24 @@ module {
       self.values := self.values.pushFront(v);
     };
   };
-  public func newCounter(self : Tracker, name : Text, labels : Text) : Metrics.Counter.Counter {
-    let newCounter = Metrics.Counter.new(name, labels, self.nonce);
+  public func newCounter(self : Tracker, name : Text, labels : [Label.Label]) : Metrics.Counter.Counter {
+    let labelStr = Label.renderLabels(labels); 
+    let newCounter = Metrics.Counter.new(name, labelStr, self.nonce);
     self.nonce += 1;
     self.add(#counter newCounter);
     newCounter;
   };
-  public func newGauge(self : Tracker, prefix : Text, labels : Text) : Metrics.Gauge.Gauge {
-    let newGauge = Metrics.Gauge.new(prefix, labels, self.env, self.nonce);
+  public func newGauge(self : Tracker, prefix : Text, labels : [Label.Label]) : Metrics.Gauge.Gauge {
+    let labelStr = Label.renderLabels(labels);
+    let newGauge = Metrics.Gauge.new(prefix, labelStr, self.env, self.nonce);
     self.nonce += 1;
     self.add(#gauge newGauge);
     newGauge;
   };
-  public func newTracker(self : Tracker, labels : Text) : Tracker {
+  public func newTracker(self : Tracker, labels : [Label.Label]) : Tracker {
+    let labelStr = Label.renderLabels(labels);
     let newTracker : Tracker = {
-      var labels = labels;
+      var labels = labelStr;
       var values = List.empty();
       env = self.env;
       var nonce = 0;

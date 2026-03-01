@@ -6,6 +6,7 @@ import Prim "mo:prim";
 module {
   // The data in type Metric is (name, labels, value)
   public type Metric = (Text, Text, Nat);
+
   public func prependLabels(self : Metric, newLabels : Text) : Metric {
     let (name, labels, value) = self;
     (name, concat(newLabels, labels), value);

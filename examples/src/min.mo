@@ -83,10 +83,10 @@ persistent actor Main {
 
   // Define some Counters and Gauges
   // Declaration must be stable (not transient)
-  let ctr1 = pt.newCounter("counter", "id=\"1\"");
-  let ctr2 = pt.newCounter("counter", "id=\"2\"");
-  let gauge1 = pt.newGauge("gauge", "id=\"1\"");
-  let gauge2 = pt.newGauge("gauge", "id=\"2\"");
+  let ctr1 = pt.newCounter("counter", [("id","1")]);
+  let ctr2 = pt.newCounter("counter", [("id","2")]);
+  let gauge1 = pt.newGauge("gauge", [("id","1")]);
+  let gauge2 = pt.newGauge("gauge", [("id","2")]);
 
   // Add some pre-defined pull values to the Renderer
   renderer.addPullValues([
@@ -99,7 +99,7 @@ persistent actor Main {
 
   // Add other global labels to the Renderer via key-value pair if desired
   // Can be dynamically added later without upgrade if needed
-  // renderer.addLabel("env", "prod");
+  renderer.addLabel("example", "min");
 
   // Set (overwrite) the Renderer's whole label string as raw Text if desired
   // Can be dynamically set later without upgrade if needed
@@ -130,8 +130,8 @@ persistent actor Main {
   // Demonstrate how to dynamically add values
   // This can happen inside a package but the Tracker (pt) needs to be passed down
   var gauges : [PT.Gauge] = [];
-  public func addGauge(name : Text) {
-    gauges := gauges.concat([pt.newGauge(name, "")]);
+  public func addGauge(name : Text, labels : [(Text, Text)]) {
+    gauges := gauges.concat([pt.newGauge(name, labels)]);
   };
 
   // Demonstrate how to use "sub-trackers"
@@ -144,20 +144,21 @@ persistent actor Main {
     };
     public func new(tracker : PT.Tracker) : Stream = {
       tracker;
-      gauge = tracker.newGauge("stream_window_size", "");
-      ctr = tracker.newCounter("stream_length", "");
+      gauge = tracker.newGauge("stream_window_size", []);
+      ctr = tracker.newCounter("stream_length", []);
     };
     public func set(self : Stream, length : Nat, windowSize : Nat) {
       self.ctr.add(length);
       self.gauge.update(windowSize);
     };
   };
+
   // Stream manager
   var streams : [Stream.Stream] = [];
   public func newStream() {
     let id = streams.size();
     // create a sub-tracker for the new stream
-    let subPt = pt.newTracker("streamid=\"" # id.toText() # "\"");
+    let subPt = pt.newTracker([("streamid", id.toText())]);
     // create and add the new stream, pass down sub-tracker
     streams := streams.concat([Stream.new(subPt)]);
   };
