@@ -23,9 +23,8 @@ module {
   public let canisterVersionMetric = Metrics.canisterVersionMetric;
   public let allSystemMetrics = Metrics.allSystemMetrics;
   public let allRtsMetrics = Metrics.allRtsMetrics;
-
+  public let bundle = Metrics.bundle;
   public let newPullValue = Metrics.newPullValue;
-  public let newPullValueBundle = Metrics.newPullValueBundle;
 
   // Constructor and other functions passthrough
   public func new() : Tracker = T.new();
@@ -83,7 +82,7 @@ module {
       if (vs.size() == 1) {
         return addPullValue(vs[0]);
       };
-      addPullValue(newPullValueBundle([], vs));
+      addPullValue(bundle([], vs));
     };
     public func removePullValue(id : Nat) {
       values := values.filter(func(iid, _) = iid != id);

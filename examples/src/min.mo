@@ -104,7 +104,7 @@ persistent actor Main {
     PT.newPullValue("custom_pull_value", [("is_bundle", "0"), ("index", "0")], func() = 12),
     PT.newPullValue("custom_pull_value", [("is_bundle", "0"), ("index", "1")], func() = 34),
     // you can also bundle them to include common labels
-    PT.newPullValueBundle(
+    PT.bundle(
       [("is_bundle", "1")],
       [
         PT.newPullValue("custom_pull_value", [("index", "0")], func() = 56),

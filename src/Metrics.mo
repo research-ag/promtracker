@@ -43,7 +43,7 @@ module {
 
   /// Arbitrary Values can be bundled together to form a new "Value"
   /// Bundling can be nested.
-  public func newPullValueBundle(commonLabels : [Label.Label], sets : [Value]) : Value {
+  public func bundle(commonLabels : [Label.Label], sets : [Value]) : Value {
     let commonLabelsText = Label.renderLabels(commonLabels);
     object {
       public func read() : [Metric] {
