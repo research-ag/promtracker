@@ -3,6 +3,8 @@ import Nat_ "mo:core/Nat";
 import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
 
+import Label "./Label";
+
 module {
   // The data in type Metric is (name, labels, value)
   public type Metric = (Text, Text, Nat);
@@ -30,18 +32,26 @@ module {
   };
 
   /// A single pull value
-  public func singleton(name : Text, labels : Text, getValue : () -> Nat) : Value = object {
-    public func read() : [Metric] { [(name, labels, getValue())] };
+  public func newPullValue(name : Text, labels : [Label.Label], getValue : () -> Nat) : Value {
+    let labelsText = Label.renderLabels(labels);
+    object {
+      public func read() : [Metric] {
+        [(name, labelsText, getValue())];
+      };
+    };
   };
 
   /// Arbitrary Values can be bundled together to form a new "Value"
   /// Bundling can be nested.
-  public func bundle(commonLabels : Text, sets : [Value]) : Value = object {
-    public func read() : [Metric] {
-      // read metrics from all sets
-      let allMetrics = sets.map(func(s) = s.read()).flatten();
-      // add common labels to all metrics
-      allMetrics.map(func(name, labels, value) { (name, concat(commonLabels, labels), value) });
+  public func newPullValueBundle(commonLabels : [Label.Label], sets : [Value]) : Value {
+    let commonLabelsText = Label.renderLabels(commonLabels);
+    object {
+      public func read() : [Metric] {
+        // read metrics from all sets
+        let allMetrics = sets.map(func(s) = s.read()).flatten();
+        // add common labels to all metrics
+        allMetrics.map(func(name, labels, value) { (name, concat(commonLabelsText, labels), value) });
+      };
     };
   };
 
@@ -96,7 +106,7 @@ module {
       name : Text;
       labels : Text;
       var value : Nat;
-      id : Nat
+      id : Nat;
     };
 
     public func new(name : Text, labels : Text, id : Nat) : Counter = {
