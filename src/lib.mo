@@ -80,6 +80,9 @@ module {
       nonce;
     };
     public func addPullValues(vs : [Metrics.Value]) : Nat {
+      if (vs.size() == 1) {
+        return addPullValue(vs[0]);
+      };
       addPullValue(newPullValueBundle([], vs));
     };
     public func removePullValue(id : Nat) {

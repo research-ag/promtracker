@@ -50,7 +50,7 @@ module {
         // read metrics from all sets
         let allMetrics = sets.map(func(s) = s.read()).flatten();
         // add common labels to all metrics
-        allMetrics.map(func(name, labels, value) { (name, concat(commonLabelsText, labels), value) });
+        allMetrics.map(func(m) = m.prependLabels(commonLabelsText));
       };
     };
   };
