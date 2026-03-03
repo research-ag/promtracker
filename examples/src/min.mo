@@ -89,10 +89,17 @@ persistent actor Main {
   let gauge2 = pt.newGauge("gauge", [("id", "2")]);
 
   // Add some pre-defined pull values to the Renderer
-  ignore renderer.addPullValues([
-    PT.cyclesBalanceMetric,
-    PT.canisterVersionMetric,
-  ]);
+  ignore renderer.addPullValue(PT.allRtsMetrics);
+  // or few at once
+  ignore renderer.addPullValue(
+    PT.bundle(
+      [],
+      [
+        PT.cyclesBalanceMetric,
+        PT.canisterVersionMetric,
+      ],
+    )
+  );
 
   // Add all system metrics (use as alternative to the previous addPullValues)
   ignore renderer.addPullValue(PT.allSystemMetrics);
@@ -100,18 +107,15 @@ persistent actor Main {
   // Add some custom pull value
   let pv = renderer.addPullValue(PT.newPullValue("custom_pull_value", [], func() = 123));
   // or few at once
-  let pvs = renderer.addPullValues([
-    PT.newPullValue("custom_pull_value", [("is_bundle", "0"), ("index", "0")], func() = 12),
-    PT.newPullValue("custom_pull_value", [("is_bundle", "0"), ("index", "1")], func() = 34),
-    // you can also bundle them to include common labels
+  let pvs = renderer.addPullValue(
     PT.bundle(
-      [("is_bundle", "1")],
+      [],
       [
-        PT.newPullValue("custom_pull_value", [("index", "0")], func() = 56),
-        PT.newPullValue("custom_pull_value", [("index", "1")], func() = 78),
+        PT.newPullValue("custom_pull_value", [("index", "0")], func() = 456),
+        PT.newPullValue("custom_pull_value", [("index", "1")], func() = 789),
       ],
-    ),
-  ]);
+    )
+  );
   // And you can remove them if needed
   renderer.removePullValue(pv);
   renderer.removePullValue(pvs);

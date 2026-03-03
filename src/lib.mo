@@ -78,12 +78,6 @@ module {
       values := values.pushFront((nonce, v));
       nonce;
     };
-    public func addPullValues(vs : [Metrics.Value]) : Nat {
-      if (vs.size() == 1) {
-        return addPullValue(vs[0]);
-      };
-      addPullValue(bundle([], vs));
-    };
     public func removePullValue(id : Nat) {
       values := values.filter(func(iid, _) = iid != id);
     };
