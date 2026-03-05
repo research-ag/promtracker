@@ -287,7 +287,6 @@ run(
 );
 
 heatmap.update(3, 103);
-
 run(
   test(
     "heatmap after update (3 -> 103)",
@@ -306,7 +305,26 @@ run(
   )
 );
 
-heatmap.remove(103);
+heatmap.update(103, 96);
+run(
+  test(
+    "heatmap after update (103 -> 96)",
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"0\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"1\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"2\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"4\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"8\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"16\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"32\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"64\"", 2) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"128\"", 4) and
+    expect(renderer.read(), "test_heatmap_count", "", 4) and
+    expect(renderer.read(), "test_heatmap_sum", "", 260),
+    M.equals(T.bool(true)),
+  )
+);
+
+heatmap.remove(96);
 heatmap.remove(100);
 
 run(

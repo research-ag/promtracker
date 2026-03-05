@@ -292,10 +292,11 @@ module {
     };
 
     public func update(self : Heatmap, oldEntryValue : Nat, newEntryValue : Nat) {
-      if (newEntryValue > oldEntryValue) {
-        self.sum += newEntryValue - oldEntryValue;
+      self.sum += newEntryValue;
+      if (oldEntryValue >= self.sum) {
+        self.sum := 0;
       } else {
-        self.sum -= oldEntryValue - newEntryValue;
+        self.sum -= oldEntryValue;
       };
       let oldB = allocateBucketFor(self, oldEntryValue);
       let newB = allocateBucketFor(self, newEntryValue);
