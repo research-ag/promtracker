@@ -2,7 +2,6 @@ import Array_ "mo:core/Array";
 import List "mo:core/pure/List";
 import Nat_ "mo:core/Nat";
 import Nat64_ "mo:core/Nat64";
-import Principal "mo:core/Principal";
 import Text_ "mo:core/Text";
 import Prim "mo:prim";
 import Metrics "Metrics";
@@ -14,11 +13,7 @@ module {
   public type Gauge = Metrics.Gauge.Gauge;
 
   // Helper functions
-  public func canisterLabel(a : actor {}) : Label.Label {
-    let s = Principal.fromActor(a).toText();
-    let ?name = s.split(#char '-').next() else Prim.trap("");
-    ("canister", name);
-  };
+  public func canisterLabel(a : actor {}) : Label.Label = Label.canisterLabel(a);
 
   // Value variant type
   type Value = {

@@ -175,17 +175,24 @@ module {
       counters : [var Nat];
       id : Nat;
     };
-    public func new(prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge = {
-      prefix;
-      labels;
-      var lastValue = 0;
-      var count = 0;
-      var sum = 0;
-      high = newWatermark(env);
-      low = newWatermark(env);
-      limits = limits;
-      counters = VarArray_.tabulate<Nat>(limits.size(), func(i : Nat) : Nat = 0);
-      id;
+    public func new(prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge {
+      for (i in Nat_.range(1, limits.size())) {
+        if (limits[i] <= limits[i - 1]) {
+          Prim.trap("Gauge limits must be strictly increasing and unique");
+        };
+      };
+      {
+        prefix;
+        labels;
+        var lastValue = 0;
+        var count = 0;
+        var sum = 0;
+        high = newWatermark(env);
+        low = newWatermark(env);
+        limits = limits;
+        counters = VarArray_.tabulate<Nat>(limits.size(), func(i : Nat) : Nat = 0);
+        id;
+      };
     };
     public func value(self : Gauge) : Value = {
       read = func() {
