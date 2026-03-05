@@ -24,18 +24,21 @@ module {
   public let allSystemMetrics = Metrics.allSystemMetrics;
   public let allRtsMetrics = Metrics.allRtsMetrics;
   public let bundle = Metrics.bundle;
+  public let newPullValue = Metrics.newPullValue;
 
   // Constructor and other functions passthrough
   public func new() : Tracker = T.new();
-  public func newGauge(self : Tracker, name : Text, labels : [Label.Label]) : Gauge {
-    T.newGauge(self, name, labels);
+  public func newTracker(self : Tracker, labels : [Label.Label]) : Tracker {
+    T.newTracker(self, labels);
+  };
+
+  public func newGauge(self : Tracker, name : Text, labels : [Label.Label], limits : [Nat]) : Gauge {
+    T.newGauge(self, name, labels, limits);
   };
   public func newCounter(self : Tracker, name : Text, labels : [Label.Label]) : Counter {
     T.newCounter(self, name, labels);
   };
-  public func newTracker(self : Tracker, labels : [Label.Label]) : Tracker {
-    T.newTracker(self, labels);
-  };
+
   public func setHoldDown(self : Tracker, seconds : Nat) {
     T.setHoldDown(self, seconds);
   };
@@ -44,13 +47,15 @@ module {
   };
 
   /// Renderer class, wrapper around the static Tracker
-  /// 
+  ///
   /// The Renderer is defined in the top-level actor code and exists only once.
   /// The Renderer references the static, stable Tracker but is transient itself.
   /// Labels and pull values have to be (re-)added to the Renderer in the top-level actor code.
   public class Renderer(tracker : Tracker) {
     // Global labels managed by the Renderer
     var labels : Text = "";
+
+    var nonce : Nat = 0;
 
     /// This function should not be needed because are cleared on upgrade.
     /// But just in case they ever need to be cleared outside upgrades we provide this function.
@@ -67,20 +72,20 @@ module {
     };
 
     // Transient values managed by the Renderer
-    var values = List.empty<Metrics.Value>();
-    public func addPullValue(v : Metrics.Value) {
-      values := values.pushFront(v);
+    var values = List.empty<(Nat, Metrics.Value)>();
+    public func addPullValue(v : Metrics.Value) : Nat {
+      nonce += 1;
+      values := values.pushFront((nonce, v));
+      nonce;
     };
-    public func addPullValues(vs : [Metrics.Value]) {
-      for (v in vs.values()) {
-        values := values.pushFront(v);
-      };
+    public func removePullValue(id : Nat) {
+      values := values.filter(func(iid, _) = iid != id);
     };
 
     // Read all values as array
     // PullValues first, then stable values, in the order of addition for both categories
     public func read() : [Metrics.Metric] {
-      let arr1 = values.map(func(v) = v.read()).reverse().toArray().flatten();
+      let arr1 = values.map(func(v) = v.1.read()).reverse().toArray().flatten();
       let arr2 = tracker.read();
       [arr1, arr2].flatten().map(func(m) = m.prependLabels(labels));
     };

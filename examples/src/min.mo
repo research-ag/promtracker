@@ -51,7 +51,7 @@ import Nat_ "mo:core/Nat";
 // Using this migration function will cause `ctr2` to be "reset" during an upgrade
 // because the initialization expression in `let ctr2 = ...` will be re-executed.
 // Alternatively, we can drop `let ctr2` from the top-level actor code with this expression.
-//   
+//
 // import { removeCtr2 } "migration";
 // (with migration = removeCtr2)
 
@@ -83,19 +83,42 @@ persistent actor Main {
 
   // Define some Counters and Gauges
   // Declaration must be stable (not transient)
-  let ctr1 = pt.newCounter("counter", [("id","1")]);
-  let ctr2 = pt.newCounter("counter", [("id","2")]);
-  let gauge1 = pt.newGauge("gauge", [("id","1")]);
-  let gauge2 = pt.newGauge("gauge", [("id","2")]);
+  let ctr1 = pt.newCounter("counter", [("id", "1")]);
+  let ctr2 = pt.newCounter("counter", [("id", "2")]);
+  let gauge1 = pt.newGauge("gauge", [("id", "1")], []);
+  let gauge2 = pt.newGauge("gauge", [("id", "2")], []);
 
   // Add some pre-defined pull values to the Renderer
-  renderer.addPullValues([
-    PT.cyclesBalanceMetric,
-    PT.canisterVersionMetric,
-  ]);
+  ignore renderer.addPullValue(PT.allRtsMetrics);
+  // or few at once
+  ignore renderer.addPullValue(
+    PT.bundle(
+      [],
+      [
+        PT.cyclesBalanceMetric,
+        PT.canisterVersionMetric,
+      ],
+    )
+  );
 
   // Add all system metrics (use as alternative to the previous addPullValues)
-  // renderer.addPullValue(PT.allSystemMetrics);
+  ignore renderer.addPullValue(PT.allSystemMetrics);
+
+  // Add some custom pull value
+  let pv = renderer.addPullValue(PT.newPullValue("custom_pull_value", [], func() = 123));
+  // or few at once
+  let pvs = renderer.addPullValue(
+    PT.bundle(
+      [],
+      [
+        PT.newPullValue("custom_pull_value", [("index", "0")], func() = 456),
+        PT.newPullValue("custom_pull_value", [("index", "1")], func() = 789),
+      ],
+    )
+  );
+  // And you can remove them if needed
+  renderer.removePullValue(pv);
+  renderer.removePullValue(pvs);
 
   // Add other global labels to the Renderer via key-value pair if desired
   // Can be dynamically added later without upgrade if needed
@@ -131,7 +154,7 @@ persistent actor Main {
   // This can happen inside a package but the Tracker (pt) needs to be passed down
   var gauges : [PT.Gauge] = [];
   public func addGauge(name : Text, labels : [(Text, Text)]) {
-    gauges := gauges.concat([pt.newGauge(name, labels)]);
+    gauges := gauges.concat([pt.newGauge(name, labels, [])]);
   };
 
   // Demonstrate how to use "sub-trackers"
@@ -144,7 +167,7 @@ persistent actor Main {
     };
     public func new(tracker : PT.Tracker) : Stream = {
       tracker;
-      gauge = tracker.newGauge("stream_window_size", []);
+      gauge = tracker.newGauge("stream_window_size", [], []);
       ctr = tracker.newCounter("stream_length", []);
     };
     public func set(self : Stream, length : Nat, windowSize : Nat) {

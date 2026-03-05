@@ -1,7 +1,10 @@
 import Array_ "mo:core/Array";
+import VarArray_ "mo:core/VarArray";
 import Nat_ "mo:core/Nat";
 import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
+
+import Label "./Label";
 
 module {
   // The data in type Metric is (name, labels, value)
@@ -30,18 +33,26 @@ module {
   };
 
   /// A single pull value
-  public func singleton(name : Text, labels : Text, getValue : () -> Nat) : Value = object {
-    public func read() : [Metric] { [(name, labels, getValue())] };
+  public func newPullValue(name : Text, labels : [Label.Label], getValue : () -> Nat) : Value {
+    let labelsText = Label.renderLabels(labels);
+    object {
+      public func read() : [Metric] {
+        [(name, labelsText, getValue())];
+      };
+    };
   };
 
   /// Arbitrary Values can be bundled together to form a new "Value"
   /// Bundling can be nested.
-  public func bundle(commonLabels : Text, sets : [Value]) : Value = object {
-    public func read() : [Metric] {
-      // read metrics from all sets
-      let allMetrics = sets.map(func(s) = s.read()).flatten();
-      // add common labels to all metrics
-      allMetrics.map(func(name, labels, value) { (name, concat(commonLabels, labels), value) });
+  public func bundle(commonLabels : [Label.Label], sets : [Value]) : Value {
+    let commonLabelsText = Label.renderLabels(commonLabels);
+    object {
+      public func read() : [Metric] {
+        // read metrics from all sets
+        let allMetrics = sets.map(func(s) = s.read()).flatten();
+        // add common labels to all metrics
+        allMetrics.map(func(m) = m.prependLabels(commonLabelsText));
+      };
     };
   };
 
@@ -96,7 +107,7 @@ module {
       name : Text;
       labels : Text;
       var value : Nat;
-      id : Nat
+      id : Nat;
     };
 
     public func new(name : Text, labels : Text, id : Nat) : Counter = {
@@ -106,6 +117,10 @@ module {
       id;
     };
     public func add(self : Counter, n : Nat) { self.value += n };
+    public func sub(self : Counter, n : Nat) {
+      if (n > self.value) self.value := 0 else self.value -= n;
+    };
+    public func set(self : Counter, n : Nat) { self.value := n };
     public func value(self : Counter) : Value = {
       read = func() = [(self.name, self.labels, self.value)];
     };
@@ -156,17 +171,28 @@ module {
       var sum : Nat;
       high : Watermark;
       low : Watermark;
+      limits : [Nat];
+      counters : [var Nat];
       id : Nat;
     };
-    public func new(prefix : Text, labels : Text, env : Env, id : Nat) : Gauge = {
-      prefix;
-      labels;
-      var lastValue = 0;
-      var count = 0;
-      var sum = 0;
-      high = newWatermark(env);
-      low = newWatermark(env);
-      id;
+    public func new(prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge {
+      for (i in Nat_.range(1, limits.size())) {
+        if (limits[i] <= limits[i - 1]) {
+          Prim.trap("Gauge limits must be strictly increasing and unique");
+        };
+      };
+      {
+        prefix;
+        labels;
+        var lastValue = 0;
+        var count = 0;
+        var sum = 0;
+        high = newWatermark(env);
+        low = newWatermark(env);
+        limits = limits;
+        counters = VarArray_.repeat(0, limits.size());
+        id;
+      };
     };
     public func value(self : Gauge) : Value = {
       read = func() {
@@ -181,6 +207,14 @@ module {
         if (self.low.activated) {
           metrics := metrics.concat([(self.prefix # "_low_watermark", self.labels, self.low.mark)]);
         };
+        if (self.limits.size() > 0) {
+          for (i in self.limits.keys()) {
+            let leLabel = Label.concat(self.labels, Label.renderLabel("le", self.limits[i].toText()));
+            metrics := metrics.concat([(self.prefix # "_bucket", leLabel, self.counters[i])]);
+          };
+          let infLabel = Label.concat(self.labels, Label.renderLabel("le", "+Inf"));
+          metrics := metrics.concat([(self.prefix # "_bucket", infLabel, self.count)]);
+        };
         metrics;
       };
     };
@@ -191,6 +225,12 @@ module {
       let now = Prim.time();
       updateWatermark(self.high, value, now, func(new, old) = new > old);
       updateWatermark(self.low, value, now, func(new, old) = new < old);
+      var n = self.limits.size();
+      while (n > 0) {
+        n -= 1;
+        if (value > self.limits[n]) { return };
+        self.counters[n] += 1;
+      };
     };
   };
 
