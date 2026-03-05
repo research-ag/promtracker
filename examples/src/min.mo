@@ -85,8 +85,8 @@ persistent actor Main {
   // Declaration must be stable (not transient)
   let ctr1 = pt.newCounter("counter", [("id", "1")]);
   let ctr2 = pt.newCounter("counter", [("id", "2")]);
-  let gauge1 = pt.newGauge("gauge", [("id", "1")]);
-  let gauge2 = pt.newGauge("gauge", [("id", "2")]);
+  let gauge1 = pt.newGauge("gauge", [("id", "1")], []);
+  let gauge2 = pt.newGauge("gauge", [("id", "2")], []);
 
   // Add some pre-defined pull values to the Renderer
   ignore renderer.addPullValue(PT.allRtsMetrics);
@@ -154,7 +154,7 @@ persistent actor Main {
   // This can happen inside a package but the Tracker (pt) needs to be passed down
   var gauges : [PT.Gauge] = [];
   public func addGauge(name : Text, labels : [(Text, Text)]) {
-    gauges := gauges.concat([pt.newGauge(name, labels)]);
+    gauges := gauges.concat([pt.newGauge(name, labels, [])]);
   };
 
   // Demonstrate how to use "sub-trackers"
@@ -167,7 +167,7 @@ persistent actor Main {
     };
     public func new(tracker : PT.Tracker) : Stream = {
       tracker;
-      gauge = tracker.newGauge("stream_window_size", []);
+      gauge = tracker.newGauge("stream_window_size", [], []);
       ctr = tracker.newCounter("stream_length", []);
     };
     public func set(self : Stream, length : Nat, windowSize : Nat) {
