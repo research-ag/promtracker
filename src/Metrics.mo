@@ -190,7 +190,7 @@ module {
         high = newWatermark(env);
         low = newWatermark(env);
         limits = limits;
-        counters = VarArray_.repeat<Nat>(limits.size(), 0);
+        counters = VarArray_.repeat(0, limits.size());
         id;
       };
     };
