@@ -1,4 +1,5 @@
 import Array_ "mo:core/Array";
+import VarArray_ "mo:core/VarArray";
 import Nat_ "mo:core/Nat";
 import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
@@ -116,6 +117,10 @@ module {
       id;
     };
     public func add(self : Counter, n : Nat) { self.value += n };
+    public func sub(self : Counter, n : Nat) {
+      if (n > self.value) self.value := 0 else self.value -= n;
+    };
+    public func set(self : Counter, n : Nat) { self.value := n };
     public func value(self : Counter) : Value = {
       read = func() = [(self.name, self.labels, self.value)];
     };
@@ -166,9 +171,11 @@ module {
       var sum : Nat;
       high : Watermark;
       low : Watermark;
+      limits : [Nat];
+      counters : [var Nat];
       id : Nat;
     };
-    public func new(prefix : Text, labels : Text, env : Env, id : Nat) : Gauge = {
+    public func new(prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge = {
       prefix;
       labels;
       var lastValue = 0;
@@ -176,6 +183,8 @@ module {
       var sum = 0;
       high = newWatermark(env);
       low = newWatermark(env);
+      limits = limits;
+      counters = VarArray_.tabulate<Nat>(limits.size(), func(i : Nat) : Nat = 0);
       id;
     };
     public func value(self : Gauge) : Value = {
@@ -191,6 +200,14 @@ module {
         if (self.low.activated) {
           metrics := metrics.concat([(self.prefix # "_low_watermark", self.labels, self.low.mark)]);
         };
+        if (self.limits.size() > 0) {
+          for (i in self.limits.keys()) {
+            let leLabel = Label.concat(self.labels, Label.renderLabel("le", self.limits[i].toText()));
+            metrics := metrics.concat([(self.prefix # "_bucket", leLabel, self.counters[i])]);
+          };
+          let infLabel = Label.concat(self.labels, Label.renderLabel("le", "+Inf"));
+          metrics := metrics.concat([(self.prefix # "_bucket", infLabel, self.count)]);
+        };
         metrics;
       };
     };
@@ -201,6 +218,12 @@ module {
       let now = Prim.time();
       updateWatermark(self.high, value, now, func(new, old) = new > old);
       updateWatermark(self.low, value, now, func(new, old) = new < old);
+      var n = self.limits.size();
+      while (n > 0) {
+        n -= 1;
+        if (value > self.limits[n]) { return };
+        self.counters[n] += 1;
+      };
     };
   };
 

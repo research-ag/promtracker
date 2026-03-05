@@ -32,8 +32,8 @@ module {
     T.newTracker(self, labels);
   };
 
-  public func newGauge(self : Tracker, name : Text, labels : [Label.Label]) : Gauge {
-    T.newGauge(self, name, labels);
+  public func newGauge(self : Tracker, name : Text, labels : [Label.Label], limits : [Nat]) : Gauge {
+    T.newGauge(self, name, labels, limits);
   };
   public func newCounter(self : Tracker, name : Text, labels : [Label.Label]) : Counter {
     T.newCounter(self, name, labels);

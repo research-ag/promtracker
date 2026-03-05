@@ -17,8 +17,7 @@ module {
   public func canisterLabel(a : actor {}) : Label.Label {
     let s = Principal.fromActor(a).toText();
     let ?name = s.split(#char '-').next() else Prim.trap("");
-    return ("canister", name);
-//    return Label.renderLabel("canister", name);
+    ("canister", name);
   };
 
   // Value variant type
@@ -98,15 +97,15 @@ module {
     };
   };
   public func newCounter(self : Tracker, name : Text, labels : [Label.Label]) : Metrics.Counter.Counter {
-    let labelStr = Label.renderLabels(labels); 
+    let labelStr = Label.renderLabels(labels);
     let newCounter = Metrics.Counter.new(name, labelStr, self.nonce);
     self.nonce += 1;
     self.add(#counter newCounter);
     newCounter;
   };
-  public func newGauge(self : Tracker, prefix : Text, labels : [Label.Label]) : Metrics.Gauge.Gauge {
+  public func newGauge(self : Tracker, prefix : Text, labels : [Label.Label], limits : [Nat]) : Metrics.Gauge.Gauge {
     let labelStr = Label.renderLabels(labels);
-    let newGauge = Metrics.Gauge.new(prefix, labelStr, self.env, self.nonce);
+    let newGauge = Metrics.Gauge.new(prefix, labelStr, self.env, limits, self.nonce);
     self.nonce += 1;
     self.add(#gauge newGauge);
     newGauge;
@@ -119,17 +118,19 @@ module {
       env = self.env;
       var nonce = 0;
       id = self.nonce;
-    }; 
+    };
     self.nonce += 1;
     self.add(#tracker newTracker);
     newTracker;
   };
   public func removeValue(self : Tracker, value : { id : Nat }) {
-    self.values := self.values.filter(func(v) = switch v {
-      case (#counter c) { c.id != value.id };
-      case (#gauge g) { g.id != value.id };
-      case (#tracker t) { t.id != value.id };
-    });
+    self.values := self.values.filter(
+      func(v) = switch v {
+        case (#counter c) { c.id != value.id };
+        case (#gauge g) { g.id != value.id };
+        case (#tracker t) { t.id != value.id };
+      }
+    );
   };
 
   /// Read all current metrics as a structured array
