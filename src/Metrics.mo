@@ -190,7 +190,7 @@ module {
         high = newWatermark(env);
         low = newWatermark(env);
         limits = limits;
-        counters = VarArray_.tabulate<Nat>(limits.size(), func(i : Nat) : Nat = 0);
+        counters = VarArray_.repeat<Nat>(limits.size(), 0);
         id;
       };
     };
