@@ -234,4 +234,95 @@ module {
     };
   };
 
+  public module Heatmap {
+    public type Heatmap = {
+      prefix : Text;
+      labels : Text;
+      var count : Nat;
+      var sum : Nat;
+      var buckets : [var Nat];
+      id : Nat;
+    };
+
+    func getBucketIndex(entry : Nat) : Nat {
+      if (entry == 0) return 0;
+      let bits = Nat64_.bitcountLeadingZero(Nat64_.fromNat(entry - 1));
+      65 - bits.toNat();
+    };
+
+    func getLimitText(bucket : Nat) : Text {
+      if (bucket == 0) return "0";
+      let v : Nat64 = 1 << Nat64_.fromNat(bucket - 1);
+      v.toText();
+    };
+
+    func allocateBucketFor(self : Heatmap, entry : Nat) : Nat {
+      let bucket = getBucketIndex(entry);
+      if (self.buckets.size() < bucket + 1) {
+        let nb = VarArray_.tabulate<Nat>(
+          bucket + 1,
+          func(i) { if (i < self.buckets.size()) self.buckets[i] else 0 },
+        );
+        self.buckets := nb;
+      };
+      bucket;
+    };
+
+    public func new(prefix : Text, labels : Text, id : Nat) : Heatmap = {
+      prefix;
+      labels;
+      var count = 0;
+      var sum = 0;
+      var buckets = VarArray_.repeat<Nat>(0, 0);
+      id;
+    };
+
+    public func add(self : Heatmap, entry : Nat) {
+      self.count += 1;
+      self.sum += entry;
+      let b = allocateBucketFor(self, entry);
+      self.buckets[b] += 1;
+    };
+
+    public func remove(self : Heatmap, entry : Nat) {
+      if (self.count > 0) self.count -= 1;
+      if (entry > self.sum) self.sum := 0 else self.sum -= entry;
+      let b = allocateBucketFor(self, entry);
+      if (self.buckets[b] > 0) self.buckets[b] -= 1;
+    };
+
+    public func update(self : Heatmap, oldEntryValue : Nat, newEntryValue : Nat) {
+      self.sum += newEntryValue;
+      if (oldEntryValue >= self.sum) {
+        self.sum := 0;
+      } else {
+        self.sum -= oldEntryValue;
+      };
+      let oldB = allocateBucketFor(self, oldEntryValue);
+      let newB = allocateBucketFor(self, newEntryValue);
+      if (oldB == newB) return;
+      if (self.buckets[oldB] > 0) self.buckets[oldB] -= 1;
+      self.buckets[newB] += 1;
+    };
+
+    public func value(self : Heatmap) : Value = {
+      read = func() {
+        var aggregated : Nat = 0;
+        Array_.tabulate<Metric>(
+          self.buckets.size() + 2,
+          func(i) {
+            if (i < self.buckets.size()) {
+              aggregated += self.buckets[i];
+              (self.prefix # "_bucket", Label.concat(self.labels, Label.renderLabel("le", getLimitText(i))), aggregated);
+            } else if (i == self.buckets.size()) {
+              (self.prefix # "_count", self.labels, self.count);
+            } else {
+              (self.prefix # "_sum", self.labels, self.sum);
+            };
+          },
+        );
+      };
+    };
+  };
+
 };

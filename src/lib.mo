@@ -13,10 +13,12 @@ module {
   public type Tracker = T.Tracker;
   public type Counter = Metrics.Counter.Counter;
   public type Gauge = Metrics.Gauge.Gauge;
+  public type Heatmap = Metrics.Heatmap.Heatmap;
 
   // Module passthrough
   public let Counter = Metrics.Counter;
   public let Gauge = Metrics.Gauge;
+  public let Heatmap = Metrics.Heatmap;
 
   // Pre-defined pull values passthrough
   public let cyclesBalanceMetric = Metrics.cyclesBalanceMetric;
@@ -37,6 +39,9 @@ module {
   };
   public func newCounter(self : Tracker, name : Text, labels : [Label.Label]) : Counter {
     T.newCounter(self, name, labels);
+  };
+  public func newHeatmap(self : Tracker, name : Text, labels : [Label.Label]) : Heatmap {
+    T.newHeatmap(self, name, labels);
   };
 
   public func setHoldDown(self : Tracker, seconds : Nat) {

@@ -11,6 +11,7 @@ module {
   // Type passthrough
   public type Counter = Metrics.Counter.Counter;
   public type Gauge = Metrics.Gauge.Gauge;
+  public type Heatmap = Metrics.Heatmap.Heatmap;
 
   // Helper functions
   public func canisterLabel(a : actor {}) : Label.Label = Label.canisterLabel(a);
@@ -19,12 +20,14 @@ module {
   type Value = {
     #counter : Metrics.Counter.Counter;
     #gauge : Metrics.Gauge.Gauge;
+    #heatmap : Metrics.Heatmap.Heatmap;
     #tracker : Tracker;
   };
   private func readValue(val : Value) : [Metrics.Metric] {
     switch val {
       case (#counter ctr) { Metrics.Counter.value(ctr).read() };
       case (#gauge g) { Metrics.Gauge.value(g).read() };
+      case (#heatmap h) { Metrics.Heatmap.value(h).read() };
       case (#tracker t) { t.read() };
     };
   };
@@ -105,6 +108,13 @@ module {
     self.add(#gauge newGauge);
     newGauge;
   };
+  public func newHeatmap(self : Tracker, prefix : Text, labels : [Label.Label]) : Metrics.Heatmap.Heatmap {
+    let labelStr = Label.renderLabels(labels);
+    let newHeatmap = Metrics.Heatmap.new(prefix, labelStr, self.nonce);
+    self.nonce += 1;
+    self.add(#heatmap newHeatmap);
+    newHeatmap;
+  };
   public func newTracker(self : Tracker, labels : [Label.Label]) : Tracker {
     let labelStr = Label.renderLabels(labels);
     let newTracker : Tracker = {
@@ -123,6 +133,7 @@ module {
       func(v) = switch v {
         case (#counter c) { c.id != value.id };
         case (#gauge g) { g.id != value.id };
+        case (#heatmap h) { h.id != value.id };
         case (#tracker t) { t.id != value.id };
       }
     );
