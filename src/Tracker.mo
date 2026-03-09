@@ -58,12 +58,12 @@ module {
     tracker;
   };
   public func newWith(
-    labels_ : Text,
+    labels_ : [(Text, Text)],
     initialValues : [Value],
     seconds : Nat,
   ) : Tracker {
     let tracker : Tracker = {
-      var labels = labels_;
+      var labels = Label.renderLabels(labels_);
       var values = List.empty();
       env = { var holdDownPeriod = nanos(seconds) };
       var nonce = 0;
@@ -143,6 +143,11 @@ module {
   public func read(self : Tracker) : [Metrics.Metric] {
     let all = self.values.map(func(v) = readValue(v)).reverse().toArray().flatten();
     all.map(func(m) = m.prependLabels(self.labels));
+  };
+
+  /// Convert to "pull value" for addition to Renderer
+  public func toValue(self : Tracker) : Metrics.Value = {
+    read = func() = self.read();
   };
 
   public func renderExposition(self : Tracker) : Text {

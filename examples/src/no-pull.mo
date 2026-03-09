@@ -1,10 +1,6 @@
 // Like min.mo but without PullValues
 // If PullValues aren't needed then we can get away without the Renderer
 
-// This import is required
-// will be "mo:promtracker/Tracker"
-import PT "../../src/Tracker";
-
 // This mixin is recommended
 // will be "mo:promtracker/mixins/http"
 import Http "../../src/mixins/http";
@@ -14,6 +10,7 @@ import Http "../../src/mixins/http";
 // This may not be needed in the top-level actor file.
 // will be "mo:promtracker"
 import { Counter; Gauge } "../../src/lib";
+import Tracker "../../src/Tracker";
 
 // Optional: only used in this particular demo code
 import Array "mo:core/Array";
@@ -31,27 +28,25 @@ persistent actor Main {
   // Required 2 lines:
   //  - create static Tracker (must be declared stable)
   //  - include mixin
-  let pt = PT.new();
+  let pt = Tracker.new();
   include Http(pt.renderFunction(), "/metrics");
 
   // Re-define the canister label (just for the hyptothetical case that it has changed)
   // This assumes that the canister label is the only global labels because setLabels overwrites the global labels.
   // Other global labels have to be re-added after this line.
-  pt.setLabels([PT.canisterLabel(Main), ("example", "no-pull")]);
+  pt.setLabels([Tracker.canisterLabel(Main), ("example", "no-pull")]);
 
   // Optional:
   // Set the watermark hold down period if different from the default value of 302.
   // The default is chosen for a 5 min scraping interval.
   // Can be dynamically changed later without upgrade if needed.
-  // Note: We could pass this in Pt.new(62), but prefer to keep PT.new() without arguments
-  // because it is easier for users who go with the default.
   // Note: This function will re-run after upgrade but that's ok because it overwrites the setting.
   pt.setHoldDown(62);
 
   // Alternative:
   // This can save some lines of code.
   // The [] can be replaced with initial (Counter, Gauge) values.
-  // let pt = PT.newWith(PT.canisterLabel(Main), [], 62);
+  // let pt2 = Tracker.newWith([Tracker.canisterLabel(Main)], [], 62);
 
   // Define some Counters and Gauges
   // Declaration must be stable (not transient)
@@ -84,7 +79,7 @@ persistent actor Main {
 
   // Demonstrate how to dynamically add values
   // This can happen inside a package but the Tracker (pt) needs to be passed down
-  var gauges : [PT.Gauge] = [];
+  var gauges : [Tracker.Gauge] = [];
   public func addGauge(name : Text, labels : [(Text, Text)]) {
     gauges := gauges.concat([pt.newGauge(name, labels, [])]);
   };
@@ -93,11 +88,11 @@ persistent actor Main {
   // Mock Stream package
   module Stream {
     public type Stream = {
-      tracker : PT.Tracker;
-      gauge : PT.Gauge;
-      ctr : PT.Counter;
+      tracker : Tracker.Tracker;
+      gauge : Tracker.Gauge;
+      ctr : Tracker.Counter;
     };
-    public func new(tracker : PT.Tracker) : Stream = {
+    public func new(tracker : Tracker.Tracker) : Stream = {
       tracker;
       gauge = tracker.newGauge("stream_window_size", [], []);
       ctr = tracker.newCounter("stream_length", []);

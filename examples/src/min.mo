@@ -41,7 +41,7 @@ import Http "../../src/mixins/http";
 // i.e. that call for example `gauge.update(..)` or `Gauge.update(gauge, ..)`.
 // This may not be needed in the top-level actor file.
 // will be "mo:promtracker"
-import { Counter; Gauge } "../../src/lib";
+import { Counter; Gauge; Tracker } "../../src/lib";
 
 // Optional: only used in this particular demo code
 import Array "mo:core/Array";
@@ -60,8 +60,9 @@ persistent actor Main {
   //  - create static Tracker (must be declared stable)
   //  - create Renderer class (must be declared transient)
   //  - include mixin
-  let pt = PT.new();
-  transient let renderer = PT.Renderer(pt);
+  let pt = Tracker.new();
+  transient let renderer = PT.Renderer();
+  renderer.addValue(pt.toValue());
   include Http(renderer.renderExposition, "/metrics");
 
   // Optional:
@@ -87,38 +88,31 @@ persistent actor Main {
   let ctr2 = pt.newCounter("counter", [("id", "2")]);
   let gauge1 = pt.newGauge("gauge", [("id", "1")], []);
   let gauge2 = pt.newGauge("gauge", [("id", "2")], []);
+  let ctr21 = pt.newCounter("counter", [("id", "1"), ("tracker", "pt2")]);
+  let ctr22 = pt.newCounter("counter", [("id", "2"), ("tracker", "pt2")]);
 
   // Add some pre-defined pull values to the Renderer
-  ignore renderer.addPullValue(PT.allRtsMetrics);
+  // renderer.addValue(PT.allRtsMetrics);
   // or few at once
-  ignore renderer.addPullValue(
-    PT.bundle(
-      [],
-      [
-        PT.cyclesBalanceMetric,
-        PT.canisterVersionMetric,
-      ],
-    )
+  renderer.addValue(
+    [
+      PT.cyclesBalanceMetric,
+      PT.canisterVersionMetric,
+    ].bundle([])
   );
 
-  // Add all system metrics (use as alternative to the previous addPullValues)
-  ignore renderer.addPullValue(PT.allSystemMetrics);
+  // Add all system metrics (use as alternative to the previous addValues)
+  // renderer.addValue(PT.allSystemMetrics);
 
   // Add some custom pull value
-  let pv = renderer.addPullValue(PT.newPullValue("custom_pull_value", [], func() = 123));
+  renderer.addValue(PT.newValue("custom_pull_value", [], func() = 123));
   // or few at once
-  let pvs = renderer.addPullValue(
-    PT.bundle(
-      [],
-      [
-        PT.newPullValue("custom_pull_value", [("index", "0")], func() = 456),
-        PT.newPullValue("custom_pull_value", [("index", "1")], func() = 789),
-      ],
-    )
+  renderer.addValue(
+    [
+      PT.newValue("custom_pull_value", [("index", "0")], func() = 456),
+      PT.newValue("custom_pull_value", [("index", "1")], func() = 789),
+    ].bundle([])
   );
-  // And you can remove them if needed
-  renderer.removePullValue(pv);
-  renderer.removePullValue(pvs);
 
   // Add other global labels to the Renderer via key-value pair if desired
   // Can be dynamically added later without upgrade if needed
@@ -133,6 +127,8 @@ persistent actor Main {
   // Increment counters
   ctr1.add(1);
   ctr2.add(2);
+  ctr21.add(3);
+  ctr22.add(4);
   public func inc() {
     ctr1.add(1);
     ctr2.add(2);

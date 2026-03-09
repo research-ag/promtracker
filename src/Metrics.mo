@@ -44,12 +44,12 @@ module {
 
   /// Arbitrary Values can be bundled together to form a new "Value"
   /// Bundling can be nested.
-  public func bundle(commonLabels : [Label.Label], sets : [Value]) : Value {
+  public func bundle(self : [Value], commonLabels : [Label.Label]) : Value {
     let commonLabelsText = Label.renderLabels(commonLabels);
     object {
       public func read() : [Metric] {
-        // read metrics from all sets
-        let allMetrics = sets.map(func(s) = s.read()).flatten();
+        // read metrics from all values
+        let allMetrics = self.map(func(s) = s.read()).flatten();
         // add common labels to all metrics
         allMetrics.map(func(m) = m.prependLabels(commonLabelsText));
       };
@@ -58,8 +58,8 @@ module {
 
   public let allSystemMetrics : Value = {
     read = func() = [
-      ("canister_version", "", Prim.canisterVersion().toNat()),
       ("cycles_balance", "", Prim.cyclesBalance()),
+      ("canister_version", "", Prim.canisterVersion().toNat()),
       ("rts_memory_size", "", Prim.rts_memory_size()),
       ("rts_heap_size", "", Prim.rts_heap_size()),
       ("rts_total_allocation", "", Prim.rts_total_allocation()),
