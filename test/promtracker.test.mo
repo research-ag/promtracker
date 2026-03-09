@@ -386,7 +386,7 @@ heatmap2.remove(3);
 
 run(
   test(
-    "bucket underflow",
+    "bad remove",
     expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"0\"", 0) and
     expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"1\"", 0) and
     expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"2\"", 0) and
@@ -404,7 +404,7 @@ run(
 heatmap2.add(3);
 run(
   test(
-    "bucket underflow",
+    "state recovery",
     expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"0\"", 0) and
     expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"1\"", 0) and
     expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"2\"", 0) and
@@ -423,7 +423,7 @@ heatmap2.remove(15);
 heatmap2.remove(15);
 run(
   test(
-    "bucket underflow",
+    "count/sum underflow",
     expect(renderer.read(), "test_heatmap_underflow_count", "", 1) and
     expect(renderer.read(), "test_heatmap_underflow_count_negative", "", 1) and
     expect(renderer.read(), "test_heatmap_underflow_sum", "", 29) and
