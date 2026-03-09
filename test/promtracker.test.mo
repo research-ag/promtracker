@@ -340,3 +340,111 @@ run(
 );
 
 pt.removeValue(heatmap);
+
+/* --------------------------------------- */
+// Handle underflows
+let underflowedCounter = pt.newCounter("test_counter", []);
+underflowedCounter.add(3);
+run(
+  test(
+    "counter add 3",
+    expect(renderer.read(), "test_counter", "", 3),
+    M.equals(T.bool(true)),
+  )
+);
+run(
+  test(
+    "counter no negative flag",
+    expectExists(renderer.read(), "test_counter_negative", "", false),
+    M.equals(T.bool(true)),
+  )
+);
+underflowedCounter.sub(7);
+run(
+  test(
+    "counter -4",
+    expect(renderer.read(), "test_counter", "", 4),
+    M.equals(T.bool(true)),
+  )
+);
+run(
+  test(
+    "counter -4 negative flag",
+    expect(renderer.read(), "test_counter_negative", "", 1),
+    M.equals(T.bool(true)),
+  )
+);
+underflowedCounter.add(5);
+run(
+  test(
+    "counter positive again",
+    expect(renderer.read(), "test_counter", "", 1),
+    M.equals(T.bool(true)),
+  )
+);
+run(
+  test(
+    "counter no negative flag again",
+    expectExists(renderer.read(), "test_counter_negative", "", false),
+    M.equals(T.bool(true)),
+  )
+);
+
+pt.removeValue(underflowedCounter);
+
+// heatmap underflows
+let heatmap2 = PT.newHeatmap(pt, "test_heatmap_underflow", []);
+heatmap2.add(7);
+heatmap2.add(9);
+// intended misuse
+heatmap2.remove(3);
+
+run(
+  test(
+    "bucket underflow",
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"0\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"1\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"2\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"4\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket_negative", "le=\"4\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"8\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"16\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_count", "", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_sum", "", 13),
+    M.equals(T.bool(true)),
+  )
+);
+
+// should get back to normal state if fixed (added back incorrectly removed value)
+heatmap2.add(3);
+run(
+  test(
+    "bucket underflow",
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"0\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"1\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"2\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"4\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"8\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"16\"", 2) and
+    expect(renderer.read(), "test_heatmap_underflow_count", "", 2) and
+    expect(renderer.read(), "test_heatmap_underflow_sum", "", 16),
+    M.equals(T.bool(true)),
+  )
+);
+
+// sum and count should also handle underflows
+heatmap2.remove(15);
+heatmap2.remove(15);
+heatmap2.remove(15);
+run(
+  test(
+    "bucket underflow",
+    expect(renderer.read(), "test_heatmap_underflow_count", "", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_count_negative", "", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_sum", "", 29) and
+    expect(renderer.read(), "test_heatmap_underflow_sum_negative", "", 1),
+    M.equals(T.bool(true)),
+  )
+);
+
+pt.removeValue(heatmap2);
