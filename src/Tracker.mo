@@ -12,18 +12,19 @@ module {
   public type Counter = Metrics.Counter.Counter;
   public type Gauge = Metrics.Gauge.Gauge;
   public type Heatmap = Metrics.Heatmap.Heatmap;
+  public type Value = Metrics.Value;
 
   // Helper functions
   public func canisterLabel(a : actor {}) : Label.Label = Label.canisterLabel(a);
 
   // Value variant type
-  type Value = {
+  type TValue = {
     #counter : Metrics.Counter.Counter;
     #gauge : Metrics.Gauge.Gauge;
     #heatmap : Metrics.Heatmap.Heatmap;
     #tracker : Tracker;
   };
-  private func readValue(val : Value) : [Metrics.Metric] {
+  private func readValue(val : TValue) : [Metrics.Metric] {
     switch val {
       case (#counter ctr) { Metrics.Counter.value(ctr).read() };
       case (#gauge g) { Metrics.Gauge.value(g).read() };
@@ -41,7 +42,7 @@ module {
   // Static tracker type
   public type Tracker = {
     var labels : Text;
-    var values : List.List<Value>;
+    var values : List.List<TValue>;
     env : Environment;
     var nonce : Nat;
     id : Nat;
@@ -59,7 +60,7 @@ module {
   };
   public func newWith(
     labels_ : [(Text, Text)],
-    initialValues : [Value],
+    initialValues : [TValue],
     seconds : Nat,
   ) : Tracker {
     let tracker : Tracker = {
@@ -86,10 +87,10 @@ module {
     let (k, v) = Label.canisterLabel(a);
     addLabel(self, k, v);
   };
-  public func add(self : Tracker, val : Value) {
+  public func add(self : Tracker, val : TValue) {
     self.values := self.values.pushFront(val);
   };
-  public func addMany(self : Tracker, vals : [Value]) {
+  public func addMany(self : Tracker, vals : [TValue]) {
     for (v in vals.values()) {
       self.values := self.values.pushFront(v);
     };
@@ -153,7 +154,7 @@ module {
   public func renderExposition(self : Tracker) : Text {
     let timeStr = (Prim.time() / 1_000_000).toText();
     read(self).map(
-      func(metric) = metric.render(timeStr)
+      func(m) = m.render(timeStr)
     ).vals().join("");
   };
 
