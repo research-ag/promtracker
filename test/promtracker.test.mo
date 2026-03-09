@@ -344,47 +344,32 @@ pt.removeValue(heatmap);
 /* --------------------------------------- */
 // Handle underflows
 let underflowedCounter = pt.newCounter("test_counter", []);
+
 underflowedCounter.add(3);
 run(
   test(
     "counter add 3",
-    expect(renderer.read(), "test_counter", "", 3),
-    M.equals(T.bool(true)),
-  )
-);
-run(
-  test(
-    "counter no negative flag",
+    expect(renderer.read(), "test_counter", "", 3) and
     expectExists(renderer.read(), "test_counter_negative", "", false),
     M.equals(T.bool(true)),
   )
 );
+
 underflowedCounter.sub(7);
 run(
   test(
     "counter -4",
-    expect(renderer.read(), "test_counter", "", 4),
-    M.equals(T.bool(true)),
-  )
-);
-run(
-  test(
-    "counter -4 negative flag",
+    expect(renderer.read(), "test_counter", "", 4) and
     expect(renderer.read(), "test_counter_negative", "", 1),
     M.equals(T.bool(true)),
   )
 );
+
 underflowedCounter.add(5);
 run(
   test(
     "counter positive again",
-    expect(renderer.read(), "test_counter", "", 1),
-    M.equals(T.bool(true)),
-  )
-);
-run(
-  test(
-    "counter no negative flag again",
+    expect(renderer.read(), "test_counter", "", 1) and
     expectExists(renderer.read(), "test_counter_negative", "", false),
     M.equals(T.bool(true)),
   )
