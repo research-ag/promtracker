@@ -139,4 +139,8 @@ module {
     func() = self.renderExposition();
   };
 
+  public func readFunction(self : Tracker) : () -> [Metrics.Metric] {
+    func() = self.read();
+  };
+
 };

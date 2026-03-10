@@ -34,8 +34,9 @@ module {
   /// Renderer class, wrapper around the static Tracker
   ///
   /// The Renderer is defined in the top-level actor code and exists only once.
-  /// The Renderer references the static, stable Tracker but is transient itself.
-  /// Labels and pull values have to be (re-)added to the Renderer in the top-level actor code.
+  /// The Renderer is transient, i.e. all labels and values have to be re-added after every upgrade,
+  /// in the top-level actor code.
+  /// However, the Renderer can reference a static, stable Tracker as one of its values.
   public class Renderer() {
     // Global labels managed by the Renderer
     var labels : Text = "";

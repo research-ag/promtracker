@@ -5,6 +5,10 @@
 // will be "mo:promtracker/mixins/http"
 import Http "../../src/mixins/http";
 
+// This mixin is optional. It exposes metrics in candid form instead of raw Text.
+// will be "mo:promtracker/mixins/query"
+import Query "../../src/mixins/query";
+
 // This import is needed only in the files that _use_ the values,
 // i.e. that call for example `gauge.update(..)` or `Gauge.update(gauge, ..)`.
 // This may not be needed in the top-level actor file.
@@ -29,6 +33,7 @@ persistent actor Main {
   //  - include mixin
   let pt = Tracker.new();
   include Http(pt.renderFunction(), "/metrics");
+  include Query(pt.readFunction());
 
   // Re-define the canister label (just for the hyptothetical case that it has changed)
   // This assumes that the canister label is the only global labels because setLabels overwrites the global labels.
@@ -44,8 +49,7 @@ persistent actor Main {
 
   // Alternative:
   // This can save some lines of code.
-  // The [] can be replaced with initial (Counter, Gauge) values.
-  // let pt2 = Tracker.newWith([Tracker.canisterLabel(Main)], [], 62);
+  // let pt2 = Tracker.newWith([Tracker.canisterLabel(Main)], 62);
 
   // Define some Counters and Gauges
   // Declaration must be stable (not transient)

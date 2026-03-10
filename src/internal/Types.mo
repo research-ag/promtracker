@@ -1,6 +1,8 @@
 import Types "mo:core/Types";
 
 module {
+  public type Metric = (Text, Text, Nat);
+
   public type Counter = {
     parent : Tracker;
     name : Text;

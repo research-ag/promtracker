@@ -37,6 +37,10 @@ import PT "../../src/lib";
 // will be "mo:promtracker/mixins/http"
 import Http "../../src/mixins/http";
 
+// This mixin is optional. It exposes metrics in candid form instead of raw Text.
+// will be "mo:promtracker/mixins/query"
+import Query "../../src/mixins/query";
+
 // This import is needed only in the files that _use_ the values,
 // i.e. that call for example `gauge.update(..)` or `Gauge.update(gauge, ..)`.
 // This may not be needed in the top-level actor file.
@@ -47,10 +51,10 @@ import { Counter; Gauge; Tracker } "../../src/lib";
 import Array_ "mo:core/Array";
 
 // Example on how to remove a top-level value from the Tracker via migration.
-// Using this migration function will cause `ctr2` to unregistered from the Tracker
+// Using this migration function causes `ctr2` to be unregistered from the Tracker
 // and removed from memory.
 // We can then drop the line `let ctr2` from the top-level actor code.
-// If the line stays in place then a new `ctr` will be created after an upgrade and
+// If the line stays in place then a new `ctr2` will be created after an upgrade and
 // the initialization expression after `=` will be evaluated.
 //
 // import { removeCtr2 } "migration";
@@ -65,6 +69,7 @@ persistent actor Main {
   transient let renderer = PT.Renderer();
   renderer.addValue(pt.toValue());
   include Http(renderer.renderExposition, "/metrics");
+  include Query(renderer.read);
 
   // Optional:
   // Add the canister="..." label with the canister id short form as value

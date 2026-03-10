@@ -11,7 +11,7 @@ import Types "internal/Types";
 
 module {
   // The data in type Metric is (name, labels, value)
-  public type Metric = (Text, Text, Nat);
+  public type Metric = Types.Metric;
 
   public func prependLabels(self : Metric, newLabels : Text) : Metric {
     let (name, labels, value) = self;
