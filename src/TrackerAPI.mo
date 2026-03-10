@@ -1,9 +1,4 @@
-import Array_ "mo:core/Array";
 import List "mo:core/pure/List";
-import Nat_ "mo:core/Nat";
-import Nat64_ "mo:core/Nat64";
-import Text_ "mo:core/Text";
-import Prim "mo:prim";
 import Metrics "Metrics";
 import Label "Label";
 
@@ -12,10 +7,6 @@ module {
   public type Counter = Metrics.Counter.Counter;
   public type Gauge = Metrics.Gauge.Gauge;
   public type Heatmap = Metrics.Heatmap.Heatmap;
-  public type Value = Metrics.Value;
-
-  // Helper functions
-  public func canisterLabel(a : actor {}) : Label.Label = Label.canisterLabel(a);
 
   // Value variant type
   type TValue = {
@@ -24,66 +15,18 @@ module {
     #heatmap : Metrics.Heatmap.Heatmap;
     #tracker : Tracker;
   };
-  private func readValue(val : TValue) : [Metrics.Metric] {
-    switch val {
-      case (#counter ctr) { Metrics.Counter.value(ctr).read() };
-      case (#gauge g) { Metrics.Gauge.value(g).read() };
-      case (#heatmap h) { Metrics.Heatmap.value(h).read() };
-      case (#tracker t) { t.read() };
-    };
-  };
-
-  // Watermark environment
-  type Environment = {
-    var holdDownPeriod : Nat64; // in nanoseconds
-  };
-  func nanos(seconds : Nat) : Nat64 = seconds.toNat64() * 1_000_000_000;
 
   // Static tracker type
   public type Tracker = {
     var labels : Text;
     var values : List.List<TValue>;
-    env : Environment;
+    env : { var holdDownPeriod : Nat64 };
     var nonce : Nat;
     id : Nat;
   };
 
-  public func new() : Tracker {
-    let tracker : Tracker = {
-      var labels = "";
-      var values = List.empty();
-      env = { var holdDownPeriod = nanos(302) };
-      var nonce = 0;
-      id = 0;
-    };
-    tracker;
-  };
-  public func newWith(
-    labels_ : [(Text, Text)],
-    seconds : Nat,
-  ) : Tracker {
-    let tracker : Tracker = {
-      var labels = Label.renderLabels(labels_);
-      var values = List.empty();
-      env = { var holdDownPeriod = nanos(seconds) };
-      var nonce = 0;
-      id = 0;
-    };
-    tracker;
-  };
-
-  public func setHoldDown(self : Tracker, seconds : Nat) {
-    self.env.holdDownPeriod := nanos(seconds);
-  };
-  public func setLabels(self : Tracker, labels : [Label.Label]) {
-    self.labels := Label.renderLabels(labels);
-  };
   public func addLabel(self : Tracker, key : Text, value : Text) {
     self.labels := Label.concat(self.labels, Label.renderLabel(key, value));
-  };
-  public func addCanisterLabel(self : Tracker, a : actor {}) {
-    let (k, v) = Label.canisterLabel(a);
-    addLabel(self, k, v);
   };
   private func add(self : Tracker, val : TValue) {
     self.values := self.values.pushFront(val);
@@ -132,27 +75,4 @@ module {
       }
     );
   };
-
-  /// Read all current metrics as a structured array
-  public func read(self : Tracker) : [Metrics.Metric] {
-    let all = self.values.map(func(v) = readValue(v)).reverse().toArray().flatten();
-    all.map(func(m) = m.prependLabels(self.labels));
-  };
-
-  /// Convert to "pull value" for addition to Renderer
-  public func toValue(self : Tracker) : Metrics.Value = {
-    read = func() = self.read();
-  };
-
-  public func renderExposition(self : Tracker) : Text {
-    let timeStr = (Prim.time() / 1_000_000).toText();
-    read(self).map(
-      func(m) = m.render(timeStr)
-    ).vals().join("");
-  };
-
-  public func renderFunction(self : Tracker) : () -> Text {
-    func() = self.renderExposition();
-  };
-
 };

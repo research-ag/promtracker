@@ -1,13 +1,13 @@
-  import Tracker "../../src/Tracker";
+  import T "../../src/TrackerAPI";
   import { Counter; Gauge } "../../src/lib";
 
   module Stream {
     public type Stream = {
-      tracker : Tracker.Tracker;
-      gauge : Tracker.Gauge;
-      ctr : Tracker.Counter;
+      tracker : T.Tracker;
+      gauge : T.Gauge;
+      ctr : T.Counter;
     };
-    public func new(tracker : Tracker.Tracker) : Stream = {
+    public func new(tracker : T.Tracker) : Stream = {
       tracker;
       gauge = tracker.newGauge("stream_window_size", [], []);
       ctr = tracker.newCounter("stream_length", []);
