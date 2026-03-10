@@ -1,15 +1,12 @@
-import Tracker "../../src/Tracker";
+import { Counter } "../../src/lib";
 
 module {
   public func removeCtr2(
     old : {
-      pt : Tracker.Tracker;
-      ctr2 : Tracker.Counter;
+      ctr2 : Counter.Counter;
     }
-  ) : { pt : Tracker.Tracker } {
-    old.pt.removeValue(old.ctr2);
-    {
-      pt = old.pt;
-    };
+  ) : {} {
+    old.ctr2.unregister();
+    {};
   };
-}
+};

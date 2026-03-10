@@ -47,9 +47,11 @@ import { Counter; Gauge; Tracker } "../../src/lib";
 import Array_ "mo:core/Array";
 
 // Example on how to remove a top-level value from the Tracker via migration.
-// Using this migration function will cause `ctr2` to be "reset" during an upgrade
-// because the initialization expression in `let ctr2 = ...` will be re-executed.
-// Alternatively, we can drop `let ctr2` from the top-level actor code with this expression.
+// Using this migration function will cause `ctr2` to unregistered from the Tracker
+// and removed from memory.
+// We can then drop the line `let ctr2` from the top-level actor code.
+// If the line stays in place then a new `ctr` will be created after an upgrade and
+// the initialization expression after `=` will be evaluated.
 //
 // import { removeCtr2 } "migration";
 // (with migration = removeCtr2)
