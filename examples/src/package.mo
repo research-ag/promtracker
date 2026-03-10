@@ -28,9 +28,9 @@ persistent actor Main {
     streams[i].set(length, windowSize);
   };
   public func removeStream(i : Nat) {
-    // Important: remove the stream's sub-tracker from the parent tracker
+    // Important: unregister the stream's sub-tracker from the parent tracker
     // This removes all of the stream's metrics at once
-    pt.removeValue(streams[i].tracker);
+    streams[i].tracker.unregister();
     // Now remove the stream from the array
     streams := Array.tabulate<Stream.Stream>(
       streams.size() - 1,

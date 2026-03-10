@@ -2,6 +2,7 @@ import Types "mo:core/Types";
 
 module {
   public type Counter = {
+    parent : Tracker;
     name : Text;
     labels : Text;
     var value : Nat;
@@ -17,6 +18,7 @@ module {
     env : Environment;
   };
   public type Gauge = {
+    parent : Tracker;
     prefix : Text;
     labels : Text;
     var lastValue : Nat;
@@ -29,6 +31,7 @@ module {
     id : Nat;
   };
   public type Heatmap = {
+    parent : Tracker;
     prefix : Text;
     labels : Text;
     var count : Nat;
@@ -43,6 +46,7 @@ module {
     #tracker : Tracker;
   };
   public type Tracker = {
+    parent : ?Tracker;
     var labels : Text;
     var values : Types.Pure.List<TValue>;
     env : Environment;

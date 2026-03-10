@@ -1,7 +1,8 @@
 import Array_ "mo:core/Array";
-import VarArray_ "mo:core/VarArray";
+import List_ "mo:core/pure/List";
 import Nat_ "mo:core/Nat";
 import Nat64_ "mo:core/Nat64";
+import VarArray_ "mo:core/VarArray";
 import Prim "mo:prim";
 
 import Label "./Label";
@@ -106,7 +107,8 @@ module {
   public module Counter {
     public type Counter = Types.Counter;
 
-    public func new(name : Text, labels : Text, id : Nat) : Counter = {
+    public func new(parent : Types.Tracker, name : Text, labels : Text, id : Nat) : Counter = {
+      parent;
       name;
       labels;
       var value = 0;
@@ -119,6 +121,14 @@ module {
     public func set(self : Counter, n : Nat) { self.value := n };
     public func value(self : Counter) : Value = {
       read = func() = [(self.name, self.labels, self.value)];
+    };
+    public func unregister(self : Counter) {
+      self.parent.values := self.parent.values.filter(
+        func(v) = switch v {
+          case (#counter c) { c.id != self.id };
+          case (_) true;
+        }
+      );
     };
   };
 
@@ -153,13 +163,14 @@ module {
 
     // Gauge
     public type Gauge = Types.Gauge;
-    public func new(prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge {
+    public func new(parent : Types.Tracker, prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge {
       for (i in Nat_.range(1, limits.size())) {
         if (limits[i] <= limits[i - 1]) {
           Prim.trap("Gauge limits must be strictly increasing and unique");
         };
       };
       {
+        parent;
         prefix;
         labels;
         var lastValue = 0;
@@ -210,6 +221,14 @@ module {
         self.counters[n] += 1;
       };
     };
+    public func unregister(self : Gauge) {
+      self.parent.values := self.parent.values.filter(
+        func(v) = switch v {
+          case (#gauge g) { g.id != self.id };
+          case (_) true;
+        }
+      );
+    };
   };
 
   public module Heatmap {
@@ -239,7 +258,8 @@ module {
       bucket;
     };
 
-    public func new(prefix : Text, labels : Text, id : Nat) : Heatmap = {
+    public func new(parent : Types.Tracker, prefix : Text, labels : Text, id : Nat) : Heatmap = {
+      parent;
       prefix;
       labels;
       var count = 0;
@@ -293,6 +313,14 @@ module {
           },
         );
       };
+    };
+    public func unregister(self : Heatmap) {
+      self.parent.values := self.parent.values.filter(
+        func(v) = switch v {
+          case (#heatmap h) { h.id != self.id };
+          case (_) true;
+        }
+      );
     };
   };
 
