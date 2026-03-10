@@ -1,10 +1,6 @@
 import Array_ "mo:core/Array";
-<<<<<<< HEAD
 import List_ "mo:core/pure/List";
-=======
-import VarArray_ "mo:core/VarArray";
 import Int_ "mo:core/Int";
->>>>>>> feature/handle-underflows
 import Nat_ "mo:core/Nat";
 import Nat64_ "mo:core/Nat64";
 import VarArray_ "mo:core/VarArray";
@@ -122,17 +118,7 @@ module {
   };
 
   public module Counter {
-<<<<<<< HEAD
     public type Counter = Types.Counter;
-=======
-    public type Counter = {
-      name : Text;
-      labels : Text;
-      var value : Int;
-      id : Nat;
-    };
->>>>>>> feature/handle-underflows
-
     public func new(parent : Types.Tracker, name : Text, labels : Text, id : Nat) : Counter = {
       parent;
       name;
@@ -256,18 +242,7 @@ module {
   };
 
   public module Heatmap {
-<<<<<<< HEAD
     public type Heatmap = Types.Heatmap;
-=======
-    public type Heatmap = {
-      prefix : Text;
-      labels : Text;
-      var count : Int;
-      var sum : Int;
-      var buckets : [var Int];
-      id : Nat;
-    };
->>>>>>> feature/handle-underflows
 
     func getBucketIndex(entry : Nat) : Nat {
       if (entry == 0) return 0;

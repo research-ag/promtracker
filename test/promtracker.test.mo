@@ -341,10 +341,7 @@ run(
   )
 );
 
-<<<<<<< HEAD
 heatmap.unregister();
-=======
-pt.removeValue(heatmap);
 
 /* --------------------------------------- */
 // Handle underflows
@@ -380,10 +377,10 @@ run(
   )
 );
 
-pt.removeValue(underflowedCounter);
+underflowedCounter.unregister();
 
 // heatmap underflows
-let heatmap2 = PT.newHeatmap(pt, "test_heatmap_underflow", []);
+let heatmap2 = pt.newHeatmap("test_heatmap_underflow", []);
 heatmap2.add(7);
 heatmap2.add(9);
 // intended misuse
@@ -437,5 +434,4 @@ run(
   )
 );
 
-pt.removeValue(heatmap2);
->>>>>>> feature/handle-underflows
+heatmap2.unregister();
