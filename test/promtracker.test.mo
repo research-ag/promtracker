@@ -121,7 +121,7 @@ run(
     M.equals(T.bool(true)),
   )
 );
-pt.removeValue(counter);
+counter.unregister();
 run(
   test(
     "counter removed",
@@ -140,7 +140,7 @@ run(
     M.equals(T.bool(true)),
   )
 );
-pt.removeValue(counter1);
+counter1.unregister();
 
 /* --------------------------------------- */
 // Gauge without buckets
@@ -184,7 +184,7 @@ run(
   )
 );
 
-pt.removeValue(gauge);
+gauge.unregister();
 
 /* --------------------------------------- */
 // Gauge with buckets
@@ -228,7 +228,7 @@ run(
   )
 );
 
-pt.removeValue(gaugeWithBuckets);
+gaugeWithBuckets.unregister();
 
 /* --------------------------------------- */
 // Labeled gauge with buckets
@@ -245,7 +245,7 @@ run(
     M.equals(T.bool(true)),
   )
 );
-pt.removeValue(gaugeWithLabels);
+gaugeWithLabels.unregister();
 
 /* --------------------------------------- */
 // Heatmap
@@ -341,4 +341,4 @@ run(
   )
 );
 
-pt.removeValue(heatmap);
+heatmap.unregister();
