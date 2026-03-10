@@ -37,20 +37,25 @@ import PT "../../src/lib";
 // will be "mo:promtracker/mixins/http"
 import Http "../../src/mixins/http";
 
+// This mixin is optional. It exposes metrics in candid form instead of raw Text.
+// will be "mo:promtracker/mixins/query"
+import Query "../../src/mixins/query";
+
 // This import is needed only in the files that _use_ the values,
 // i.e. that call for example `gauge.update(..)` or `Gauge.update(gauge, ..)`.
 // This may not be needed in the top-level actor file.
 // will be "mo:promtracker"
-import { Counter; Gauge } "../../src/lib";
+import { Counter; Gauge; Tracker } "../../src/lib";
 
 // Optional: only used in this particular demo code
-import Array "mo:core/Array";
-import Nat_ "mo:core/Nat";
+import Array_ "mo:core/Array";
 
 // Example on how to remove a top-level value from the Tracker via migration.
-// Using this migration function will cause `ctr2` to be "reset" during an upgrade
-// because the initialization expression in `let ctr2 = ...` will be re-executed.
-// Alternatively, we can drop `let ctr2` from the top-level actor code with this expression.
+// Using this migration function causes `ctr2` to be unregistered from the Tracker
+// and removed from memory.
+// We can then drop the line `let ctr2` from the top-level actor code.
+// If the line stays in place then a new `ctr2` will be created after an upgrade and
+// the initialization expression after `=` will be evaluated.
 //
 // import { removeCtr2 } "migration";
 // (with migration = removeCtr2)
@@ -60,9 +65,11 @@ persistent actor Main {
   //  - create static Tracker (must be declared stable)
   //  - create Renderer class (must be declared transient)
   //  - include mixin
-  let pt = PT.new();
-  transient let renderer = PT.Renderer(pt);
+  let pt = Tracker.new();
+  transient let renderer = PT.Renderer();
+  renderer.addValue(pt.toValue());
   include Http(renderer.renderExposition, "/metrics");
+  include Query(renderer.read);
 
   // Optional:
   // Add the canister="..." label with the canister id short form as value
@@ -87,38 +94,31 @@ persistent actor Main {
   let ctr2 = pt.newCounter("counter", [("id", "2")]);
   let gauge1 = pt.newGauge("gauge", [("id", "1")], []);
   let gauge2 = pt.newGauge("gauge", [("id", "2")], []);
+  let ctr21 = pt.newCounter("counter", [("id", "1"), ("tracker", "pt2")]);
+  let ctr22 = pt.newCounter("counter", [("id", "2"), ("tracker", "pt2")]);
 
   // Add some pre-defined pull values to the Renderer
-  ignore renderer.addPullValue(PT.allRtsMetrics);
+  // renderer.addValue(PT.allRtsMetrics);
   // or few at once
-  ignore renderer.addPullValue(
-    PT.bundle(
-      [],
-      [
-        PT.cyclesBalanceMetric,
-        PT.canisterVersionMetric,
-      ],
-    )
+  renderer.addValue(
+    [
+      PT.cyclesBalanceMetric,
+      PT.canisterVersionMetric,
+    ].bundle([])
   );
 
-  // Add all system metrics (use as alternative to the previous addPullValues)
-  ignore renderer.addPullValue(PT.allSystemMetrics);
+  // Add all system metrics (use as alternative to the previous addValues)
+  // renderer.addValue(PT.allSystemMetrics);
 
   // Add some custom pull value
-  let pv = renderer.addPullValue(PT.newPullValue("custom_pull_value", [], func() = 123));
+  renderer.addValue(PT.newValue("custom_pull_value", [], func() = 123));
   // or few at once
-  let pvs = renderer.addPullValue(
-    PT.bundle(
-      [],
-      [
-        PT.newPullValue("custom_pull_value", [("index", "0")], func() = 456),
-        PT.newPullValue("custom_pull_value", [("index", "1")], func() = 789),
-      ],
-    )
+  renderer.addValue(
+    [
+      PT.newValue("custom_pull_value", [("index", "0")], func() = 456),
+      PT.newValue("custom_pull_value", [("index", "1")], func() = 789),
+    ].bundle([])
   );
-  // And you can remove them if needed
-  renderer.removePullValue(pv);
-  renderer.removePullValue(pvs);
 
   // Add other global labels to the Renderer via key-value pair if desired
   // Can be dynamically added later without upgrade if needed
@@ -133,6 +133,8 @@ persistent actor Main {
   // Increment counters
   ctr1.add(1);
   ctr2.add(2);
+  ctr21.add(3);
+  ctr22.add(4);
   public func inc() {
     ctr1.add(1);
     ctr2.add(2);
@@ -155,47 +157,5 @@ persistent actor Main {
   var gauges : [PT.Gauge] = [];
   public func addGauge(name : Text, labels : [(Text, Text)]) {
     gauges := gauges.concat([pt.newGauge(name, labels, [])]);
-  };
-
-  // Demonstrate how to use "sub-trackers"
-  // Mock Stream package
-  module Stream {
-    public type Stream = {
-      tracker : PT.Tracker;
-      gauge : PT.Gauge;
-      ctr : PT.Counter;
-    };
-    public func new(tracker : PT.Tracker) : Stream = {
-      tracker;
-      gauge = tracker.newGauge("stream_window_size", [], []);
-      ctr = tracker.newCounter("stream_length", []);
-    };
-    public func set(self : Stream, length : Nat, windowSize : Nat) {
-      self.ctr.add(length);
-      self.gauge.update(windowSize);
-    };
-  };
-
-  // Stream manager
-  var streams : [Stream.Stream] = [];
-  public func newStream() {
-    let id = streams.size();
-    // create a sub-tracker for the new stream
-    let subPt = pt.newTracker([("streamid", id.toText())]);
-    // create and add the new stream, pass down sub-tracker
-    streams := streams.concat([Stream.new(subPt)]);
-  };
-  public func updateStream(i : Nat, length : Nat, windowSize : Nat) {
-    streams[i].set(length, windowSize);
-  };
-  public func removeStream(i : Nat) {
-    // Important: remove the stream's sub-tracker from the parent tracker
-    // This removes all of the stream's metrics at once
-    pt.removeValue(streams[i].tracker);
-    // Now remove the stream from the array
-    streams := Array.tabulate<Stream.Stream>(
-      streams.size() - 1,
-      func(j) = if (j < i) streams[j] else streams[j + 1],
-    );
   };
 };

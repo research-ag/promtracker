@@ -1,4 +1,5 @@
 import PT "../src/lib";
+import Tracker "../src/Tracker";
 import { Counter; Gauge; Heatmap } "../src/Metrics";
 
 import Suite "mo:motoko-matchers/Suite";
@@ -9,9 +10,10 @@ import Debug "mo:core/Debug";
 
 let { run; test; suite } = Suite;
 
-let pt = PT.new();
+let pt = Tracker.new();
 pt.setHoldDown(5);
-let renderer = PT.Renderer(pt);
+let renderer = PT.Renderer();
+renderer.addValue(pt.toValue());
 
 // Helper functions
 func find(metrics : [(Text, Text, Nat)], name : Text, labels : Text) : ?Nat {
@@ -45,7 +47,7 @@ func expectExists(metrics : [(Text, Text, Nat)], name : Text, labels : Text, exi
 
 /* --------------------------------------- */
 // Pull value basic
-let pvId = renderer.addPullValue(PT.newPullValue("test_val_0", [], func() = 150));
+let pvId = renderer.addValueRef(PT.newValue("test_val_0", [], func() = 150));
 run(
   test(
     "pull value output",
@@ -56,7 +58,7 @@ run(
 
 /* --------------------------------------- */
 // Remove pull value
-renderer.removePullValue(pvId);
+renderer.removeValue(pvId);
 run(
   test(
     "value removed",
@@ -67,7 +69,7 @@ run(
 
 /* --------------------------------------- */
 // Pull value with labels
-let pvId2 = renderer.addPullValue(PT.newPullValue("test_val_1", [("foo", "bar")], func() = 270));
+let pvId2 = renderer.addValueRef(PT.newValue("test_val_1", [("foo", "bar")], func() = 270));
 run(
   test(
     "pull value labels",
@@ -75,7 +77,7 @@ run(
     M.equals(T.bool(true)),
   )
 );
-renderer.removePullValue(pvId2);
+renderer.removeValue(pvId2);
 
 /* --------------------------------------- */
 // Counter
@@ -119,7 +121,7 @@ run(
     M.equals(T.bool(true)),
   )
 );
-pt.removeValue(counter);
+counter.unregister();
 run(
   test(
     "counter removed",
@@ -138,11 +140,11 @@ run(
     M.equals(T.bool(true)),
   )
 );
-pt.removeValue(counter1);
+counter1.unregister();
 
 /* --------------------------------------- */
 // Gauge without buckets
-let gauge = PT.newGauge(pt, "test_gauge", [], []);
+let gauge = pt.newGauge("test_gauge", [], []);
 run(
   test(
     "initial gauge state (no buckets)",
@@ -182,11 +184,11 @@ run(
   )
 );
 
-pt.removeValue(gauge);
+gauge.unregister();
 
 /* --------------------------------------- */
 // Gauge with buckets
-let gaugeWithBuckets = PT.newGauge(pt, "buckets_gauge", [], [10, 20, 50, 120, 180]);
+let gaugeWithBuckets = pt.newGauge("buckets_gauge", [], [10, 20, 50, 120, 180]);
 run(
   test(
     "initial gauge with buckets",
@@ -226,11 +228,11 @@ run(
   )
 );
 
-pt.removeValue(gaugeWithBuckets);
+gaugeWithBuckets.unregister();
 
 /* --------------------------------------- */
 // Labeled gauge with buckets
-let gaugeWithLabels = PT.newGauge(pt, "labels_gauge", [("foo", "bar")], [10, 20, 50, 120, 180]);
+let gaugeWithLabels = pt.newGauge("labels_gauge", [("foo", "bar")], [10, 20, 50, 120, 180]);
 run(
   test(
     "gauge with bucket labels initial",
@@ -243,11 +245,11 @@ run(
     M.equals(T.bool(true)),
   )
 );
-pt.removeValue(gaugeWithLabels);
+gaugeWithLabels.unregister();
 
 /* --------------------------------------- */
 // Heatmap
-let heatmap = PT.newHeatmap(pt, "test_heatmap", []);
+let heatmap = pt.newHeatmap("test_heatmap", []);
 run(
   suite(
     "initial heatmap state",
@@ -339,4 +341,97 @@ run(
   )
 );
 
-pt.removeValue(heatmap);
+heatmap.unregister();
+
+/* --------------------------------------- */
+// Handle underflows
+let underflowedCounter = pt.newCounter("test_counter", []);
+
+underflowedCounter.add(3);
+run(
+  test(
+    "counter add 3",
+    expect(renderer.read(), "test_counter", "", 3) and
+    expectExists(renderer.read(), "test_counter_negative", "", false),
+    M.equals(T.bool(true)),
+  )
+);
+
+underflowedCounter.sub(7);
+run(
+  test(
+    "counter -4",
+    expect(renderer.read(), "test_counter", "", 4) and
+    expect(renderer.read(), "test_counter_negative", "", 1),
+    M.equals(T.bool(true)),
+  )
+);
+
+underflowedCounter.add(5);
+run(
+  test(
+    "counter positive again",
+    expect(renderer.read(), "test_counter", "", 1) and
+    expectExists(renderer.read(), "test_counter_negative", "", false),
+    M.equals(T.bool(true)),
+  )
+);
+
+underflowedCounter.unregister();
+
+// heatmap underflows
+let heatmap2 = pt.newHeatmap("test_heatmap_underflow", []);
+heatmap2.add(7);
+heatmap2.add(9);
+// intended misuse
+heatmap2.remove(3);
+
+run(
+  test(
+    "bad remove",
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"0\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"1\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"2\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"4\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket_negative", "le=\"4\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"8\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"16\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_count", "", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_sum", "", 13),
+    M.equals(T.bool(true)),
+  )
+);
+
+// should get back to normal state if fixed (added back incorrectly removed value)
+heatmap2.add(3);
+run(
+  test(
+    "state recovery",
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"0\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"1\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"2\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"4\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"8\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"16\"", 2) and
+    expect(renderer.read(), "test_heatmap_underflow_count", "", 2) and
+    expect(renderer.read(), "test_heatmap_underflow_sum", "", 16),
+    M.equals(T.bool(true)),
+  )
+);
+
+// sum and count should also handle underflows
+heatmap2.remove(15);
+heatmap2.remove(15);
+heatmap2.remove(15);
+run(
+  test(
+    "count/sum underflow",
+    expect(renderer.read(), "test_heatmap_underflow_count", "", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_count_negative", "", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_sum", "", 29) and
+    expect(renderer.read(), "test_heatmap_underflow_sum_negative", "", 1),
+    M.equals(T.bool(true)),
+  )
+);
+
+heatmap2.unregister();
