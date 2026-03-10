@@ -1,5 +1,10 @@
 import Array_ "mo:core/Array";
+<<<<<<< HEAD
 import List_ "mo:core/pure/List";
+=======
+import VarArray_ "mo:core/VarArray";
+import Int_ "mo:core/Int";
+>>>>>>> feature/handle-underflows
 import Nat_ "mo:core/Nat";
 import Nat64_ "mo:core/Nat64";
 import VarArray_ "mo:core/VarArray";
@@ -25,6 +30,18 @@ module {
     if (a == "") return b;
     if (b == "") return a;
     return a # "," # b;
+  };
+
+  type IntMetric = (Text, Text, Int);
+  func mapIntMetric((p, l, v) : IntMetric) : [Metric] {
+    if (v >= 0) {
+      [(p, l, Int_.abs(v))];
+    } else {
+      [
+        (p, l, Int_.abs(v)),
+        (p # "_negative", l, 1),
+      ];
+    };
   };
 
   /// Each "Value" can deliver one or more metrics.
@@ -105,7 +122,16 @@ module {
   };
 
   public module Counter {
+<<<<<<< HEAD
     public type Counter = Types.Counter;
+=======
+    public type Counter = {
+      name : Text;
+      labels : Text;
+      var value : Int;
+      id : Nat;
+    };
+>>>>>>> feature/handle-underflows
 
     public func new(parent : Types.Tracker, name : Text, labels : Text, id : Nat) : Counter = {
       parent;
@@ -115,12 +141,10 @@ module {
       id;
     };
     public func add(self : Counter, n : Nat) { self.value += n };
-    public func sub(self : Counter, n : Nat) {
-      if (n > self.value) self.value := 0 else self.value -= n;
-    };
+    public func sub(self : Counter, n : Nat) { self.value -= n };
     public func set(self : Counter, n : Nat) { self.value := n };
     public func value(self : Counter) : Value = {
-      read = func() = [(self.name, self.labels, self.value)];
+      read = func() = mapIntMetric((self.name, self.labels, self.value));
     };
     public func unregister(self : Counter) {
       self.parent.values := self.parent.values.filter(
@@ -232,7 +256,18 @@ module {
   };
 
   public module Heatmap {
+<<<<<<< HEAD
     public type Heatmap = Types.Heatmap;
+=======
+    public type Heatmap = {
+      prefix : Text;
+      labels : Text;
+      var count : Int;
+      var sum : Int;
+      var buckets : [var Int];
+      id : Nat;
+    };
+>>>>>>> feature/handle-underflows
 
     func getBucketIndex(entry : Nat) : Nat {
       if (entry == 0) return 0;
@@ -249,7 +284,7 @@ module {
     func allocateBucketFor(self : Heatmap, entry : Nat) : Nat {
       let bucket = getBucketIndex(entry);
       if (self.buckets.size() < bucket + 1) {
-        let nb = VarArray_.tabulate<Nat>(
+        let nb = VarArray_.tabulate<Int>(
           bucket + 1,
           func(i) { if (i < self.buckets.size()) self.buckets[i] else 0 },
         );
@@ -264,7 +299,7 @@ module {
       labels;
       var count = 0;
       var sum = 0;
-      var buckets = VarArray_.repeat<Nat>(0, 0);
+      var buckets = VarArray_.repeat<Int>(0, 0);
       id;
     };
 
@@ -276,30 +311,26 @@ module {
     };
 
     public func remove(self : Heatmap, entry : Nat) {
-      if (self.count > 0) self.count -= 1;
-      if (entry > self.sum) self.sum := 0 else self.sum -= entry;
+      self.count -= 1;
+      self.sum -= entry;
       let b = allocateBucketFor(self, entry);
-      if (self.buckets[b] > 0) self.buckets[b] -= 1;
+      self.buckets[b] -= 1;
     };
 
     public func update(self : Heatmap, oldEntryValue : Nat, newEntryValue : Nat) {
       self.sum += newEntryValue;
-      if (oldEntryValue >= self.sum) {
-        self.sum := 0;
-      } else {
-        self.sum -= oldEntryValue;
-      };
+      self.sum -= oldEntryValue;
       let oldB = allocateBucketFor(self, oldEntryValue);
       let newB = allocateBucketFor(self, newEntryValue);
       if (oldB == newB) return;
-      if (self.buckets[oldB] > 0) self.buckets[oldB] -= 1;
+      self.buckets[oldB] -= 1;
       self.buckets[newB] += 1;
     };
 
     public func value(self : Heatmap) : Value = {
       read = func() {
-        var aggregated : Nat = 0;
-        Array_.tabulate<Metric>(
+        var aggregated : Int = 0;
+        let metrics = Array_.tabulate<IntMetric>(
           self.buckets.size() + 2,
           func(i) {
             if (i < self.buckets.size()) {
@@ -312,6 +343,7 @@ module {
             };
           },
         );
+        metrics.map(func(s) = mapIntMetric(s)).flatten();
       };
     };
     public func unregister(self : Heatmap) {

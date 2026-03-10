@@ -5,7 +5,7 @@ module {
     parent : Tracker;
     name : Text;
     labels : Text;
-    var value : Nat;
+    var value : Int;
     id : Nat;
   };
   public type Environment = {
@@ -34,9 +34,9 @@ module {
     parent : Tracker;
     prefix : Text;
     labels : Text;
-    var count : Nat;
-    var sum : Nat;
-    var buckets : [var Nat];
+    var count : Int;
+    var sum : Int;
+    var buckets : [var Int];
     id : Nat;
   };
   public type TValue = {
