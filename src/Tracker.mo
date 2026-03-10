@@ -6,6 +6,7 @@ import Text_ "mo:core/Text";
 import Prim "mo:prim";
 import Metrics "Metrics";
 import Label "Label";
+import Types "internal/Types";
 
 module {
   // Type passthrough
@@ -13,18 +14,13 @@ module {
   public type Gauge = Metrics.Gauge.Gauge;
   public type Heatmap = Metrics.Heatmap.Heatmap;
   public type Value = Metrics.Value;
+  public type Tracker = Types.Tracker;
 
   // Helper functions
   public func canisterLabel(a : actor {}) : Label.Label = Label.canisterLabel(a);
 
   // Value variant type
-  type TValue = {
-    #counter : Metrics.Counter.Counter;
-    #gauge : Metrics.Gauge.Gauge;
-    #heatmap : Metrics.Heatmap.Heatmap;
-    #tracker : Tracker;
-  };
-  private func readValue(val : TValue) : [Metrics.Metric] {
+  private func readValue(val : Types.TValue) : [Metrics.Metric] {
     switch val {
       case (#counter ctr) { Metrics.Counter.value(ctr).read() };
       case (#gauge g) { Metrics.Gauge.value(g).read() };
@@ -34,20 +30,9 @@ module {
   };
 
   // Watermark environment
-  type Environment = {
-    var holdDownPeriod : Nat64; // in nanoseconds
-  };
   func nanos(seconds : Nat) : Nat64 = seconds.toNat64() * 1_000_000_000;
 
   // Static tracker type
-  public type Tracker = {
-    var labels : Text;
-    var values : List.List<TValue>;
-    env : Environment;
-    var nonce : Nat;
-    id : Nat;
-  };
-
   public func new() : Tracker {
     let tracker : Tracker = {
       var labels = "";
@@ -85,7 +70,7 @@ module {
     let (k, v) = Label.canisterLabel(a);
     addLabel(self, k, v);
   };
-  private func add(self : Tracker, val : TValue) {
+  private func add(self : Tracker, val : Types.TValue) {
     self.values := self.values.pushFront(val);
   };
   public func newCounter(self : Tracker, name : Text, labels : [Label.Label]) : Metrics.Counter.Counter {

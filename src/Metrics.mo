@@ -5,6 +5,7 @@ import Nat64_ "mo:core/Nat64";
 import Prim "mo:prim";
 
 import Label "./Label";
+import Types "internal/Types";
 
 module {
   // The data in type Metric is (name, labels, value)
@@ -103,12 +104,7 @@ module {
   };
 
   public module Counter {
-    public type Counter = {
-      name : Text;
-      labels : Text;
-      var value : Nat;
-      id : Nat;
-    };
+    public type Counter = Types.Counter;
 
     public func new(name : Text, labels : Text, id : Nat) : Counter = {
       name;
@@ -128,9 +124,7 @@ module {
 
   public module Gauge {
     // Env
-    type Env = {
-      var holdDownPeriod : Nat64; // in nanoseconds
-    };
+    type Env = Types.Environment;
     public func env(holdDownSeconds : Nat) : Env = {
       var holdDownPeriod = holdDownSeconds.toNat64() * 1_000_000_000;
     };
@@ -139,12 +133,7 @@ module {
     };
 
     // Watermark
-    type Watermark = {
-      var activated : Bool; // a watermark is activated after the first update
-      var mark : Nat;
-      var lastMarkTime : Nat64;
-      env : Env;
-    };
+    type Watermark = Types.Watermark;
     func newWatermark(env : Env) : Watermark = {
       var activated = false;
       var mark = 0;
@@ -163,18 +152,7 @@ module {
     };
 
     // Gauge
-    public type Gauge = {
-      prefix : Text;
-      labels : Text;
-      var lastValue : Nat;
-      var count : Nat;
-      var sum : Nat;
-      high : Watermark;
-      low : Watermark;
-      limits : [Nat];
-      counters : [var Nat];
-      id : Nat;
-    };
+    public type Gauge = Types.Gauge;
     public func new(prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge {
       for (i in Nat_.range(1, limits.size())) {
         if (limits[i] <= limits[i - 1]) {
@@ -235,14 +213,7 @@ module {
   };
 
   public module Heatmap {
-    public type Heatmap = {
-      prefix : Text;
-      labels : Text;
-      var count : Nat;
-      var sum : Nat;
-      var buckets : [var Nat];
-      id : Nat;
-    };
+    public type Heatmap = Types.Heatmap;
 
     func getBucketIndex(entry : Nat) : Nat {
       if (entry == 0) return 0;
