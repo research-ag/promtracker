@@ -14,7 +14,6 @@ import Tracker "../../src/Tracker";
 
 // Optional: only used in this particular demo code
 import Array "mo:core/Array";
-import Nat_ "mo:core/Nat";
 
 // Example on how to remove a top-level value from the Tracker via migration.
 // Using this migration function will cause `ctr2` to be "reset" during an upgrade
@@ -83,47 +82,4 @@ persistent actor Main {
   public func addGauge(name : Text, labels : [(Text, Text)]) {
     gauges := gauges.concat([pt.newGauge(name, labels, [])]);
   };
-
-  // Demonstrate how to use "sub-trackers"
-  // Mock Stream package
-  module Stream {
-    public type Stream = {
-      tracker : Tracker.Tracker;
-      gauge : Tracker.Gauge;
-      ctr : Tracker.Counter;
-    };
-    public func new(tracker : Tracker.Tracker) : Stream = {
-      tracker;
-      gauge = tracker.newGauge("stream_window_size", [], []);
-      ctr = tracker.newCounter("stream_length", []);
-    };
-    public func set(self : Stream, length : Nat, windowSize : Nat) {
-      self.ctr.add(length);
-      self.gauge.update(windowSize);
-    };
-  };
-
-  // Stream manager
-  var streams : [Stream.Stream] = [];
-  public func newStream() {
-    let id = streams.size();
-    // create a sub-tracker for the new stream
-    let subPt = pt.newTracker([("streamid", id.toText())]);
-    // create and add the new stream, pass down sub-tracker
-    streams := streams.concat([Stream.new(subPt)]);
-  };
-  public func updateStream(i : Nat, length : Nat, windowSize : Nat) {
-    streams[i].set(length, windowSize);
-  };
-  public func removeStream(i : Nat) {
-    // Important: unregister the stream's sub-tracker from the parent tracker
-    // This removes all of the stream's metrics at once
-    streams[i].tracker.unregister();
-    // Now remove the stream from the array
-    streams := Array.tabulate<Stream.Stream>(
-      streams.size() - 1,
-      func(j) = if (j < i) streams[j] else streams[j + 1],
-    );
-  };
-
 };
