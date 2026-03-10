@@ -27,6 +27,7 @@ mixin(text : () -> Text, route : Text) {
   };
 };
 
+// YAML:
 /*
 openapi: 3.1.0
 info:
