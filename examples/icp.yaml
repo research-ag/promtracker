@@ -2,41 +2,31 @@
 
 canisters:
   - name: min
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/min.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/min.mo
 
   - name: no-pull
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/no-pull.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/no-pull.mo
 
   - name: package
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/package.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/package.mo
 
   - name: nested
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/nested.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/nested.mo
 
   - name: uptime
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/uptime.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/uptime.mo
