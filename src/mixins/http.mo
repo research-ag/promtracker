@@ -1,4 +1,4 @@
-import Text_ "mo:core/Text";
+import _Text "mo:core/Text";
 import Http "../Http";
 
 /// Mixin that adds a `/metrics` endpoint returning text
