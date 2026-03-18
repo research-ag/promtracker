@@ -1,4 +1,4 @@
-import Text_ "mo:core/Text";
+import _Text "mo:core/Text";
 import Http "../Http";
 import PT "../";
 
@@ -11,6 +11,7 @@ import PT "../";
 ///
 /// * pt: PromTracker class from which to generate the exposition
 mixin(pt : PT.PromTracker, route : Text) {
+  /// Public query method to handle http requests.
   public query func http_request(req : Http.Request) : async Http.Response {
     let ?path = req.url.split(#char '?').next() else return Http.render400();
     switch (req.method, path) {
