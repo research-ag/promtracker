@@ -1,6 +1,6 @@
 # PromTracker changelog
 
-## 0.10.1 (2026-05-01)
+## 0.10.1
 
 * Bump `core` dependency from 2.2.0 to 2.5.0
 * Bump `moc` toolchain from 1.3.0 to 1.6.0
