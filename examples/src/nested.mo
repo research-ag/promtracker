@@ -1,4 +1,3 @@
-
 import PT "../../src/lib";
 import Http "../../src/mixins/http";
 
@@ -16,5 +15,3 @@ persistent actor Main {
     ].bundle([])
   );
 };
-
-

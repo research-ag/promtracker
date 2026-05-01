@@ -1,0 +1,29 @@
+{
+  "name": "promtracker",
+  "version": "1.0.0",
+  "description": "[![mops](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/mops/promtracker)](https://mops.one/promtracker) [![documentation](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/documentation/promtracker)](https://mops.one/promtracker/docs)",
+  "main": "index.js",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/research-ag/promtracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/research-ag/promtracker/issues"
+  },
+  "homepage": "https://github.com/research-ag/promtracker#readme",
+  "devDependencies": {
+    "prettier": "^3.8.3",
+    "prettier-plugin-motoko": "^0.13.0"
+  }
+}

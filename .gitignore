@@ -9,3 +9,5 @@
 *.wasm
 package-set.dhall
 vessel.dhall
+node_modules/
+package-lock.json
