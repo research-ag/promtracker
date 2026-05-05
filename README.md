@@ -5,8 +5,8 @@
 
 ## Overview
 
-The `PromTracker` class provides a convenient way 
-to track real-time metrics inside a canister that can 
+The `PromTracker` class provides a convenient way
+to track real-time metrics inside a canister that can
 be exported and scraped via HTTP by a Prometheus scraper.
 It supports a range of metrics types from simple values
 to histograms.
@@ -29,13 +29,13 @@ i.e. during canister installation.
 However, it is also possible to register values dynamically at a later time.
 
 The canister code then updates the registered values at runtime
-during the specific event that corresponds to the value. 
-The two main such value types are `CounterValue` and `GaugeValue`. 
+during the specific event that corresponds to the value.
+The two main such value types are `CounterValue` and `GaugeValue`.
 
 A `CounterValue` is normally an ever-increasing counter such as the number of total requests received. The scraper only sees its last value. The values between scraping events are not visible.
 
 A `GaugeValue` captures a frequently changing, fluctuating value such as the size of the last request, time between last two events, etc.
-The values of interest occur _between_ the scraping events (not at the scraping event). 
+The values of interest occur _between_ the scraping events (not at the scraping event).
 A gauge value automatically tracks the high and low watermarks between scraping events plus a histogram in which all values are captured.
 The histogram can be used to create heatmaps in Grafana.
 
@@ -50,7 +50,7 @@ for `Counter` and `Gauge` values.
 A `PullValue` means they are read at scraping time and returned.
 
 `Counter` and `Gauge` values can be persisted across canister upgrades.
-Whether a value's data should persist can be configured on a per-value basis. 
+Whether a value's data should persist can be configured on a per-value basis.
 
 ## Links
 
@@ -60,13 +60,13 @@ The API documentation can be found [here](https://mops.one/promtracker/docs/lib)
 
 For updates, help, questions, feedback and other requests related to this package join us on:
 
-* [OpenChat group](https://oc.app/2zyqk-iqaaa-aaaar-anmra-cai)
-* [Twitter](https://twitter.com/mr_research_ag)
-* [Dfinity forum](https://forum.dfinity.org/)
+- [OpenChat group](https://oc.app/2zyqk-iqaaa-aaaar-anmra-cai)
+- [Twitter](https://twitter.com/mr_research_ag)
+- [Dfinity forum](https://forum.dfinity.org/)
 
 ## Usage
 
-### Executable examples 
+### Executable examples
 
 The `examples/` directory contains executable examples.
 For instructions how to run them see: [examples/README.md](examples/README.md).
@@ -84,15 +84,17 @@ persistent actor Main {
   include Http(pt, "/metrics");
   pt.addSystemValues();
 };
+
 ```
 
 The `pt.addSystemValues()` command registers
 a default set of system metrics including cycle balance
-and memory stats. 
+and memory stats.
 Without this command the metrics would be empty without further code.
 The default system metrics are all `PullValue`s.
 
 Metrics render like this:
+
 ```text
 cycles_balance{canister="tl4x7"} 1497180100444 1770400321653
 canister_version{canister="tl4x7"} 2 1770400321653
@@ -119,7 +121,9 @@ A `PullValue` is added like this:
 import Cycles "mo:core/Cycles";
 
 transient let _cycleBalance = pt.addPullValue("cycles", "", Cycles.balance);
+
 ```
+
 and will render as:
 
 ```text
@@ -153,14 +157,16 @@ then we don't need `preupgrade`, `postupgrade` system functions.
 This was the case in the minimal example.
 
 For any other type of values we need to add:
+
 ```motoko
 system func preupgrade() { pt_preupgrade() };
 system func postupgrade() { pt_postupgrade() };
+
 ```
 
 The `pt_preupgrade, pt_postupgrade` are already defined by the `tracker` mixin.
 
-Arbitrary other code can be freely added to the system function bodies before or after the 
+Arbitrary other code can be freely added to the system function bodies before or after the
 `pt_preupgrade(), pt_postupgrade()` calls.
 
 It is advisable to add `PullValue`s only in top-level actor code.
@@ -185,15 +191,17 @@ system func heartbeat() : async () {
   counter0.add(1);
   counter1.add(1);
 };
+
 ```
 
 The metrics render like this:
+
 ```text
 heartbeats{canister="tz2ag",is_stable="false"} 120 1770400540297
 heartbeats{canister="tz2ag",is_stable="true"} 120 1770400540297
 ```
 
-Alternatively, we could implement a counter ourselves in canister state 
+Alternatively, we could implement a counter ourselves in canister state
 and expose it through a `PullValue` like this:
 
 ```motoko
@@ -201,6 +209,7 @@ transient var counter0 = 0;
 var counter1 = 0;
 transient let _ctr0 = pt.addPullValue("counter", "is_stable=\"false\"", func() = counter0);
 transient let _ctr1 = pt.addPullValue("counter", "is_stable=\"true\"", func() = counter1);
+
 ```
 
 But keep in mind the comment about persistence of `PullValue`s above.
@@ -228,6 +237,7 @@ system func heartbeat() : async () {
   };
   last_time := ?now;
 };
+
 ```
 
 Here, the heartbeat intervals are measured in milliseconds.
@@ -242,6 +252,7 @@ The `GaugeValue` also creates a histogram with 10 buckets (plus the +Inf bucket)
 where the bucket limits are: 110, 120, 130, .., 200.
 
 The metrics render like this:
+
 ```text
 time_last{canister="tz2ag"} 180 1770400540297
 time_sum{canister="tz2ag"} 18017 1770400540297
@@ -264,14 +275,14 @@ time_bucket{canister="tz2ag",le="+Inf"} 119 1770400540297
 Grafana can translate these histograms into heatmaps
 which display the distribution of values over time.
 
-You can remove the watermarks from the metrics by replacing argument `#both` with 
+You can remove the watermarks from the metrics by replacing argument `#both` with
 `#high` (only high watermark),
-`#low` (only low watermark) or `#none`. 
+`#low` (only low watermark) or `#none`.
 
 ### Heatmap
 
 The `Heatmap` is a simplified `GaugeValue`.
-It does not have watermarks and does not require the user to 
+It does not have watermarks and does not require the user to
 define buckets.
 Instead, it creates exponentially sized buckets automatically on demand.
 
@@ -292,9 +303,11 @@ system func heartbeat() : async () {
   };
   last_time := ?now;
 };
+
 ```
 
 The metrics render like this:
+
 ```text
 heatmap{canister="t63gs",le="0"} 0 1770401064297
 heatmap{canister="t63gs",le="1"} 0 1770401064297
@@ -314,7 +327,7 @@ heatmap_sum{canister="t63gs"} 865284 1770401064297
 ### Additional HTTP routes
 
 Most backend canisters do not serve HTTP request.
-However, if we want to serve routes other than `/metrics` with our own code 
+However, if we want to serve routes other than `/metrics` with our own code
 then we need to define the public `http_request` function ourselves.
 We import the `http` module for this, not the `http` mixin.
 
@@ -344,6 +357,7 @@ persistent actor Main {
     };
   };
 };
+
 ```
 
 ### Plain mode (without `tracker` mixin)
@@ -367,6 +381,7 @@ persistent actor Main {
 
   system func heartbeat() : async () { counter.add(1) };
 };
+
 ```
 
 In plain mode we get control over the global `canister="..."` label and can modify it or remove it.
@@ -374,6 +389,7 @@ We can also change the 305-second interval to reset watermarks:
 
 ```motoko
 pt.setWatermarkHoldPeriod(65);
+
 ```
 
 A value of 65 seconds is recommended for a 1-minute scraping interval.
@@ -382,21 +398,21 @@ A value of 65 seconds is recommended for a 1-minute scraping interval.
 
 The system metrics consist of the following
 
-* `cycles_balance` // Prim.cyclesBalance()
-* `canister_version` // Prim.canisterVersion()
-* `rts_memory_size` // Prim.rts_memory_size()
-* `rts_heap_size` // Prim.rts_heap_size()
-* `rts_total_allocation` // Prim.rts_total_allocation()
-* `rts_reclaimed` // Prim.rts_reclaimed()
-* `rts_max_live_size` // Prim.rts_max_live_size()
-* `rts_max_stack_size` // Prim.rts_max_stack_size()
-* `rts_callback_table_count` // Prim.rts_callback_table_count()
-* `rts_callback_table_size` // Prim.rts_callback_table_size()
-* `rts_mutator_instructions` // Prim.rts_mutator_instructions()
-* `rts_collector_instructions` // Prim.rts_collector_instructions()
-* `rts_upgrade_instructions` // Prim.rts_upgrade_instructions()
-* `rts_stable_memory_size` // Prim.rts_stable_memory_size()
-* `rts_logical_stable_memory_size` // Prim.rts_logical_stable_memory_size()
+- `cycles_balance` // Prim.cyclesBalance()
+- `canister_version` // Prim.canisterVersion()
+- `rts_memory_size` // Prim.rts_memory_size()
+- `rts_heap_size` // Prim.rts_heap_size()
+- `rts_total_allocation` // Prim.rts_total_allocation()
+- `rts_reclaimed` // Prim.rts_reclaimed()
+- `rts_max_live_size` // Prim.rts_max_live_size()
+- `rts_max_stack_size` // Prim.rts_max_stack_size()
+- `rts_callback_table_count` // Prim.rts_callback_table_count()
+- `rts_callback_table_size` // Prim.rts_callback_table_size()
+- `rts_mutator_instructions` // Prim.rts_mutator_instructions()
+- `rts_collector_instructions` // Prim.rts_collector_instructions()
+- `rts_upgrade_instructions` // Prim.rts_upgrade_instructions()
+- `rts_stable_memory_size` // Prim.rts_stable_memory_size()
+- `rts_logical_stable_memory_size` // Prim.rts_logical_stable_memory_size()
 
 ## Copyright
 

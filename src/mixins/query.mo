@@ -8,8 +8,8 @@ import Types "../internal/Types";
 ///
 /// Parameters:
 /// * `read`: Function that returns the metrics array.
-mixin(read : () -> [Types.Metric]) {
+mixin (read : () -> [Types.Metric]) {
   public query func pt_query() : async ([Types.Metric], Nat64) {
-   (read(), Prim.time());
+    (read(), Prim.time());
   };
 };
