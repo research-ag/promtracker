@@ -13,7 +13,7 @@ core = "2.5.0"
 motoko-matchers = "https://github.com/kritzcreek/motoko-matchers#v1.3.0@3dac8a071b69e4e651b25a7d9683fe831eb7cffd"
 
 [requirements]
-moc = "1.0.0"
+moc = "1.6.0"
 
 [toolchain]
 moc = "1.7.0"
