@@ -7,4 +7,4 @@ persistent actor Main {
   include Http(renderer.renderExposition, "/metrics");
   include Uptime();
   renderer.addValue(PT.newValue("uptime_seconds", [], uptime));
-};
+}

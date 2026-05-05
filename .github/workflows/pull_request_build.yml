@@ -10,6 +10,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+
       - uses: caffeinelabs/setup-mops@v1
 
       - name: Install icp-cli
@@ -24,13 +27,18 @@ jobs:
       - name: make sure moc is installed
         run: mops toolchain bin moc || mops toolchain use moc latest
 
-      - name: run tests
-        run: mops test
-
-      - name: Prettier Check
+      - name: Format code
         run: |
           npm install prettier prettier-plugin-motoko
-          npx prettier --check '**/*.{mo,json,md}'
+          npx prettier --write '**/*.{mo,json,md}'
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: format code with prettier"
+
+      - name: run tests
+        run: mops test
 
       - name: Build minimal example
         working-directory: ./examples
