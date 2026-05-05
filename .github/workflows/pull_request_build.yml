@@ -28,7 +28,9 @@ jobs:
         run: mops test
 
       - name: Prettier Check
-        run: npx -p prettier -p prettier-plugin-motoko prettier --plugin prettier-plugin-motoko --check '**/*.{mo,json,md}'
+        run: |
+          npm install prettier prettier-plugin-motoko
+          npx prettier --check '**/*.{mo,json,md}'
 
       - name: Build minimal example
         working-directory: ./examples
