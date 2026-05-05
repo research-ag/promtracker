@@ -40,7 +40,7 @@ module {
   };
 
   /// Escape label values according to Prometheus exposition format requirements
-  public func escapeLabelValue(t : Text) : Text = t.flatMap(escape);
+  public func escapeLabelValue(t: Text): Text = t.flatMap(escape);
 
   /// Concatenate two label strings, handling empty cases
   public func concat(a : Text, b : Text) : Text {
