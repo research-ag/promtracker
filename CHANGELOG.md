@@ -1,5 +1,18 @@
 # PromTracker changelog
 
+## [0.10.1]
+
+### Changed
+
+- Updated `core` from `2.2.0` to `2.5.0`.
+- Sync `examples/mops.toml` dependencies with root.
+- Update `[toolchain] moc` to `1.7.0`.
+
+### Fixed
+
+- Improved `.gitignore` and added `.prettierrc`.
+- Added automated Prettier formatting to CI.
+
 ## 0.10.0
 
 * Redesign mixin interfaces
