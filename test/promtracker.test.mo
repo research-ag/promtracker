@@ -2,9 +2,9 @@ import PT "../src/lib";
 import Tracker "../src/Tracker";
 import { Counter; Gauge; Heatmap } "../src/Metrics";
 
-import Suite "mo:motoko-matchers/Suite";
-import T "mo:motoko-matchers/Testable";
-import M "mo:motoko-matchers/Matchers";
+import Suite "mo:matchers/Suite";
+import T "mo:matchers/Testable";
+import M "mo:matchers/Matchers";
 import Nat "mo:core/Nat";
 import Debug "mo:core/Debug";
 

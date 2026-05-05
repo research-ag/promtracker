@@ -1,5 +1,16 @@
 # PromTracker changelog
 
+## [0.10.1]
+
+### Changed
+
+- Updated `core` from `2.2.0` to `2.5.0`.
+- Updated `matchers` from `https://github.com/kritzcreek/motoko-matchers#v1.3.0` to `2.1.0`.
+
+### Fixed
+
+- Updated `test/promtracker.test.mo` to use renamed `matchers` package.
+
 ## 0.10.0
 
 * Redesign mixin interfaces
