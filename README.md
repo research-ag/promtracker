@@ -76,19 +76,28 @@ For instructions how to run them see: [examples/README.md](examples/README.md).
 The minimal code to use `promtracker` is:
 
 ```motoko
-import PromTracker "mo:promtracker/mixins/tracker";
-import Http "mo:promtracker/mixins/http";
+import PromTracker "mo:promtracker";
+import Http "mo:promtracker/Http";
 
-persistent actor Main {
-  include PromTracker(Main);
-  include Http(pt, "/metrics");
-  pt.addSystemValues();
+actor Main {
+  let tracker = PromTracker.Tracker.new();
+  let renderer = PromTracker.Renderer();
+  
+  renderer.addValue(tracker.toValue());
+  renderer.addValue(PromTracker.allSystemMetrics);
+
+  public query func http_request(req : Http.Request) : async Http.Response {
+    let ?path = req.url.split(#char '?').next() else return Http.render400();
+    if (path == "/metrics") {
+      Http.renderPlainText(renderer.renderExposition());
+    } else {
+      Http.render400();
+    };
+  };
 };
 ```
 
-The `pt.addSystemValues()` command registers
-a default set of system metrics including cycle balance
-and memory stats. 
+`PromTracker.allSystemMetrics` provides a default set of system metrics including cycle balance and memory stats.
 Without this command the metrics would be empty without further code.
 The default system metrics are all `PullValue`s.
 

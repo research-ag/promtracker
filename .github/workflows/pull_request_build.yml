@@ -24,6 +24,18 @@ jobs:
       - name: make sure moc is installed
         run: mops toolchain bin moc || mops toolchain use moc latest
 
+      - name: Prettier Check and Format
+        run: |
+          npm install prettier prettier-plugin-motoko --no-save
+          npx -y prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
+      - name: Commit formatted files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -u
+          git diff-index --quiet HEAD || git commit -m "chore: format code with prettier"
+          git push
+
       - name: run tests
         run: mops test
 

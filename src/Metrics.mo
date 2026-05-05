@@ -1,3 +1,9 @@
+/// Core metrics logic for Counters, Gauges, and Heatmaps.
+///
+/// ```motoko name=import
+/// import Metrics "mo:promtracker/Metrics";
+/// ```
+
 import Array_ "mo:core/Array";
 import List_ "mo:core/pure/List";
 import Int_ "mo:core/Int";
@@ -10,13 +16,16 @@ import Label "./Label";
 import Types "internal/Types";
 
 module {
-  // The data in type Metric is (name, labels, value)
+  /// The data in type Metric is (name, labels, value)
   public type Metric = Types.Metric;
 
+  /// Prepend labels to an existing metric.
   public func prependLabels(self : Metric, newLabels : Text) : Metric {
     let (name, labels, value) = self;
     (name, concat(newLabels, labels), value);
   };
+
+  /// Render a metric in Prometheus exposition format.
   public func render(self : Metric, time : Text) : Text {
     let (name, labels, value) = self;
     name # "{" # labels # "} " # value.toText() # " " # time # "\n";
@@ -40,14 +49,12 @@ module {
     };
   };
 
-  /// Each "Value" can deliver one or more metrics.
-  /// For example a Gauge delivers sum, count, lastValue, watermarks, etc.
-  /// A Value is a set of metrics.
+  /// A `Value` is a set of metrics that can be read.
   public type Value = {
     read : () -> [Metric];
   };
 
-  /// A single pull value
+  /// Create a new pull-based metric value.
   public func newPullValue(name : Text, labels : [Label.Label], getValue : () -> Nat) : Value {
     let labelsText = Label.renderLabels(labels);
     object {
@@ -57,8 +64,7 @@ module {
     };
   };
 
-  /// Arbitrary Values can be bundled together to form a new "Value"
-  /// Bundling can be nested.
+  /// Bundle multiple `Value`s together into a single `Value` with common labels.
   public func bundle(self : [Value], commonLabels : [Label.Label]) : Value {
     let commonLabelsText = Label.renderLabels(commonLabels);
     object {
@@ -71,6 +77,7 @@ module {
     };
   };
 
+  /// Bundle containing all system and RTS metrics.
   public let allSystemMetrics : Value = {
     read = func() = [
       ("cycles_balance", "", Prim.cyclesBalance()),
@@ -91,14 +98,17 @@ module {
     ];
   };
 
+  /// Metric for canister version.
   public let canisterVersionMetric : Value = {
     read = func() = [("canister_version", "", Prim.canisterVersion().toNat())];
   };
 
+  /// Metric for cycles balance.
   public let cyclesBalanceMetric : Value = {
     read = func() = [("cycles_balance", "", Prim.cyclesBalance())];
   };
 
+  /// Bundle containing all RTS metrics.
   public let allRtsMetrics : Value = {
     read = func() = [
       ("rts_memory_size", "", Prim.rts_memory_size()),
@@ -117,8 +127,12 @@ module {
     ];
   };
 
+  /// Counter metrics.
   public module Counter {
+    /// Counter type passthrough.
     public type Counter = Types.Counter;
+
+    /// Create a new counter. Internal use only, prefer `Tracker.newCounter`.
     public func new(parent : Types.Tracker, name : Text, labels : Text, id : Nat) : Counter = {
       parent;
       name;
@@ -126,12 +140,24 @@ module {
       var value = 0;
       id;
     };
+
+    /// Increment the counter by `n`.
     public func add(self : Counter, n : Nat) { self.value += n };
+
+    /// Decrement the counter by `n`.
+    ///
+    /// Traps on underflow.
     public func sub(self : Counter, n : Nat) { self.value -= n };
+
+    /// Set the counter to `n`.
     public func set(self : Counter, n : Nat) { self.value := n };
+
+    /// Returns the `Value` interface for this counter.
     public func value(self : Counter) : Value = {
       read = func() = mapIntMetric((self.name, self.labels, self.value));
     };
+
+    /// Unregister this counter from its parent tracker.
     public func unregister(self : Counter) {
       self.parent.values := self.parent.values.filter(
         func(v) = switch v {
@@ -142,12 +168,16 @@ module {
     };
   };
 
+  /// Gauge metrics with optional watermarks and buckets.
   public module Gauge {
     // Env
     type Env = Types.Environment;
+    /// Create a new environment for gauge watermarks.
     public func env(holdDownSeconds : Nat) : Env = {
       var holdDownPeriod = holdDownSeconds.toNat64() * 1_000_000_000;
     };
+
+    /// Set the hold-down period for the environment in seconds.
     public func setHoldDown(self : Env, seconds : Nat) {
       self.holdDownPeriod := seconds.toNat64() * 1_000_000_000;
     };
@@ -171,8 +201,13 @@ module {
       self.lastMarkTime := time;
     };
 
-    // Gauge
+    /// Gauge type passthrough.
     public type Gauge = Types.Gauge;
+
+    /// Create a new gauge. Internal use only, prefer `Tracker.newGauge`.
+    ///
+    /// `limits` defines bucket boundaries for a histogram-like view.
+    /// Traps if `limits` are not strictly increasing.
     public func new(parent : Types.Tracker, prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge {
       for (i in Nat_.range(1, limits.size())) {
         if (limits[i] <= limits[i - 1]) {
@@ -193,6 +228,8 @@ module {
         id;
       };
     };
+
+    /// Returns the `Value` interface for this gauge.
     public func value(self : Gauge) : Value = {
       read = func() {
         var metrics = [
@@ -217,6 +254,8 @@ module {
         metrics;
       };
     };
+
+    /// Update the gauge with a new value.
     public func update(self : Gauge, value : Nat) {
       self.lastValue := value;
       self.count += 1;
@@ -231,6 +270,8 @@ module {
         self.counters[n] += 1;
       };
     };
+
+    /// Unregister this gauge from its parent tracker.
     public func unregister(self : Gauge) {
       self.parent.values := self.parent.values.filter(
         func(v) = switch v {
@@ -241,7 +282,9 @@ module {
     };
   };
 
+  /// Heatmap metrics with automatic exponential buckets.
   public module Heatmap {
+    /// Heatmap type passthrough.
     public type Heatmap = Types.Heatmap;
 
     func getBucketIndex(entry : Nat) : Nat {
@@ -268,6 +311,7 @@ module {
       bucket;
     };
 
+    /// Create a new heatmap. Internal use only, prefer `Tracker.newHeatmap`.
     public func new(parent : Types.Tracker, prefix : Text, labels : Text, id : Nat) : Heatmap = {
       parent;
       prefix;
@@ -278,6 +322,7 @@ module {
       id;
     };
 
+    /// Add an entry to the heatmap.
     public func add(self : Heatmap, entry : Nat) {
       self.count += 1;
       self.sum += entry;
@@ -285,6 +330,9 @@ module {
       self.buckets[b] += 1;
     };
 
+    /// Remove an entry from the heatmap.
+    ///
+    /// Traps if `count` or `sum` underflow.
     public func remove(self : Heatmap, entry : Nat) {
       self.count -= 1;
       self.sum -= entry;
@@ -292,6 +340,9 @@ module {
       self.buckets[b] -= 1;
     };
 
+    /// Update an entry in the heatmap.
+    ///
+    /// Traps if `sum` underflows.
     public func update(self : Heatmap, oldEntryValue : Nat, newEntryValue : Nat) {
       self.sum += newEntryValue;
       self.sum -= oldEntryValue;
@@ -302,6 +353,7 @@ module {
       self.buckets[newB] += 1;
     };
 
+    /// Returns the `Value` interface for this heatmap.
     public func value(self : Heatmap) : Value = {
       read = func() {
         var aggregated : Int = 0;
@@ -321,6 +373,8 @@ module {
         metrics.map(func(s) = mapIntMetric(s)).flatten();
       };
     };
+
+    /// Unregister this heatmap from its parent tracker.
     public func unregister(self : Heatmap) {
       self.parent.values := self.parent.values.filter(
         func(v) = switch v {

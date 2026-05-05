@@ -1,5 +1,11 @@
 # PromTracker changelog
 
+## [0.10.1]
+
+### Changed
+
+- Updated `core` from `2.2.0` to `2.5.0`.
+
 ## 0.10.0
 
 * Redesign mixin interfaces
