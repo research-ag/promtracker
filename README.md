@@ -425,3 +425,13 @@ Andy Gura (AndyGura) with contributions from Timo Hanke (timohanke)
 ## License
 
 Apache-2.0
+
+## Development
+
+### Formatting
+
+To format the code, run:
+
+```bash
+npx -y prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
+```
