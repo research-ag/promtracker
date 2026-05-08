@@ -1,12 +1,11 @@
 # PromTracker changelog
 
-## [0.10.1]
+## [1.0.0]
 
 ### Changed
 
 - Updated `core` from `2.2.0` to `2.5.0`.
 - Updated `[requirements] moc` from `1.0.0` to `1.6.0`.
-- Sync `examples/mops.toml` dependencies with root.
 
 ### Fixed
 
