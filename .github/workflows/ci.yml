@@ -47,7 +47,7 @@ jobs:
             # Install icp-cli as it was used in previous CI
             npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
             
-            icp build --check
+            icp build
             cd ..
           fi
 
