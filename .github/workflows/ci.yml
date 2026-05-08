@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  test:
+    name: Tests and Examples
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+
+      - name: Install mops
+        uses: caffeinelabs/setup-mops@v1
+
+      - name: Make sure moc is installed
+        run: mops toolchain init && mops toolchain bin moc
+
+      - name: Show versions
+        run: |
+          mops --version
+          $(mops toolchain bin moc) --version
+
+      - name: Install dependencies
+        run: mops install
+
+      - name: Run tests
+        run: mops test
+
+      - name: Build examples
+        run: |
+          if [ -d "examples" ]; then
+            cd examples
+            if [ -f "mops.toml" ]; then
+              mops install
+            fi
+            
+            # Install icp-cli as it was used in previous CI
+            npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
+            
+            icp build
+            cd ..
+          fi
+
+  fmt:
+    name: Formatting Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+
+      - name: Prettier Check
+        run: |
+          npm install prettier prettier-plugin-motoko --no-save
+          npx -y prettier --plugin prettier-plugin-motoko --check '**/*.{mo,json,md}'

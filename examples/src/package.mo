@@ -1,6 +1,6 @@
 import Http "../../src/mixins/http";
 import { Tracker } "../../src/lib";
-import  Stream "../src/mock-stream";
+import Stream "../src/mock-stream";
 import Array "mo:core/Array";
 import Nat_ "mo:core/Nat";
 
@@ -9,7 +9,7 @@ persistent actor Main {
   include Http(pt.renderFunction(), "/metrics");
   pt.setLabels([Tracker.canisterLabel(Main)]);
   pt.setHoldDown(62);
-  
+
   public func setHoldDown(seconds : Nat) {
     pt.setHoldDown(seconds);
   };

@@ -1,7 +1,9 @@
 # Executable examples to run locally
+
 ## Run
 
 Install `icp` executable:
+
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dfinity/icp-cli/releases/download/v0.1.0-beta.6/icp-cli-installer.sh | sh
 ```
@@ -10,17 +12,20 @@ Install [node](https://nodejs.org/) (LTS recommended) including `npm`.
 Required for `mops`.
 
 Install `mops`:
+
 ```sh
 npm install -g ic-mops
 mops toolchain init
 ```
 
 Change into the examples subdirectory:
+
 ```sh
 cd examples
 ```
 
 Then do:
+
 ```sh
 icp network start -d
 icp deploy
@@ -44,6 +49,7 @@ Very useful already for minimal health monitoring which every canister in produc
 It requires only one code line.
 
 Metrics render like this:
+
 ```text
 cycles_balance{canister="tl4x7"} 1497180100444 1770400321653
 canister_version{canister="tl4x7"} 2 1770400321653
@@ -72,6 +78,7 @@ In the case of Gauges it shows how to define buckets so that the Gauge can produ
 It also shows how to persist Counter and Gauge across canister upgrades.
 
 Metrics render like this:
+
 ```text
 cycles{canister="tz2ag"} 1453739534899 1770400540297
 heartbeats{canister="tz2ag",is_stable="false"} 120 1770400540297
@@ -101,10 +108,11 @@ Uses `mixins/tracker, mixins/http`.
 Focuses on Gauges and shows advanced usage of them
 to track:
 
-* amount of instructions used by other update calls
-* size of call arguments delivered to other update calls
+- amount of instructions used by other update calls
+- size of call arguments delivered to other update calls
 
 The metrics render like this:
+
 ```text
 instructions_last{canister="tc74d"} 7573 1770400881392
 instructions_sum{canister="tc74d"} 297487 1770400881392
@@ -142,6 +150,7 @@ Uses `mixins/tracker, mixins/http`.
 Demonstrates the `Heatmap` metric type which is similar to a Gauge but has automated (exponential) bucket creation built in.
 
 The metrics render like this:
+
 ```text
 heatmap{canister="t63gs",le="0"} 0 1770401064297
 heatmap{canister="t63gs",le="1"} 0 1770401064297
@@ -168,9 +177,11 @@ This example shows how to bypass this limitation.
 It shows how to define the custom `http_request` handler with other routes added.
 
 The metrics render like this:
+
 ```text
 counter{canister="tm5rl"} 6056 1770401117142
 ```
+
 and another `/hello` route is served.
 
 ## Plain
@@ -181,6 +192,7 @@ Shows how to define `PromTracker` without the `tracker` mixin,
 including manual sharing of stable state across upgrades.
 
 The metrics render like this:
+
 ```text
 counter{canister="tf62x"} 6321 1770401156396
 ```
