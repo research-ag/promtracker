@@ -433,5 +433,5 @@ Apache-2.0
 To format the code, run:
 
 ```bash
-npx -y prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
+npx -y prettier --write '**/*.{mo,json,md}'
 ```
