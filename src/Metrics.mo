@@ -15,18 +15,13 @@ module {
 
   public func prependLabels(self : Metric, newLabels : Text) : Metric {
     let (name, labels, value) = self;
-    (name, concat(newLabels, labels), value);
+    (name, Label.concat(newLabels, labels), value);
   };
   public func render(self : Metric, time : Text) : Text {
     let (name, labels, value) = self;
     name # "{" # labels # "} " # value.toText() # " " # time # "\n";
   };
 
-  func concat(a : Text, b : Text) : Text {
-    if (a == "") return b;
-    if (b == "") return a;
-    return a # "," # b;
-  };
 
   type IntMetric = (Text, Text, Int);
   func mapIntMetric((p, l, v) : IntMetric) : [Metric] {

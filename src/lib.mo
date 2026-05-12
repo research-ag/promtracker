@@ -41,7 +41,7 @@ module {
     // Global labels managed by the Renderer
     var labels : Text = "";
 
-    /// This function should not be needed because are cleared on upgrade.
+    /// This function should not be needed because labels are cleared on upgrade.
     /// But just in case they ever need to be cleared outside upgrades we provide this function.
     public func clearLabels() { labels := "" };
 
