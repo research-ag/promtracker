@@ -5,7 +5,7 @@
 
 ## Overview
 
-The `PromTracker` class provides a convenient way
+The `Tracker` class provides a convenient way
 to track real-time metrics inside a canister that can
 be exported and scraped via HTTP by a Prometheus scraper.
 It supports a range of metrics types from simple values
@@ -132,7 +132,7 @@ cycles{canister="tz2ag"} 1453739534899 1770400540297
 
 Here, `Cycles.balance` can be replaced by any function `() -> Nat` that returns the value.
 
-The `pt : PromTracker` instance is already available because it is created by the `mixin`.
+The `pt : Tracker` instance is already available because it is created by the `mixin`.
 
 ### Labels
 
@@ -140,7 +140,7 @@ All value registration functions have as their first argument the metric name.
 
 The `tracker` mixin automatically adds the `canister=".."` label to each metric.
 
-The `PromTracker` class accepts an arbitrary label string in the constructor.
+The `Tracker` class accepts an arbitrary label string in the constructor.
 
 Additional per-metric labels can be added with the second argument in the registration function.  
 For example, passing `"mylabel1=\"value1\",mylabel2=\"value2\""` instead of `""`
@@ -243,7 +243,7 @@ system func heartbeat() : async () {
 Here, the heartbeat intervals are measured in milliseconds.
 The `GaugeValue` stores the last recorded value
 and keeps a high watermark and low watermark.
-Watermarks by default get held for 305 seconds
+Watermarks by default get held for 302 seconds
 before they can be overwritten by values "under" the mark.
 That way, a Grafana agent that scrapes at a 5-minute interval cannot miss a watermark.
 It might see the same watermark twice but that is usually not a problem.
@@ -362,22 +362,23 @@ persistent actor Main {
 
 ### Plain mode (without `tracker` mixin)
 
-It is possible to use the `PromTracker` class directly without the `tracker` mixin.
+It is possible to use the `Tracker` class directly without the `tracker` mixin.
 The `http` mixin can still be used for serving the `/metrics` endpoint.
 
 ```motoko
 import PT "mo:promtracker";
 import Http "mo:promtracker/mixins/http";
+import Query "mo:promtracker/mixins/query";
 
 persistent actor Main {
-  transient let pt = PT.PromTracker(PT.canisterLabel(Main));
-  include Http(pt, "/metrics");
+  transient let pt = PT.Tracker.new();
+  transient let renderer = PT.Renderer();
 
-  var ptStableData : PT.StableData = null;
-  system func preupgrade() { ptStableData := pt.share() };
-  system func postupgrade() { pt.unshare(ptStableData) };
+  renderer.addValue(pt.toValue());
+  include Http(renderer.renderExposition, "/metrics");
+  include Query(renderer.read);
 
-  transient let counter = pt.addCounter("counter", "", true);
+  transient let counter = pt.newCounter("counter", []);
 
   system func heartbeat() : async () { counter.add(1) };
 };
@@ -385,10 +386,10 @@ persistent actor Main {
 ```
 
 In plain mode we get control over the global `canister="..."` label and can modify it or remove it.
-We can also change the 305-second interval to reset watermarks:
+We can also change the 302-second interval to reset watermarks:
 
 ```motoko
-pt.setWatermarkHoldPeriod(65);
+pt.setHoldDown(65);
 
 ```
 

@@ -64,7 +64,7 @@ module {
     );
   };
 
-  /// Create the caniser="id" label witht the short form canister id of an actor
+  /// Create the canister="id" label with the short form canister id of an actor
   public func canisterLabel(a : actor {}) : Label {
     let s = Principal.fromActor(a).toText();
     let ?name = s.split(#char '-').next() else Runtime.trap("");
