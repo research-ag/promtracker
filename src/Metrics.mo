@@ -22,7 +22,6 @@ module {
     name # "{" # labels # "} " # value.toText() # " " # time # "\n";
   };
 
-
   type IntMetric = (Text, Text, Int);
   func mapIntMetric((p, l, v) : IntMetric) : [Metric] {
     if (v >= 0) {
