@@ -5,52 +5,34 @@
 
 ## Overview
 
-The `Tracker` class provides a convenient way
-to track real-time metrics inside a canister that can
-be exported and scraped via HTTP by a Prometheus scraper.
-It supports a range of metrics types from simple values
-to histograms.
+The library provides a two-layer approach to metric tracking:
 
-The `mo:promtracker/mixins/tracker` mixin is the most
-convenient way to add the class to the canister and to
-integrate it with system functions.
+1.  **Tracker**: A persistent state object that holds counters, gauges, and heatmaps. It is designed to be stored in a variable within a `persistent actor` (using Enhanced Orthogonal Persistence) so that its values survive canister upgrades.
+2.  **Renderer**: A transient class that wraps around a `Tracker` (or multiple trackers/values) and manages global labels (like `canister="id"`). The `Renderer` is re-initialized after each upgrade.
 
-The `mo:promtracker/mixins/http` mixin exports the metrics
-in the Prometheus exposition format via HTTP.
-From the endpoint, normally `/metrics`,
-the metrics can be scraped by a Prometheus scraper.
+The `mo:promtracker/mixins/http` mixin exports the metrics in the Prometheus exposition format via HTTP.
+From the endpoint, normally `/metrics`, the metrics can be scraped by a Prometheus scraper.
 
 The list of tracked metrics is initially empty.
-The canister has to register the values it wants to export with the tracker.
-Here, a _value_ corresponds to a single metric which results in one line in the exported exposition format.
-Registration of values is a one-time action
-and is most commonly done in the top-level actor code,
-i.e. during canister installation.
+The canister has to register the values it wants to export with the tracker or renderer.
+Registration of values is a one-time action and is most commonly done in the top-level actor code, i.e. during canister installation.
 However, it is also possible to register values dynamically at a later time.
 
-The canister code then updates the registered values at runtime
-during the specific event that corresponds to the value.
-The two main such value types are `CounterValue` and `GaugeValue`.
+The canister code then updates the registered values at runtime during the specific event that corresponds to the value.
+The two main such value types are `Counter` and `Gauge`.
 
-A `CounterValue` is normally an ever-increasing counter such as the number of total requests received. The scraper only sees its last value. The values between scraping events are not visible.
+A `Counter` is normally an ever-increasing counter such as the number of total requests received.
 
-A `GaugeValue` captures a frequently changing, fluctuating value such as the size of the last request, time between last two events, etc.
-The values of interest occur _between_ the scraping events (not at the scraping event).
-A gauge value automatically tracks the high and low watermarks between scraping events plus a histogram in which all values are captured.
-The histogram can be used to create heatmaps in Grafana.
+A `Gauge` captures a frequently changing, fluctuating value such as the size of the last request, time between last two events, etc.
+A gauge automatically tracks the high and low watermarks between scraping events plus a histogram in which all values are captured.
 
 There is another value type which is not explicitly updated by canister code, the `PullValue`.
 The value is calculated on the fly ("pulled") when the `/metrics` endpoint is being scraped.
-Any state that is accessible to query functions can be used in the calculation.
 
 For example, the canister's system state such as cycle balance and memory size can be exposed through `PullValue`s.
-They are already tracked by the canister's runtime or by the management canister.
-The canister does not need to update them through "events" like it does
-for `Counter` and `Gauge` values.
 A `PullValue` means they are read at scraping time and returned.
 
-`Counter` and `Gauge` values can be persisted across canister upgrades.
-Whether a value's data should persist can be configured on a per-value basis.
+`Tracker` state (including its counters and gauges) can be persisted across canister upgrades by using a non-transient variable in a `persistent actor`.
 
 ## Links
 
@@ -76,18 +58,23 @@ For instructions how to run them see: [examples/README.md](examples/README.md).
 The minimal code to use `promtracker` is:
 
 ```motoko
-import PromTracker "mo:promtracker/mixins/tracker";
+import PT "mo:promtracker";
 import Http "mo:promtracker/mixins/http";
 
 persistent actor Main {
-  include PromTracker(Main);
-  include Http(pt, "/metrics");
-  pt.addSystemValues();
+  let pt = PT.Tracker.new();
+  transient let renderer = PT.Renderer();
+
+  renderer.addValue(pt.toValue());
+  renderer.addCanisterLabel(Main);
+  renderer.addValue(PT.allSystemMetrics);
+
+  include Http(renderer.renderExposition, "/metrics");
 };
 
 ```
 
-The `pt.addSystemValues()` command registers
+The `renderer.addValue(PT.allSystemMetrics)` command registers
 a default set of system metrics including cycle balance
 and memory stats.
 Without this command the metrics would be empty without further code.
@@ -115,240 +102,134 @@ rts_logical_stable_memory_size{canister="tl4x7"} 0 1770400321653
 
 ### PullValue
 
-A `PullValue` is added like this:
+`PullValue`s are metrics that are calculated on the fly when the `/metrics` endpoint is being scraped.
 
 ```motoko
-import Cycles "mo:core/Cycles";
+import PT "mo:promtracker";
+import Prim "mo:prim";
 
-transient let _cycleBalance = pt.addPullValue("cycles", "", Cycles.balance);
+persistent actor Main {
+  let pt = PT.Tracker.new();
+  transient let renderer = PT.Renderer();
+  renderer.addValue(pt.toValue());
+
+  // A PullValue is added to the renderer
+  renderer.addValue(PT.newValue("cycles", [], func() = Prim.cyclesBalance()));
+};
 
 ```
 
-and will render as:
-
-```text
-cycles{canister="tz2ag"} 1453739534899 1770400540297
-```
-
-Here, `Cycles.balance` can be replaced by any function `() -> Nat` that returns the value.
-
-The `pt : Tracker` instance is already available because it is created by the `mixin`.
+Here, the third argument can be any function `() -> Nat` that returns the current value.
 
 ### Labels
 
-All value registration functions have as their first argument the metric name.
+Prometheus labels can be added at different levels:
 
-The `tracker` mixin automatically adds the `canister=".."` label to each metric.
+1.  **Global labels**: Added to the `Renderer`. These are prepended to every metric rendered by that renderer.
+2.  **Per-metric labels**: Added when creating a counter, gauge, or heatmap.
 
-The `Tracker` class accepts an arbitrary label string in the constructor.
+```motoko
+// Global label on renderer
+renderer.addLabel("env", "prod");
 
-Additional per-metric labels can be added with the second argument in the registration function.  
-For example, passing `"mylabel1=\"value1\",mylabel2=\"value2\""` instead of `""`
-will make the metric render as
+// Per-metric labels on tracker (using an array of tuples)
+let ctr = pt.newCounter("my_counter", [("id", "1"), ("tier", "api")]);
 
-```text
-cycles{canister="tz2ag",mylabel1="value1",mylabel2="value2"} 1453739534899 1770400540297
+// Per-metric labels on a pull value
+renderer.addValue(PT.newValue("my_pull", [("type", "test")], func() = 42));
+
 ```
 
 ### Persistence
 
-If we exclusively use `PullValue`s
-then we don't need `preupgrade`, `postupgrade` system functions.
-This was the case in the minimal example.
+When using a `persistent actor` (Enhanced Orthogonal Persistence), state stored in non-transient variables persists across upgrades.
 
-For any other type of values we need to add:
-
-```motoko
-system func preupgrade() { pt_preupgrade() };
-system func postupgrade() { pt_postupgrade() };
-
-```
-
-The `pt_preupgrade, pt_postupgrade` are already defined by the `tracker` mixin.
-
-Arbitrary other code can be freely added to the system function bodies before or after the
-`pt_preupgrade(), pt_postupgrade()` calls.
-
-It is advisable to add `PullValue`s only in top-level actor code.
-Only add `PullValue`s dynamically in branched code if you know exactly what you are doing.
-The reason is that the `PullValue`s, being functions,
-cannot be persisted across canister upgrades.
-The ones added in top-level actor will always be there
-because that code runs again after an upgrade.
-But the ones defined dynamically will be gone after an upgrade.
-
-### CounterValue
-
-A `CounterValue` can be demonstrated by a heartbeat counter.
-In this example one heartbeat counter resets on canister upgrade,
-the other one persists across upgrades.
+- The `Tracker` and metrics created from it (counters, gauges, heatmaps) should be stored in non-transient variables to persist their values.
+- The `Renderer` is transient and should be re-initialized in the actor body. Since adding values and labels to it is cheap, there is no downside to this.
 
 ```motoko
-transient let counter0 = pt.addCounter("heartbeats", "is_stable=\"false\"", false);
-transient let counter1 = pt.addCounter("heartbeats", "is_stable=\"true\"", true);
+persistent actor Main {
+  // PERSISTENT: survive upgrades
+  let pt = PT.Tracker.new();
+  let heartbeats = pt.newCounter("heartbeats_total", []);
 
-system func heartbeat() : async () {
-  counter0.add(1);
-  counter1.add(1);
+  // TRANSIENT: re-initialized on upgrade
+  transient let renderer = PT.Renderer();
+  renderer.addValue(pt.toValue());
+  renderer.addCanisterLabel(Main);
+  renderer.addValue(PT.allSystemMetrics);
 };
 
 ```
 
-The metrics render like this:
+> **Note**: While `persistent actor` handles persistence of `var` fields in objects, some types in the library (like `List`) or the `Renderer` itself are intentionally designed to be transient or require re-initialization after a canister upgrade. Sticking to the `persistent Tracker` + `transient Renderer` pattern is recommended for full metric state persistence.
 
-```text
-heartbeats{canister="tz2ag",is_stable="false"} 120 1770400540297
-heartbeats{canister="tz2ag",is_stable="true"} 120 1770400540297
-```
+### Counter
 
-Alternatively, we could implement a counter ourselves in canister state
-and expose it through a `PullValue` like this:
+A `Counter` is an ever-increasing value.
 
 ```motoko
-transient var counter0 = 0;
-var counter1 = 0;
-transient let _ctr0 = pt.addPullValue("counter", "is_stable=\"false\"", func() = counter0);
-transient let _ctr1 = pt.addPullValue("counter", "is_stable=\"true\"", func() = counter1);
+let requests = pt.newCounter("requests_total", [("method", "get")]);
 
-```
-
-But keep in mind the comment about persistence of `PullValue`s above.
-A `CounterValue` will persist even if added dynamically.
-
-### GaugeValue
-
-A `GaugeValue` can be demonstrated by tracking the "heartbeat interval",
-i.e. the time between consecutive heartbeats.
-This makes for an interesting heatmap in Grafana.
-
-```motoko
-import Int "mo:core/Int";
-import Time "mo:core/Time";
-import Util "mo:promtracker";
-
-transient let timeGauge = pt.addGauge("time", "", #both, Util.limits(100, 10, 10), false);
-
-transient var last_time : ?Int = null;
-system func heartbeat() : async () {
-  let now = Time.now() / 1_000_000;
-  switch (last_time) {
-    case (?last) timeGauge.update(Int.abs(now - last));
-    case (_) {};
-  };
-  last_time := ?now;
+public func handle_get() {
+  requests.add(1);
 };
 
 ```
 
-Here, the heartbeat intervals are measured in milliseconds.
-The `GaugeValue` stores the last recorded value
-and keeps a high watermark and low watermark.
-Watermarks by default get held for 302 seconds
-before they can be overwritten by values "under" the mark.
-That way, a Grafana agent that scrapes at a 5-minute interval cannot miss a watermark.
-It might see the same watermark twice but that is usually not a problem.
+### Gauge
 
-The `GaugeValue` also creates a histogram with 10 buckets (plus the +Inf bucket)
-where the bucket limits are: 110, 120, 130, .., 200.
+A `Gauge` represents a value that can go up and down. It automatically tracks high/low watermarks and a histogram of all values seen since the last scrape.
 
-The metrics render like this:
+```motoko
+// Gauge with buckets: [100, 200, 500]
+let processing_time = pt.newGauge("processing_time", [], [100, 200, 500]);
 
-```text
-time_last{canister="tz2ag"} 180 1770400540297
-time_sum{canister="tz2ag"} 18017 1770400540297
-time_count{canister="tz2ag"} 119 1770400540297
-time_high_watermark{canister="tz2ag"} 220 1770400540297
-time_low_watermark{canister="tz2ag"} 126 1770400540297
-time_bucket{canister="tz2ag",le="110"} 0 1770400540297
-time_bucket{canister="tz2ag",le="120"} 0 1770400540297
-time_bucket{canister="tz2ag",le="130"} 3 1770400540297
-time_bucket{canister="tz2ag",le="140"} 31 1770400540297
-time_bucket{canister="tz2ag",le="150"} 66 1770400540297
-time_bucket{canister="tz2ag",le="160"} 94 1770400540297
-time_bucket{canister="tz2ag",le="170"} 105 1770400540297
-time_bucket{canister="tz2ag",le="180"} 114 1770400540297
-time_bucket{canister="tz2ag",le="190"} 116 1770400540297
-time_bucket{canister="tz2ag",le="200"} 118 1770400540297
-time_bucket{canister="tz2ag",le="+Inf"} 119 1770400540297
+public func process(duration : Nat) {
+  processing_time.update(duration);
+};
+
 ```
 
-Grafana can translate these histograms into heatmaps
-which display the distribution of values over time.
+You can also change the default 302-second hold-down period for watermarks (useful if your scraping interval is not 5 minutes):
 
-You can remove the watermarks from the metrics by replacing argument `#both` with
-`#high` (only high watermark),
-`#low` (only low watermark) or `#none`.
+```motoko
+// Set hold-down to 65 seconds for a 1-minute scraping interval
+pt.setHoldDown(65);
+
+```
 
 ### Heatmap
 
-The `Heatmap` is a simplified `GaugeValue`.
-It does not have watermarks and does not require the user to
-define buckets.
-Instead, it creates exponentially sized buckets automatically on demand.
+A `Heatmap` is a specialized gauge that only tracks a histogram with power-of-2 buckets automatically sized on demand.
 
 ```motoko
-import Int "mo:core/Int";
+let latencies = pt.newHeatmap("request_latency", []);
 
-transient let heatmap = pt.addHeatmap("heatmap", "", false);
-
-transient var last_time : ?Int = null;
-system func heartbeat() : async () {
-  let now = Time.now() / 1_000_000;
-  switch (last_time) {
-    case (?last) {
-      let v : Nat = Int.abs(now - last);
-      heatmap.addEntry(v);
-    };
-    case (_) {};
-  };
-  last_time := ?now;
+public func record(ms : Nat) {
+  latencies.update(ms);
 };
 
-```
-
-The metrics render like this:
-
-```text
-heatmap{canister="t63gs",le="0"} 0 1770401064297
-heatmap{canister="t63gs",le="1"} 0 1770401064297
-heatmap{canister="t63gs",le="2"} 0 1770401064297
-heatmap{canister="t63gs",le="4"} 0 1770401064297
-heatmap{canister="t63gs",le="8"} 0 1770401064297
-heatmap{canister="t63gs",le="16"} 0 1770401064297
-heatmap{canister="t63gs",le="32"} 0 1770401064297
-heatmap{canister="t63gs",le="64"} 0 1770401064297
-heatmap{canister="t63gs",le="128"} 197 1770401064297
-heatmap{canister="t63gs",le="256"} 5695 1770401064297
-heatmap{canister="t63gs",le="512"} 5700 1770401064297
-heatmap_count{canister="t63gs"} 5700 1770401064297
-heatmap_sum{canister="t63gs"} 865284 1770401064297
 ```
 
 ### Additional HTTP routes
 
-Most backend canisters do not serve HTTP request.
-However, if we want to serve routes other than `/metrics` with our own code
-then we need to define the public `http_request` function ourselves.
-We import the `http` module for this, not the `http` mixin.
+If you want to serve routes other than `/metrics` with your own code, you can define the `http_request` function manually and use the `Http` module's rendering helpers.
 
 ```motoko
-import Text_ "mo:core/Text";
-import PromTracker "mo:promtracker/mixins/tracker";
+import PT "mo:promtracker";
 import Http "mo:promtracker/Http";
 
 persistent actor Main {
-  include PromTracker(Main);
+  let pt = PT.Tracker.new();
+  transient let renderer = PT.Renderer();
+  renderer.addValue(pt.toValue());
 
-  transient let counter = pt.addCounter("counter", "", true);
-
-  system func heartbeat() : async () { counter.add(1) };
-
-  // Expose the `/metrics` endpoint
   public query func http_request(req : Http.Request) : async Http.Response {
     let ?path = req.url.split(#char '?').next() else return Http.render400();
     switch (req.method, path) {
       case ("GET", "/metrics") {
-        Http.renderPlainText(pt.renderExposition());
+        Http.renderPlainText(renderer.renderExposition());
       };
       case ("GET", "/hello") {
         Http.renderPlainText("Hello, world!");
@@ -359,41 +240,6 @@ persistent actor Main {
 };
 
 ```
-
-### Plain mode (without `tracker` mixin)
-
-It is possible to use the `Tracker` class directly without the `tracker` mixin.
-The `http` mixin can still be used for serving the `/metrics` endpoint.
-
-```motoko
-import PT "mo:promtracker";
-import Http "mo:promtracker/mixins/http";
-import Query "mo:promtracker/mixins/query";
-
-persistent actor Main {
-  transient let pt = PT.Tracker.new();
-  transient let renderer = PT.Renderer();
-
-  renderer.addValue(pt.toValue());
-  include Http(renderer.renderExposition, "/metrics");
-  include Query(renderer.read);
-
-  transient let counter = pt.newCounter("counter", []);
-
-  system func heartbeat() : async () { counter.add(1) };
-};
-
-```
-
-In plain mode we get control over the global `canister="..."` label and can modify it or remove it.
-We can also change the 302-second interval to reset watermarks:
-
-```motoko
-pt.setHoldDown(65);
-
-```
-
-A value of 65 seconds is recommended for a 1-minute scraping interval.
 
 ## Default system metrics
 

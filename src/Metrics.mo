@@ -1,3 +1,13 @@
+/// Core metric types and implementations.
+///
+/// This module defines the base `Metric` type, the `Value` interface for pull-based
+/// metrics, and implementations for common Prometheus metric types like counters,
+/// gauges, and heatmaps.
+///
+/// ```motoko name=import
+/// import Metrics "mo:promtracker/Metrics";
+/// ```
+
 import Array_ "mo:core/Array";
 import List_ "mo:core/pure/List";
 import Int_ "mo:core/Int";
@@ -10,13 +20,17 @@ import Label "./Label";
 import Types "internal/Types";
 
 module {
-  // The data in type Metric is (name, labels, value)
+  /// A single Prometheus metric sample: `(name, labels, value)`.
   public type Metric = Types.Metric;
 
+  /// Prepends labels to an existing metric.
   public func prependLabels(self : Metric, newLabels : Text) : Metric {
     let (name, labels, value) = self;
     (name, Label.concat(newLabels, labels), value);
   };
+  /// Renders a metric to Prometheus exposition format.
+  ///
+  /// Returns a string like `name{labels} value time\n`.
   public func render(self : Metric, time : Text) : Text {
     let (name, labels, value) = self;
     name # "{" # labels # "} " # value.toText() # " " # time # "\n";
@@ -34,14 +48,15 @@ module {
     };
   };
 
-  /// Each "Value" can deliver one or more metrics.
-  /// For example a Gauge delivers sum, count, lastValue, watermarks, etc.
-  /// A Value is a set of metrics.
+  /// A source of one or more metrics.
+  ///
+  /// Objects implementing this interface can be sampled by calling `read()`.
   public type Value = {
+    /// Returns the current list of metrics.
     read : () -> [Metric];
   };
 
-  /// A single pull value
+  /// Creates a new `Value` that calls a function to get its current value.
   public func newPullValue(name : Text, labels : [Label.Label], getValue : () -> Nat) : Value {
     let labelsText = Label.renderLabels(labels);
     object {
@@ -51,8 +66,9 @@ module {
     };
   };
 
-  /// Arbitrary Values can be bundled together to form a new "Value"
-  /// Bundling can be nested.
+  /// Bundles multiple `Value` objects into a single `Value`.
+  ///
+  /// Common labels are prepended to all metrics produced by the bundled values.
   public func bundle(self : [Value], commonLabels : [Label.Label]) : Value {
     let commonLabelsText = Label.renderLabels(commonLabels);
     object {
@@ -65,6 +81,7 @@ module {
     };
   };
 
+  /// Returns a bundle of all available IC system and RTS metrics.
   public let allSystemMetrics : Value = {
     read = func() = [
       ("cycles_balance", "", Prim.cyclesBalance()),
@@ -85,14 +102,17 @@ module {
     ];
   };
 
+  /// Returns a metric for the current canister version.
   public let canisterVersionMetric : Value = {
     read = func() = [("canister_version", "", Prim.canisterVersion().toNat())];
   };
 
+  /// Returns a metric for the current canister cycles balance.
   public let cyclesBalanceMetric : Value = {
     read = func() = [("cycles_balance", "", Prim.cyclesBalance())];
   };
 
+  /// Returns a bundle of all available Motoko Runtime System (RTS) metrics.
   public let allRtsMetrics : Value = {
     read = func() = [
       ("rts_memory_size", "", Prim.rts_memory_size()),
@@ -111,8 +131,15 @@ module {
     ];
   };
 
+  /// Implementation of the Prometheus Counter metric.
+  ///
+  /// A counter is a cumulative metric that represents a single monotonically increasing
+  /// counter whose value can only increase or be reset to zero on restart.
   public module Counter {
+    /// The counter state object.
     public type Counter = Types.Counter;
+
+    /// Creates a new counter.
     public func new(parent : Types.Tracker, name : Text, labels : Text, id : Nat) : Counter = {
       parent;
       name;
@@ -120,12 +147,23 @@ module {
       var value = 0;
       id;
     };
+    /// Increases the counter by `n`.
     public func add(self : Counter, n : Nat) { self.value += n };
+
+    /// Decreases the counter by `n`.
+    ///
+    /// NOTE: Prometheus counters should strictly increase. Use a Gauge if you need
+    /// a value that can decrease.
     public func sub(self : Counter, n : Nat) { self.value -= n };
+
+    /// Sets the counter to `n`.
     public func set(self : Counter, n : Nat) { self.value := n };
+
+    /// Returns the `Value` interface for sampling this counter.
     public func value(self : Counter) : Value = {
       read = func() = mapIntMetric((self.name, self.labels, self.value));
     };
+    /// Unregisters the counter from its parent tracker.
     public func unregister(self : Counter) {
       self.parent.values := self.parent.values.filter(
         func(v) = switch v {
@@ -136,12 +174,23 @@ module {
     };
   };
 
+  /// Implementation of the Prometheus Gauge metric.
+  ///
+  /// A gauge is a metric that represents a single numerical value that can
+  /// arbitrarily go up and down.
   public module Gauge {
-    // Env
-    type Env = Types.Environment;
+    /// Configuration for gauge watermarks.
+    public type Env = Types.Environment;
+
+    /// Creates a new gauge environment with the given hold-down period.
+    ///
+    /// The `holdDownSeconds` parameter defines how long a watermark should be
+    /// held before it can be updated by a value that is NOT "more extreme" than
+    /// the current mark.
     public func env(holdDownSeconds : Nat) : Env = {
       var holdDownPeriod = holdDownSeconds.toNat64() * 1_000_000_000;
     };
+    /// Updates the hold-down period for the environment.
     public func setHoldDown(self : Env, seconds : Nat) {
       self.holdDownPeriod := seconds.toNat64() * 1_000_000_000;
     };
@@ -165,8 +214,12 @@ module {
       self.lastMarkTime := time;
     };
 
-    // Gauge
+    /// The gauge state object.
     public type Gauge = Types.Gauge;
+
+    /// Creates a new gauge.
+    ///
+    /// Traps if `limits` are not strictly increasing.
     public func new(parent : Types.Tracker, prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge {
       for (i in Nat_.range(1, limits.size())) {
         if (limits[i] <= limits[i - 1]) {
@@ -187,6 +240,10 @@ module {
         id;
       };
     };
+    /// Returns the `Value` interface for sampling this gauge.
+    ///
+    /// This includes the last value, sum, count, and watermarks.
+    /// If `limits` were provided, it also includes bucket metrics.
     public func value(self : Gauge) : Value = {
       read = func() {
         var metrics = [
@@ -211,6 +268,7 @@ module {
         metrics;
       };
     };
+    /// Updates the gauge with a new value.
     public func update(self : Gauge, value : Nat) {
       self.lastValue := value;
       self.count += 1;
@@ -225,6 +283,7 @@ module {
         self.counters[n] += 1;
       };
     };
+    /// Unregisters the gauge from its parent tracker.
     public func unregister(self : Gauge) {
       self.parent.values := self.parent.values.filter(
         func(v) = switch v {
@@ -235,7 +294,11 @@ module {
     };
   };
 
+  /// Implementation of a Heatmap (histogram-like) metric.
+  ///
+  /// Uses power-of-2 buckets to track the distribution of values.
   public module Heatmap {
+    /// The heatmap state object.
     public type Heatmap = Types.Heatmap;
 
     func getBucketIndex(entry : Nat) : Nat {
@@ -262,6 +325,7 @@ module {
       bucket;
     };
 
+    /// Creates a new heatmap.
     public func new(parent : Types.Tracker, prefix : Text, labels : Text, id : Nat) : Heatmap = {
       parent;
       prefix;
@@ -272,6 +336,7 @@ module {
       id;
     };
 
+    /// Adds a value to the heatmap.
     public func add(self : Heatmap, entry : Nat) {
       self.count += 1;
       self.sum += entry;
@@ -279,6 +344,7 @@ module {
       self.buckets[b] += 1;
     };
 
+    /// Removes a value from the heatmap (decrements its bucket).
     public func remove(self : Heatmap, entry : Nat) {
       self.count -= 1;
       self.sum -= entry;
@@ -286,6 +352,7 @@ module {
       self.buckets[b] -= 1;
     };
 
+    /// Updates a value in the heatmap.
     public func update(self : Heatmap, oldEntryValue : Nat, newEntryValue : Nat) {
       self.sum += newEntryValue;
       self.sum -= oldEntryValue;
@@ -296,6 +363,7 @@ module {
       self.buckets[newB] += 1;
     };
 
+    /// Returns the `Value` interface for sampling this heatmap.
     public func value(self : Heatmap) : Value = {
       read = func() {
         var aggregated : Int = 0;
@@ -315,6 +383,7 @@ module {
         metrics.map(func(s) = mapIntMetric(s)).flatten();
       };
     };
+    /// Unregisters the heatmap from its parent tracker.
     public func unregister(self : Heatmap) {
       self.parent.values := self.parent.values.filter(
         func(v) = switch v {

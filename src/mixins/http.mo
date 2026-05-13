@@ -26,21 +26,3 @@ mixin (text : () -> Text, route : Text) {
     };
   };
 };
-
-// YAML:
-/*
-openapi: 3.1.0
-info:
-  title: metrics
-  version: "1"
-paths:
-  /metrics:
-    get:
-      responses:
-        "200":
-          description: Metrics
-          content:
-            text/plain:
-              schema:
-                type: string
-*/
