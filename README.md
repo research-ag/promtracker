@@ -162,8 +162,6 @@ persistent actor Main {
 
 ```
 
-> **Note**: While `persistent actor` handles persistence of `var` fields in objects, some types in the library (like `List`) or the `Renderer` itself are intentionally designed to be transient or require re-initialization after a canister upgrade. Sticking to the `persistent Tracker` + `transient Renderer` pattern is recommended for full metric state persistence.
-
 ### Counter
 
 A `Counter` is an ever-increasing value.
