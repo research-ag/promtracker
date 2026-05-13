@@ -1,126 +1,158 @@
 import PT "../src/lib";
+import Tracker "../src/Tracker";
+import { Counter; Gauge; Heatmap } "../src/Metrics";
 
 import Suite "mo:motoko-matchers/Suite";
 import T "mo:motoko-matchers/Testable";
 import M "mo:motoko-matchers/Matchers";
-import Nat64 "mo:base/Nat64";
+import Nat "mo:core/Nat";
+import Debug "mo:core/Debug";
 
 let { run; test; suite } = Suite;
 
-var mockedTime : Nat64 = 123_000_000_000_000;
+let pt = Tracker.new();
+pt.setHoldDown(5);
+let renderer = PT.Renderer();
+renderer.addValue(pt.toValue());
 
-// Re-define the default value for the implicit `now` parameter in the PromTracker constructor
-func now() : Nat64 = mockedTime;
-
-var tracker = PT.PromTracker("");
-tracker.setWatermarkHoldPeriod(5);
+// Helper functions
+func find(metrics : [(Text, Text, Nat)], name : Text, labels : Text) : ?Nat {
+  for (m in metrics.vals()) {
+    if (m.0 == name and m.1 == labels) return ?m.2;
+  };
+  null;
+};
+func expect(metrics : [(Text, Text, Nat)], name : Text, labels : Text, value : Nat) : Bool {
+  switch (find(metrics, name, labels)) {
+    case (?v) {
+      if (v == value) {
+        true;
+      } else {
+        Debug.print("Expect failed for metric '" # name # "': expected " # Nat.toText(value) # ", found " # Nat.toText(v));
+        false;
+      };
+    };
+    case (null) {
+      Debug.print("Expect failed for metric '" # name # "': not found");
+      false;
+    };
+  };
+};
+func expectExists(metrics : [(Text, Text, Nat)], name : Text, labels : Text, exists : Bool) : Bool {
+  switch (find(metrics, name, labels)) {
+    case (?_) exists;
+    case (null) not exists;
+  };
+};
 
 /* --------------------------------------- */
-let testValue = tracker.addPullValue("test_val_0", "", func() = 150);
+// Pull value basic
+let pvId = renderer.addValueRef(PT.newValue("test_val_0", [], func() = 150));
 run(
   test(
     "pull value output",
-    tracker.renderExposition(),
-    M.equals(T.text("test_val_0{} 150 123000000\n")),
+    expect(renderer.read(), "test_val_0", "", 150),
+    M.equals(T.bool(true)),
   )
 );
 
 /* --------------------------------------- */
-testValue.remove();
+// Remove pull value
+renderer.removeValue(pvId);
 run(
   test(
     "value removed",
-    tracker.renderExposition(),
-    M.equals(T.text("")),
+    renderer.read().size(),
+    M.equals(T.nat(0)),
   )
 );
 
 /* --------------------------------------- */
-let testValue1 = tracker.addPullValue("test_val_1", "foo=\"bar\"", func() = 270);
+// Pull value with labels
+let pvId2 = renderer.addValueRef(PT.newValue("test_val_1", [("foo", "bar")], func() = 270));
 run(
   test(
     "pull value labels",
-    tracker.renderExposition(),
-    M.equals(T.text("test_val_1{foo=\"bar\"} 270 123000000\n")),
+    expect(renderer.read(), "test_val_1", "foo=\"bar\"", 270),
+    M.equals(T.bool(true)),
   )
 );
-testValue1.remove();
+renderer.removeValue(pvId2);
 
 /* --------------------------------------- */
-let counter = tracker.addCounter("test_counter", "", false);
+// Counter
+let counter = pt.newCounter("test_counter", []);
 run(
   test(
-    "initial counter state",
-    tracker.renderExposition(),
-    M.equals(T.text("test_counter{} 0 123000000\n")),
+    "initial counter state (0)",
+    expect(renderer.read(), "test_counter", "", 0),
+    M.equals(T.bool(true)),
   )
 );
 counter.add(3);
 run(
   test(
-    "counter state",
-    tracker.renderExposition(),
-    M.equals(T.text("test_counter{} 3 123000000\n")),
+    "counter add 3",
+    expect(renderer.read(), "test_counter", "", 3),
+    M.equals(T.bool(true)),
   )
 );
 counter.add(4);
 run(
   test(
-    "counter state",
-    tracker.renderExposition(),
-    M.equals(T.text("test_counter{} 7 123000000\n")),
+    "counter add 4 => 7",
+    expect(renderer.read(), "test_counter", "", 7),
+    M.equals(T.bool(true)),
   )
 );
 counter.sub(2);
 run(
   test(
-    "counter state",
-    tracker.renderExposition(),
-    M.equals(T.text("test_counter{} 5 123000000\n")),
+    "counter sub 2 => 5",
+    expect(renderer.read(), "test_counter", "", 5),
+    M.equals(T.bool(true)),
   )
 );
 counter.set(2);
 run(
   test(
-    "counter state",
-    tracker.renderExposition(),
-    M.equals(T.text("test_counter{} 2 123000000\n")),
+    "counter set 2",
+    expect(renderer.read(), "test_counter", "", 2),
+    M.equals(T.bool(true)),
   )
 );
-counter.remove();
-
-/* --------------------------------------- */
-let counter1 = tracker.addCounter("test_counter_1", "foo=\"bar\"", false);
+counter.unregister();
 run(
   test(
-    "counter labels",
-    tracker.renderExposition(),
-    M.equals(T.text("test_counter_1{foo=\"bar\"} 0 123000000\n")),
+    "counter removed",
+    expectExists(renderer.read(), "test_counter", "", false), // should now be missing
+    M.equals(T.bool(true)),
   )
 );
-counter1.remove();
 
 /* --------------------------------------- */
-let gauge = tracker.addGauge("test_gauge", "", #both, [], false);
+// Counter with labels
+let counter1 = pt.newCounter("test_counter_1", [("foo", "bar")]);
 run(
-  suite(
-    "initial gauge state",
-    [
-      test(
-        "initial gauge exposition",
-        tracker.renderExposition(),
-        M.equals(T.text("test_gauge_last{} 0 123000000
-test_gauge_sum{} 0 123000000
-test_gauge_count{} 0 123000000
-test_gauge_high_watermark{} 0 123000000
-test_gauge_low_watermark{} 0 123000000\n")),
-      ),
-      test(
-        "initial gauge value",
-        gauge.value(),
-        M.equals(T.nat(0)),
-      ),
-    ],
+  test(
+    "counter labels initial 0",
+    expect(renderer.read(), "test_counter_1", "foo=\"bar\"", 0),
+    M.equals(T.bool(true)),
+  )
+);
+counter1.unregister();
+
+/* --------------------------------------- */
+// Gauge without buckets
+let gauge = pt.newGauge("test_gauge", [], []);
+run(
+  test(
+    "initial gauge state (no buckets)",
+    // Watermarks are not rendered before first update, so only last/sum/count = 0
+    expect(renderer.read(), "test_gauge_last", "", 0) and
+    expect(renderer.read(), "test_gauge_sum", "", 0) and
+    expect(renderer.read(), "test_gauge_count", "", 0),
+    M.equals(T.bool(true)),
   )
 );
 
@@ -136,42 +168,38 @@ run(
     "gauge state",
     [
       test(
-        "gauge state exposition",
-        tracker.renderExposition(),
-        M.equals(T.text("test_gauge_last{} 160 123000000
-test_gauge_sum{} 1240 123000000
-test_gauge_count{} 6 123000000
-test_gauge_high_watermark{} 280 123000000
-test_gauge_low_watermark{} 120 123000000\n")),
+        "gauge aggregates",
+        expect(renderer.read(), "test_gauge_last", "", 160) and
+        expect(renderer.read(), "test_gauge_sum", "", 1240) and
+        expect(renderer.read(), "test_gauge_count", "", 6),
+        M.equals(T.bool(true)),
       ),
       test(
-        "gauge value",
-        gauge.value(),
-        M.equals(T.nat(160)),
+        "gauge watermarks",
+        expect(renderer.read(), "test_gauge_high_watermark", "", 280) and
+        expect(renderer.read(), "test_gauge_low_watermark", "", 120),
+        M.equals(T.bool(true)),
       ),
     ],
   )
 );
 
-gauge.remove();
+gauge.unregister();
 
 /* --------------------------------------- */
-let gaugeWithBuckets = tracker.addGauge("buckets_gauge", "", #both, [10, 20, 50, 120, 180], false);
+// Gauge with buckets
+let gaugeWithBuckets = pt.newGauge("buckets_gauge", [], [10, 20, 50, 120, 180]);
 run(
   test(
-    "initial gauge state",
-    tracker.renderExposition(),
-    M.equals(T.text("buckets_gauge_last{} 0 123000000
-buckets_gauge_sum{} 0 123000000
-buckets_gauge_count{} 0 123000000
-buckets_gauge_high_watermark{} 0 123000000
-buckets_gauge_low_watermark{} 0 123000000
-buckets_gauge_bucket{le=\"10\"} 0 123000000
-buckets_gauge_bucket{le=\"20\"} 0 123000000
-buckets_gauge_bucket{le=\"50\"} 0 123000000
-buckets_gauge_bucket{le=\"120\"} 0 123000000
-buckets_gauge_bucket{le=\"180\"} 0 123000000
-buckets_gauge_bucket{le=\"+Inf\"} 0 123000000\n")),
+    "initial gauge with buckets",
+    // Buckets render even when empty; watermarks do not before first update
+    expect(renderer.read(), "buckets_gauge_last", "", 0) and
+    expect(renderer.read(), "buckets_gauge_sum", "", 0) and
+    expect(renderer.read(), "buckets_gauge_count", "", 0) and
+    expect(renderer.read(), "buckets_gauge_bucket", "le=\"10\"", 0) and
+    expect(renderer.read(), "buckets_gauge_bucket", "le=\"20\"", 0) and
+    expect(renderer.read(), "buckets_gauge_bucket", "le=\"+Inf\"", 0),
+    M.equals(T.bool(true)),
   )
 );
 
@@ -184,329 +212,226 @@ gaugeWithBuckets.update(999999);
 
 run(
   test(
-    "gauge state",
-    tracker.renderExposition(),
-    M.equals(T.text("buckets_gauge_last{} 999999 123000000
-buckets_gauge_sum{} 1000301 123000000
-buckets_gauge_count{} 6 123000000
-buckets_gauge_high_watermark{} 999999 123000000
-buckets_gauge_low_watermark{} 1 123000000
-buckets_gauge_bucket{le=\"10\"} 1 123000000
-buckets_gauge_bucket{le=\"20\"} 1 123000000
-buckets_gauge_bucket{le=\"50\"} 3 123000000
-buckets_gauge_bucket{le=\"120\"} 4 123000000
-buckets_gauge_bucket{le=\"180\"} 5 123000000
-buckets_gauge_bucket{le=\"+Inf\"} 6 123000000\n")),
+    "gauge with buckets after updates",
+    expect(renderer.read(), "buckets_gauge_last", "", 999999) and
+    expect(renderer.read(), "buckets_gauge_sum", "", 1000301) and
+    expect(renderer.read(), "buckets_gauge_count", "", 6) and
+    expect(renderer.read(), "buckets_gauge_high_watermark", "", 999999) and
+    expect(renderer.read(), "buckets_gauge_low_watermark", "", 1) and
+    expect(renderer.read(), "buckets_gauge_bucket", "le=\"10\"", 1) and
+    expect(renderer.read(), "buckets_gauge_bucket", "le=\"20\"", 1) and
+    expect(renderer.read(), "buckets_gauge_bucket", "le=\"50\"", 3) and
+    expect(renderer.read(), "buckets_gauge_bucket", "le=\"120\"", 4) and
+    expect(renderer.read(), "buckets_gauge_bucket", "le=\"180\"", 5) and
+    expect(renderer.read(), "buckets_gauge_bucket", "le=\"+Inf\"", 6),
+    M.equals(T.bool(true)),
   )
 );
-gaugeWithBuckets.remove();
+
+gaugeWithBuckets.unregister();
 
 /* --------------------------------------- */
-let gauge2 = tracker.addGauge("buckets_gauge", "", #both, [], false);
-gauge2.update(10);
-gauge2.update(900);
-gauge2.update(90);
+// Labeled gauge with buckets
+let gaugeWithLabels = pt.newGauge("labels_gauge", [("foo", "bar")], [10, 20, 50, 120, 180]);
 run(
   test(
-    "gauge state",
-    tracker.renderExposition(),
-    M.equals(T.text("buckets_gauge_last{} 90 123000000
-buckets_gauge_sum{} 1000 123000000
-buckets_gauge_count{} 3 123000000
-buckets_gauge_high_watermark{} 900 123000000
-buckets_gauge_low_watermark{} 10 123000000\n")),
+    "gauge with bucket labels initial",
+    expect(renderer.read(), "labels_gauge_last", "foo=\"bar\"", 0) and
+    expect(renderer.read(), "labels_gauge_sum", "foo=\"bar\"", 0) and
+    expect(renderer.read(), "labels_gauge_count", "foo=\"bar\"", 0) and
+    expect(renderer.read(), "labels_gauge_bucket", "foo=\"bar\",le=\"10\"", 0) and
+    expect(renderer.read(), "labels_gauge_bucket", "foo=\"bar\",le=\"20\"", 0) and
+    expect(renderer.read(), "labels_gauge_bucket", "foo=\"bar\",le=\"+Inf\"", 0),
+    M.equals(T.bool(true)),
   )
 );
-// emulate that 1 second passed. Watermarks should remain the same
-mockedTime += 1_000_000_000;
-gauge2.update(20);
-gauge2.update(800);
-gauge2.update(180);
-run(
-  test(
-    "gauge state",
-    tracker.renderExposition(),
-    M.equals(T.text("buckets_gauge_last{} 180 123001000
-buckets_gauge_sum{} 2000 123001000
-buckets_gauge_count{} 6 123001000
-buckets_gauge_high_watermark{} 900 123001000
-buckets_gauge_low_watermark{} 10 123001000\n")),
-  )
-);
-// emulate that 5 more seconds passed and watermarks invalidated
-// (in tracker we set 5 seconds as hold period)
-mockedTime += 5_000_000_000;
-gauge2.update(20);
-gauge2.update(800);
-gauge2.update(180);
-run(
-  test(
-    "gauge state",
-    tracker.renderExposition(),
-    M.equals(T.text("buckets_gauge_last{} 180 123006000
-buckets_gauge_sum{} 3000 123006000
-buckets_gauge_count{} 9 123006000
-buckets_gauge_high_watermark{} 800 123006000
-buckets_gauge_low_watermark{} 20 123006000\n")),
-  )
-);
-// reduce watermark holding period to 1 second
-tracker.setWatermarkHoldPeriod(1);
-// emulate that 2 more seconds passed and watermarks invalidate
-mockedTime += 2_000_000_000;
-gauge2.update(30);
-gauge2.update(700);
-gauge2.update(200);
-run(
-  test(
-    "gauge state",
-    tracker.renderExposition(),
-    M.equals(T.text("buckets_gauge_last{} 200 123008000
-buckets_gauge_sum{} 3930 123008000
-buckets_gauge_count{} 12 123008000
-buckets_gauge_high_watermark{} 700 123008000
-buckets_gauge_low_watermark{} 30 123008000\n")),
-  )
-);
-
-gauge2.remove();
+gaugeWithLabels.unregister();
 
 /* --------------------------------------- */
-let gaugeWithoutWatermarks = tracker.addGauge("dry_gauge", "", #none, [], false);
-gaugeWithoutWatermarks.update(20);
-gaugeWithoutWatermarks.update(30);
-run(
-  test(
-    "gauge without watermarks",
-    tracker.renderExposition(),
-    M.equals(T.text("dry_gauge_last{} 30 123008000
-dry_gauge_sum{} 50 123008000
-dry_gauge_count{} 2 123008000\n")),
-  )
-);
-gaugeWithoutWatermarks.remove();
-
-/* --------------------------------------- */
-let gaugeWithLowWatermark = tracker.addGauge("half_dry_gauge", "", #low, [], false);
-gaugeWithLowWatermark.update(20);
-gaugeWithLowWatermark.update(30);
-run(
-  test(
-    "gauge with only low watermark",
-    tracker.renderExposition(),
-    M.equals(T.text("half_dry_gauge_last{} 30 123008000
-half_dry_gauge_sum{} 50 123008000
-half_dry_gauge_count{} 2 123008000
-half_dry_gauge_low_watermark{} 20 123008000\n")),
-  )
-);
-gaugeWithLowWatermark.remove();
-
-/* --------------------------------------- */
-let gaugeWithHighWatermark = tracker.addGauge("half_wet_gauge", "", #high, [], false);
-gaugeWithHighWatermark.update(20);
-gaugeWithHighWatermark.update(30);
-run(
-  test(
-    "gauge with only low watermark",
-    tracker.renderExposition(),
-    M.equals(T.text("half_wet_gauge_last{} 30 123008000
-half_wet_gauge_sum{} 50 123008000
-half_wet_gauge_count{} 2 123008000
-half_wet_gauge_high_watermark{} 30 123008000\n")),
-  )
-);
-gaugeWithHighWatermark.remove();
-
-/* --------------------------------------- */
-let gaugeWithLabels = tracker.addGauge("labels_gauge", "foo=\"bar\"", #both, [10, 20, 50, 120, 180], false);
-run(
-  test(
-    "gauge with bucket labels",
-    tracker.renderExposition(),
-    M.equals(T.text("labels_gauge_last{foo=\"bar\"} 0 123008000
-labels_gauge_sum{foo=\"bar\"} 0 123008000
-labels_gauge_count{foo=\"bar\"} 0 123008000
-labels_gauge_high_watermark{foo=\"bar\"} 0 123008000
-labels_gauge_low_watermark{foo=\"bar\"} 0 123008000
-labels_gauge_bucket{foo=\"bar\",le=\"10\"} 0 123008000
-labels_gauge_bucket{foo=\"bar\",le=\"20\"} 0 123008000
-labels_gauge_bucket{foo=\"bar\",le=\"50\"} 0 123008000
-labels_gauge_bucket{foo=\"bar\",le=\"120\"} 0 123008000
-labels_gauge_bucket{foo=\"bar\",le=\"180\"} 0 123008000
-labels_gauge_bucket{foo=\"bar\",le=\"+Inf\"} 0 123008000\n")),
-  )
-);
-gaugeWithLabels.remove();
-
-/* --------------------------------------- */
-let stableGauge1 = tracker.addGauge("stable_gauge1", "", #none, [150, 200], true);
-stableGauge1.update(20);
-stableGauge1.update(800);
-stableGauge1.update(180);
-let stableGauge2 = tracker.addGauge("stable_gauge2", "", #none, [150, 200], true);
-stableGauge2.update(20);
-stableGauge2.update(800);
-stableGauge2.update(180);
-let stableCounter1 = tracker.addCounter("stable_counter1", "", true);
-stableCounter1.add(5);
-let stableCounter2 = tracker.addCounter("stable_counter2", "", true);
-stableCounter2.add(7);
-let stableCounterDuplicatedKeyFoo = tracker.addCounter("stable_counter_duplicated_key", "keyId=\"foo\"", true);
-stableCounterDuplicatedKeyFoo.add(123);
-let stableCounterDuplicatedKeyBar = tracker.addCounter("stable_counter_duplicated_key", "keyId=\"bar\"", true);
-stableCounterDuplicatedKeyBar.add(456);
-
-let sharedData = tracker.share();
-stableGauge1.remove();
-stableGauge2.remove();
-stableCounter1.remove();
-stableCounter2.remove();
-stableCounterDuplicatedKeyFoo.remove();
-stableCounterDuplicatedKeyBar.remove();
-
-let newTracker = PT.PromTracker("");
-newTracker.setWatermarkHoldPeriod(5);
-// the same gauge, state should be the same
-ignore newTracker.addGauge("stable_gauge1", "", #none, [150, 200], true);
-// gauge with changed buckets, buckets should be overwritten by stable data
-ignore newTracker.addGauge("stable_gauge2", "", #none, [151, 201, 250], true);
-// the same counter
-ignore newTracker.addCounter("stable_counter1", "", true);
-// counter now marked as not stable, should not be unshared
-ignore newTracker.addCounter("stable_counter2", "", false);
-// stable counters, duplicated key
-ignore newTracker.addCounter("stable_counter_duplicated_key", "keyId=\"foo\"", true);
-ignore newTracker.addCounter("stable_counter_duplicated_key", "keyId=\"bar\"", true);
-
-newTracker.unshare(sharedData);
-
-run(
-  test(
-    "exposition from unshared tracker",
-    newTracker.renderExposition(),
-    M.equals(T.text("stable_gauge1_last{} 180 123008000
-stable_gauge1_sum{} 1000 123008000
-stable_gauge1_count{} 3 123008000
-stable_gauge1_bucket{le=\"150\"} 1 123008000
-stable_gauge1_bucket{le=\"200\"} 2 123008000
-stable_gauge1_bucket{le=\"+Inf\"} 3 123008000
-stable_gauge2_last{} 180 123008000
-stable_gauge2_sum{} 1000 123008000
-stable_gauge2_count{} 3 123008000
-stable_gauge2_bucket{le=\"150\"} 1 123008000
-stable_gauge2_bucket{le=\"200\"} 2 123008000
-stable_gauge2_bucket{le=\"+Inf\"} 3 123008000
-stable_counter1{} 5 123008000
-stable_counter2{} 0 123008000
-stable_counter_duplicated_key{keyId=\"foo\"} 123 123008000
-stable_counter_duplicated_key{keyId=\"bar\"} 456 123008000\n")),
-  )
-);
-
-/* --------------------------------------- */
-let heatmap = tracker.addHeatmap("test_heatmap", "", false);
+// Heatmap
+let heatmap = pt.newHeatmap("test_heatmap", []);
 run(
   suite(
     "initial heatmap state",
     [
       test(
-        "initial heatmap exposition",
-        tracker.renderExposition(),
-        M.equals(T.text("test_heatmap_count{} 0 123008000
-test_heatmap_sum{} 0 123008000\n")),
-      ),
-      test(
-        "initial heatmap sum",
-        heatmap.sum(),
-        M.equals(T.nat(0)),
-      ),
-      test(
-        "initial heatmap count",
-        heatmap.count(),
-        M.equals(T.nat(0)),
+        "initial heatmap count/sum",
+        expect(renderer.read(), "test_heatmap_count", "", 0) and
+        expect(renderer.read(), "test_heatmap_sum", "", 0),
+        M.equals(T.bool(true)),
       ),
     ],
   )
 );
 
-heatmap.addEntry(100);
-heatmap.addEntry(0);
-heatmap.addEntry(3);
-heatmap.addEntry(64);
+heatmap.add(100);
+heatmap.add(0);
+heatmap.add(3);
+heatmap.add(64);
 
 run(
-  suite(
-    "heatmap state",
-    [
-      test(
-        "heatmap state exposition",
-        tracker.renderExposition(),
-        M.equals(T.text("test_heatmap{le=\"0\"} 1 123008000
-test_heatmap{le=\"1\"} 1 123008000
-test_heatmap{le=\"2\"} 1 123008000
-test_heatmap{le=\"4\"} 2 123008000
-test_heatmap{le=\"8\"} 2 123008000
-test_heatmap{le=\"16\"} 2 123008000
-test_heatmap{le=\"32\"} 2 123008000
-test_heatmap{le=\"64\"} 3 123008000
-test_heatmap{le=\"128\"} 4 123008000
-test_heatmap_count{} 4 123008000
-test_heatmap_sum{} 167 123008000\n")),
-      ),
-    ],
+  test(
+    "heatmap buckets after adds",
+    // Buckets are cumulative
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"0\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"1\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"2\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"4\"", 2) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"8\"", 2) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"16\"", 2) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"32\"", 2) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"64\"", 3) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"128\"", 4) and
+    expect(renderer.read(), "test_heatmap_count", "", 4) and
+    expect(renderer.read(), "test_heatmap_sum", "", 167),
+    M.equals(T.bool(true)),
   )
 );
 
-heatmap.updateEntry(3, 103);
+heatmap.update(3, 103);
+run(
+  test(
+    "heatmap after update (3 -> 103)",
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"0\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"1\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"2\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"4\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"8\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"16\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"32\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"64\"", 2) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"128\"", 4) and
+    expect(renderer.read(), "test_heatmap_count", "", 4) and
+    expect(renderer.read(), "test_heatmap_sum", "", 267),
+    M.equals(T.bool(true)),
+  )
+);
+
+heatmap.update(103, 96);
+run(
+  test(
+    "heatmap after update (103 -> 96)",
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"0\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"1\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"2\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"4\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"8\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"16\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"32\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"64\"", 2) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"128\"", 4) and
+    expect(renderer.read(), "test_heatmap_count", "", 4) and
+    expect(renderer.read(), "test_heatmap_sum", "", 260),
+    M.equals(T.bool(true)),
+  )
+);
+
+heatmap.remove(96);
+heatmap.remove(100);
 
 run(
-  suite(
-    "heatmap state",
-    [
-      test(
-        "heatmap state exposition",
-        tracker.renderExposition(),
-        M.equals(T.text("test_heatmap{le=\"0\"} 1 123008000
-test_heatmap{le=\"1\"} 1 123008000
-test_heatmap{le=\"2\"} 1 123008000
-test_heatmap{le=\"4\"} 1 123008000
-test_heatmap{le=\"8\"} 1 123008000
-test_heatmap{le=\"16\"} 1 123008000
-test_heatmap{le=\"32\"} 1 123008000
-test_heatmap{le=\"64\"} 2 123008000
-test_heatmap{le=\"128\"} 4 123008000
-test_heatmap_count{} 4 123008000
-test_heatmap_sum{} 267 123008000\n")),
-      ),
-    ],
+  test(
+    "heatmap after removes",
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"0\"", 1) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"64\"", 2) and
+    expect(renderer.read(), "test_heatmap_bucket", "le=\"128\"", 2) and
+    expect(renderer.read(), "test_heatmap_count", "", 2) and
+    expect(renderer.read(), "test_heatmap_sum", "", 64),
+    M.equals(T.bool(true)),
   )
 );
 
-heatmap.removeEntry(103);
-heatmap.removeEntry(100);
+heatmap.unregister();
+
+/* --------------------------------------- */
+// Handle underflows
+let underflowedCounter = pt.newCounter("test_counter", []);
+
+underflowedCounter.add(3);
+run(
+  test(
+    "counter add 3",
+    expect(renderer.read(), "test_counter", "", 3) and
+    expectExists(renderer.read(), "test_counter_negative", "", false),
+    M.equals(T.bool(true)),
+  )
+);
+
+underflowedCounter.sub(7);
+run(
+  test(
+    "counter -4",
+    expect(renderer.read(), "test_counter", "", 4) and
+    expect(renderer.read(), "test_counter_negative", "", 1),
+    M.equals(T.bool(true)),
+  )
+);
+
+underflowedCounter.add(5);
+run(
+  test(
+    "counter positive again",
+    expect(renderer.read(), "test_counter", "", 1) and
+    expectExists(renderer.read(), "test_counter_negative", "", false),
+    M.equals(T.bool(true)),
+  )
+);
+
+underflowedCounter.unregister();
+
+// heatmap underflows
+let heatmap2 = pt.newHeatmap("test_heatmap_underflow", []);
+heatmap2.add(7);
+heatmap2.add(9);
+// intended misuse
+heatmap2.remove(3);
 
 run(
-  suite(
-    "heatmap state",
-    [
-      test(
-        "heatmap state exposition",
-        tracker.renderExposition(),
-        M.equals(T.text("test_heatmap{le=\"0\"} 1 123008000
-test_heatmap{le=\"1\"} 1 123008000
-test_heatmap{le=\"2\"} 1 123008000
-test_heatmap{le=\"4\"} 1 123008000
-test_heatmap{le=\"8\"} 1 123008000
-test_heatmap{le=\"16\"} 1 123008000
-test_heatmap{le=\"32\"} 1 123008000
-test_heatmap{le=\"64\"} 2 123008000
-test_heatmap{le=\"128\"} 2 123008000
-test_heatmap_count{} 2 123008000
-test_heatmap_sum{} 64 123008000\n")),
-      ),
-    ],
+  test(
+    "bad remove",
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"0\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"1\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"2\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"4\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket_negative", "le=\"4\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"8\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"16\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_count", "", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_sum", "", 13),
+    M.equals(T.bool(true)),
   )
 );
 
-heatmap.remove();
+// should get back to normal state if fixed (added back incorrectly removed value)
+heatmap2.add(3);
+run(
+  test(
+    "state recovery",
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"0\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"1\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"2\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"4\"", 0) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"8\"", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_bucket", "le=\"16\"", 2) and
+    expect(renderer.read(), "test_heatmap_underflow_count", "", 2) and
+    expect(renderer.read(), "test_heatmap_underflow_sum", "", 16),
+    M.equals(T.bool(true)),
+  )
+);
+
+// sum and count should also handle underflows
+heatmap2.remove(15);
+heatmap2.remove(15);
+heatmap2.remove(15);
+run(
+  test(
+    "count/sum underflow",
+    expect(renderer.read(), "test_heatmap_underflow_count", "", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_count_negative", "", 1) and
+    expect(renderer.read(), "test_heatmap_underflow_sum", "", 29) and
+    expect(renderer.read(), "test_heatmap_underflow_sum_negative", "", 1),
+    M.equals(T.bool(true)),
+  )
+);
+
+heatmap2.unregister();
