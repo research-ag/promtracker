@@ -20,8 +20,8 @@ This skill provides guidelines for agents to integrate and use `promtracker` in 
 
 ```motoko
 import PT "mo:promtracker";
-import Http "mo:promtracker/mixins/http";
-
+import Http "mo:promtracker/mixins/http"; // For simple setup
+import Http_ "mo:promtracker/Http";       // For custom manual setup
 ```
 
 ### 2. Initialize Renderer (and optionally Tracker)
@@ -99,6 +99,36 @@ renderer.addValue(PT.newValue("uptime_seconds", [], uptime));
 
 ```
 
+### 4. Custom HTTP Endpoints
+
+If you need to serve other custom routes alongside `/metrics`, you must implement `http_request` manually instead of using the `Http` mixin.
+
+```motoko
+import PT "mo:promtracker";
+import Http "mo:promtracker/Http";
+
+persistent actor Main {
+  transient let renderer = PT.Renderer();
+
+  public query func http_request(req : Http.Request) : async Http.Response {
+    let ?path = req.url.split(#char '?').next() else return Http.render400();
+    switch (req.method, path) {
+      case ("GET", "/metrics") {
+        // Use renderer.renderExposition() for Prometheus metrics
+        Http.renderPlainText(renderer.renderExposition());
+      };
+      case ("GET", "/hello") {
+        Http.renderPlainText("Hello, world!");
+      };
+      case (_) Http.render400();
+    };
+  };
+
+  // Initialize renderer as usual
+  renderer.addValue(PT.allSystemMetrics);
+};
+```
+
 ## Adding Metrics
 
 ### System Metrics
@@ -158,6 +188,6 @@ renderer.addValue(PT.newValue("custom_metric", [], func() = 42));
 1. **Labels**: Use labels to differentiate dimensions of the same metric instead of creating many metrics with different names. Traps if label names are invalid.
 2. **Transient Renderer**: Always use a `transient` variable for the `Renderer` and initialize it in the actor body (or constructor).
 3. **Optional Tracker**: Use a `Tracker` only if you need stateful metrics like counters or gauges. For simple system metric monitoring, the `Renderer` alone is sufficient.
-4. **Use Mixins**: Prefer using provided mixins (e.g., `mo:promtracker/mixins/http`) instead of manual implementations of `http_request`.
+4. **Use Mixins**: Prefer using provided mixins (e.g., `mo:promtracker/mixins/http`) for simple cases. If you need multiple custom HTTP routes, implement `http_request` manually using `renderer.renderExposition()`.
 5. **Hierarchy**: Use `pt.newTracker([("subsystem", "api")])` to create nested trackers for better organization.
-6. **Exposition Format**: Prometheus expects metrics to be served as plain text. The `Http` mixin handles this automatically.
+6. **Exposition Format**: Prometheus expects metrics to be served as plain text. The `Http` mixin and `Http.renderPlainText` helper handle this automatically.

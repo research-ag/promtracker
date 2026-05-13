@@ -14,16 +14,16 @@ The library provides a two-layer approach to metric tracking:
 
 ```mermaid
 graph TD
+
     subgraph Tracked [Tracked / Stateful]
-        direction LR
         Tracker["Tracker (Persistent)"]
-        NestedTracker["Tracker"]
+        T["Tracker"]
         Counter["Counter"]
         Gauge["Gauge"]
         Heatmap["Heatmap"]
 
-        Tracker --> NestedTracker
-        NestedTracker --> Counter
+        Tracker --> T
+        Tracker --> Counter
         Tracker --> Gauge
         Tracker --> Heatmap
     end
@@ -33,25 +33,23 @@ graph TD
     end
 
     subgraph Values [Values]
-        direction LR
         V1["Value"]
         V2["Value"]
     end
 
-    Tracker -- "toValue()" --> V1
-    Renderer["Renderer (Transient)"] -- "manages" --> Values
+    Tracker -- "toValue()" --> V2
     PullValue -- "implements" --> V1
 
     subgraph Metrics [Metrics]
-        direction LR
         M1["Metric"]
         M2["Metric"]
     end
 
     V1 -- "read()" --> Metrics
 
-    M1 & M2 -- "render()" --> Output["Prometheus Exposition Format"]
+    Renderer -- "manages" --> Values
     Renderer -- "collects & renders" --> Output
+    M2 -- "render()" --> Output["Prometheus Exposition Format"]
 
     style Renderer fill:#f9f,stroke:#333,stroke-width:2px
     style Tracker fill:#bbf,stroke:#333,stroke-width:2px
