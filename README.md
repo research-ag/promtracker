@@ -121,6 +121,12 @@ persistent actor Main {
 
 Here, the third argument can be any function `() -> Nat` that returns the current value.
 
+Metrics render like this:
+
+```text
+cycles{canister="tl4x7"} 1497180100444 1770400321653
+```
+
 ### Labels
 
 Prometheus labels can be added at different levels:
@@ -138,6 +144,13 @@ let ctr = pt.newCounter("my_counter", [("id", "1"), ("tier", "api")]);
 // Per-metric labels on a pull value
 renderer.addValue(PT.newValue("my_pull", [("type", "test")], func() = 42));
 
+```
+
+Metrics render like this:
+
+```text
+my_counter{canister="tl4x7",env="prod",id="1",tier="api"} 0 1770400321653
+my_pull{canister="tl4x7",env="prod",type="test"} 42 1770400321653
 ```
 
 ### Persistence
@@ -175,6 +188,12 @@ public func handle_get() {
 
 ```
 
+Metrics render like this:
+
+```text
+requests_total{canister="tl4x7",method="get"} 1 1770400321653
+```
+
 ### Gauge
 
 A `Gauge` represents a value that can go up and down. It automatically tracks high/low watermarks and a histogram of all values seen since the last scrape.
@@ -187,6 +206,18 @@ public func process(duration : Nat) {
   processing_time.update(duration);
 };
 
+```
+
+Metrics render like this:
+
+```text
+processing_time_last{canister="tl4x7"} 150 1770400321653
+processing_time_sum{canister="tl4x7"} 150 1770400321653
+processing_time_count{canister="tl4x7"} 1 1770400321653
+processing_time_bucket{canister="tl4x7",le="100"} 0 1770400321653
+processing_time_bucket{canister="tl4x7",le="200"} 1 1770400321653
+processing_time_bucket{canister="tl4x7",le="500"} 1 1770400321653
+processing_time_bucket{canister="tl4x7",le="+Inf"} 1 1770400321653
 ```
 
 You can also change the default 302-second hold-down period for watermarks (useful if your scraping interval is not 5 minutes):
@@ -207,6 +238,53 @@ let latencies = pt.newHeatmap("request_latency", []);
 public func record(ms : Nat) {
   latencies.update(ms);
 };
+
+```
+
+Metrics render like this:
+
+```text
+request_latency_bucket{canister="tl4x7",le="0"} 0 1770400321653
+request_latency_bucket{canister="tl4x7",le="1"} 0 1770400321653
+request_latency_bucket{canister="tl4x7",le="2"} 0 1770400321653
+request_latency_bucket{canister="tl4x7",le="4"} 0 1770400321653
+request_latency_bucket{canister="tl4x7",le="8"} 0 1770400321653
+request_latency_bucket{canister="tl4x7",le="16"} 0 1770400321653
+request_latency_bucket{canister="tl4x7",le="32"} 0 1770400321653
+request_latency_bucket{canister="tl4x7",le="64"} 0 1770400321653
+request_latency_bucket{canister="tl4x7",le="128"} 1 1770400321653
+request_latency_count{canister="tl4x7"} 1 1770400321653
+request_latency_sum{canister="tl4x7"} 120 1770400321653
+```
+
+### Advanced Usage
+
+#### Bundling
+
+Multiple `Value` objects can be bundled into a single `Value`. This is useful for grouping related metrics and adding common labels to them.
+
+```motoko
+let bundled = [
+  PT.newValue("metric_a", [], func() = 10),
+  PT.newValue("metric_b", [], func() = 20),
+].bundle([("group", "example")]);
+
+renderer.addValue(bundled);
+
+```
+
+> **Note:** The dot notation `[...].bundle(...)` requires the `PT` module to be imported. Alternatively, you can use the traditional function call: `PT.bundle([metric1, metric2], labels)`.
+
+#### Nested Trackers
+
+Trackers can be nested to create a hierarchy of metrics. Each nested tracker can have its own set of labels which are prepended to all metrics within it.
+
+```motoko
+let apiTracker = pt.newTracker([("module", "api")]);
+let userTracker = pt.newTracker([("module", "user")]);
+
+let apiRequests = apiTracker.newCounter("requests_total", []);
+let userRegistrations = userTracker.newCounter("registrations_total", []);
 
 ```
 
