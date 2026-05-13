@@ -19,19 +19,19 @@ import Label "Label";
 import Types "internal/Types";
 
 module {
-  /// Passthrough for `Metrics.Counter.Counter`.
+  /// A cumulative, monotonically increasing counter.
   public type Counter = Types.Counter;
 
-  /// Passthrough for `Metrics.Gauge.Gauge`.
+  /// A numerical value that can arbitrarily go up and down.
   public type Gauge = Types.Gauge;
 
-  /// Passthrough for `Metrics.Heatmap.Heatmap`.
+  /// A histogram-like metric using power-of-2 buckets.
   public type Heatmap = Types.Heatmap;
 
   /// The tracker state object.
   public type Tracker = Types.Tracker;
 
-  /// Passthrough for `Metrics.Value`.
+  /// A source of one or more metrics.
   public type Value = Metrics.Value;
 
   /// Returns a `canister="id"` label for the given actor.

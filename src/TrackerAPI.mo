@@ -19,16 +19,16 @@ import Types "internal/Types";
 import Tracker "Tracker";
 
 module {
-  /// Passthrough for `Metrics.Counter.Counter`.
+  /// A cumulative, monotonically increasing counter.
   public type Counter = Types.Counter;
 
-  /// Passthrough for `Metrics.Gauge.Gauge`.
+  /// A numerical value that can arbitrarily go up and down.
   public type Gauge = Types.Gauge;
 
-  /// Passthrough for `Metrics.Heatmap.Heatmap`.
+  /// A histogram-like metric using power-of-2 buckets.
   public type Heatmap = Types.Heatmap;
 
-  /// Passthrough for `Tracker.Tracker`.
+  /// A hierarchical metric tracker.
   public type Tracker = Types.Tracker;
 
   /// Adds a single label to the tracker.

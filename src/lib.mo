@@ -4,7 +4,7 @@
 /// and re-exports the `Tracker` and metric types for convenience.
 ///
 /// ```motoko name=import
-/// import PromTracker "mo:promtracker/Tracker";
+/// import PromTracker "mo:promtracker";
 /// ```
 
 import Array_ "mo:core/Array";
@@ -17,46 +17,69 @@ import T "Tracker";
 import Label "Label";
 
 module {
-  /// Passthrough for `Tracker.Tracker`.
+  /// A hierarchical metric tracker.
+  ///
+  /// Trackers allow for organizational grouping of metrics. A tracker can
+  /// contain counters, gauges, heatmaps, and other nested trackers.
+  ///
+  /// Use `Tracker.new()` to create a top-level tracker.
   public type Tracker = T.Tracker;
 
-  /// Passthrough for `Metrics.Counter.Counter`.
+  /// A cumulative, monotonically increasing counter.
+  ///
+  /// A counter is used to track values that only go up, such as the number of requests
+  /// served or errors encountered.
+  ///
+  /// Use `Counter.add(counter, n)` to increase the value.
   public type Counter = Metrics.Counter.Counter;
 
-  /// Passthrough for `Metrics.Gauge.Gauge`.
+  /// A numerical value that can arbitrarily go up and down.
+  ///
+  /// Gauges are typically used for measured values like temperature or current
+  /// memory usage, but also "counts" that can go up and down, like the number of
+  /// concurrent requests.
+  ///
+  /// Use `Gauge.update(gauge, value)` to set the current value.
   public type Gauge = Metrics.Gauge.Gauge;
 
-  /// Passthrough for `Metrics.Heatmap.Heatmap`.
+  /// A histogram-like metric using power-of-2 buckets.
+  ///
+  /// Heatmaps track the distribution of values by counting them into buckets.
+  /// This implementation uses automatic power-of-2 bucket boundaries.
+  ///
+  /// Use `Heatmap.add(heatmap, value)` to record a new observation.
   public type Heatmap = Metrics.Heatmap.Heatmap;
 
-  /// Passthrough for the `Tracker` module.
+  /// Module for creating and managing trackers.
   public let Tracker = T;
 
-  /// Passthrough for the `Counter` module.
+  /// Module for creating and managing counter metrics.
   public let Counter = Metrics.Counter;
 
-  /// Passthrough for the `Gauge` module.
+  /// Module for creating and managing gauge metrics.
   public let Gauge = Metrics.Gauge;
 
-  /// Passthrough for the `Heatmap` module.
+  /// Module for creating and managing heatmap metrics.
   public let Heatmap = Metrics.Heatmap;
 
-  /// Passthrough for `Metrics.cyclesBalanceMetric`.
+  /// Returns a metric for the current canister cycles balance.
   public let cyclesBalanceMetric = Metrics.cyclesBalanceMetric;
 
-  /// Passthrough for `Metrics.canisterVersionMetric`.
+  /// Returns a metric for the current canister version.
   public let canisterVersionMetric = Metrics.canisterVersionMetric;
 
-  /// Passthrough for `Metrics.allSystemMetrics`.
+  /// Returns a bundle of all available IC system and RTS metrics.
   public let allSystemMetrics = Metrics.allSystemMetrics;
 
-  /// Passthrough for `Metrics.allRtsMetrics`.
+  /// Returns a bundle of all available Motoko Runtime System (RTS) metrics.
   public let allRtsMetrics = Metrics.allRtsMetrics;
 
-  /// Passthrough for `Metrics.newPullValue`.
+  /// Creates a new `Value` that calls a function to get its current value.
   public let newValue = Metrics.newPullValue;
 
-  /// Passthrough for `Metrics.bundle`.
+  /// Bundles multiple `Value` objects into a single `Value`.
+  ///
+  /// Common labels are prepended to all metrics produced by the bundled values.
   public let bundle = Metrics.bundle;
 
   /// High-level renderer for metric exposition.
@@ -82,6 +105,8 @@ module {
     };
 
     /// Adds a `canister="id"` label for the given actor.
+    ///
+    /// Traps if the canister ID cannot be extracted from the actor's principal.
     public func addCanisterLabel(a : actor {}) {
       addLabel(Label.canisterLabel(a));
     };
@@ -99,6 +124,9 @@ module {
       nonce;
     };
     /// Adds a `Value` to the renderer.
+    ///
+    /// Values can be trackers (`tracker.toValue()`) or custom pull-based metrics
+    /// created with `newValue()`.
     public func addValue(v : Metrics.Value) = ignore addValueRef(v);
 
     /// Removes a `Value` from the renderer by its identifier.
