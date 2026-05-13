@@ -17,7 +17,7 @@ graph TD
 
     subgraph Tracked [Tracked / Stateful]
         Tracker["Tracker (Persistent)"]
-        T["Tracker"]
+        T["Tracker\n(nested)"]
         Counter["Counter"]
         Gauge["Gauge"]
         Heatmap["Heatmap"]
@@ -275,8 +275,8 @@ processing_time_bucket{canister="tl4x7",le="+Inf"} 1 1770400321653
 You can also change the default 302-second hold-down period for watermarks (useful if your scraping interval is not 5 minutes):
 
 ```motoko
-// Set hold-down to 65 seconds for a 1-minute scraping interval
-pt.setHoldDown(65);
+// Set hold-down to 62 seconds for a 1-minute scraping interval
+pt.setHoldDown(62);
 
 ```
 

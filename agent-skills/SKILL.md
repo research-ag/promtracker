@@ -21,7 +21,8 @@ This skill provides guidelines for agents to integrate and use `promtracker` in 
 ```motoko
 import PT "mo:promtracker";
 import Http "mo:promtracker/mixins/http"; // For simple setup
-import Http_ "mo:promtracker/Http";       // For custom manual setup
+import Http_ "mo:promtracker/Http"; // For custom manual setup
+
 ```
 
 ### 2. Initialize Renderer (and optionally Tracker)
@@ -127,6 +128,7 @@ persistent actor Main {
   // Initialize renderer as usual
   renderer.addValue(PT.allSystemMetrics);
 };
+
 ```
 
 ## Adding Metrics
