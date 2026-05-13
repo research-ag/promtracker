@@ -1,45 +1,32 @@
 # yaml-language-server: $schema=https://github.com/dfinity/icp-cli/raw/refs/tags/v0.1.0-beta.2/docs/schemas/icp-yaml-schema.json
 
 canisters:
-  - name: minimal
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/minimal.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
-  - name: main
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/main.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
-  - name: advanced
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/advanced.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
-  - name: heatmap
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/heatmap.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
-  - name: http
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/http.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
-  - name: plain
-    build:
-      steps:
-        - type: script
-          commands:
-            - command -v mops >/dev/null 2>&1 || { echo >&2 "'mops' not found on path. To install Mops, see https://mops.one/docs/install.\n"; exit 1; }
-            - $(mops toolchain bin moc) src/plain.mo $(mops sources) -o "$ICP_WASM_OUTPUT_PATH"
+  - name: min
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/min.mo
+
+  - name: no-pull
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/no-pull.mo
+
+  - name: package
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/package.mo
+
+  - name: nested
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/nested.mo
+
+  - name: uptime
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/uptime.mo
