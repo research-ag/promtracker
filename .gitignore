@@ -3,11 +3,15 @@
 .mops/
 .tmp/
 .vessel/
+.agents/
 *.wasm
 package-set.dhall
 vessel.dhall
 node_modules/
-.agents/
-skills-lock.json
 package.json
 package-lock.json
+skills-lock.json
+mops.lock
+dfx.json
+icp.yaml
+build/
