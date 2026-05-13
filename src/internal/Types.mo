@@ -19,7 +19,7 @@ module {
     name : Text;
     labels : Text;
     var value : Int;
-    id : Nat;
+    id : Nat; // unique ID for unregistering, drawn from parent's nonce
   };
   /// Configuration for the metric environment.
   public type Environment = {
@@ -44,7 +44,7 @@ module {
     low : Watermark;
     limits : [Nat];
     counters : [var Nat];
-    id : Nat;
+    id : Nat; // unique ID for unregistering, drawn from parent's nonce
   };
   /// State for a `Heatmap`.
   public type Heatmap = {
@@ -54,7 +54,7 @@ module {
     var count : Int;
     var sum : Int;
     var buckets : [var Int];
-    id : Nat;
+    id : Nat; // unique ID for unregistering, drawn from parent's nonce
   };
   /// Internal variant for values held by a `Tracker`.
   public type TValue = {
@@ -64,12 +64,16 @@ module {
     #tracker : Tracker;
   };
   /// State for a `Tracker`.
+  ///
+  /// Each Tracker has a mutable `nonce` used to generate unique `id` values
+  /// assigned to its children (Counter, Gauge, Heatmap, or nested Tracker).
+  /// These `id`s are stable keys used only for unregistering.
   public type Tracker = {
     parent : ?Tracker;
     var labels : Text;
     var values : Types.Pure.List<TValue>;
     env : Environment;
-    var nonce : Nat;
-    id : Nat;
+    var nonce : Nat; // source of unique IDs for children
+    id : Nat; // unique ID for unregistering, drawn from parent's nonce
   };
 };

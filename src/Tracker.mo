@@ -68,7 +68,7 @@ module {
   ///
   /// Traps if `labels_` contains invalid label names.
   public func newWith(
-    labels_ : [(Text, Text)],
+    labels_ : [Label.Label],
     seconds : Nat,
   ) : Tracker {
     let tracker : Tracker = {
