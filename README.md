@@ -10,6 +10,60 @@ The library provides a two-layer approach to metric tracking:
 1.  **Tracker**: A persistent state object that holds counters, gauges, and heatmaps. It is designed to be stored in a variable within a `persistent actor` (using Enhanced Orthogonal Persistence) so that its values survive canister upgrades.
 2.  **Renderer**: A transient class that wraps around a `Tracker` (or multiple trackers/values) and manages global labels (like `canister="id"`). The `Renderer` is re-initialized after each upgrade.
 
+### Component relationship
+
+```mermaid
+graph TD
+    subgraph Tracked [Tracked / Stateful]
+        direction LR
+        Tracker["Tracker (Persistent)"]
+        NestedTracker["Tracker"]
+        Counter["Counter"]
+        Gauge["Gauge"]
+        Heatmap["Heatmap"]
+
+        Tracker --> NestedTracker
+        NestedTracker --> Counter
+        Tracker --> Gauge
+        Tracker --> Heatmap
+    end
+
+    subgraph Pull [Pull / Stateless]
+        PullValue["PullValue"]
+    end
+
+    subgraph Values [Values]
+        direction LR
+        V1["Value"]
+        V2["Value"]
+    end
+
+    Tracker -- "toValue()" --> V1
+    Renderer["Renderer (Transient)"] -- "manages" --> Values
+    PullValue -- "implements" --> V1
+
+    subgraph Metrics [Metrics]
+        direction LR
+        M1["Metric"]
+        M2["Metric"]
+    end
+
+    V1 -- "read()" --> Metrics
+
+    M1 & M2 -- "render()" --> Output["Prometheus Exposition Format"]
+    Renderer -- "collects & renders" --> Output
+
+    style Renderer fill:#f9f,stroke:#333,stroke-width:2px
+    style Tracker fill:#bbf,stroke:#333,stroke-width:2px
+    style V1 fill:#dfd,stroke:#333,stroke-width:2px
+    style V2 fill:#dfd,stroke:#333,stroke-width:2px
+    style M1 fill:#fff,stroke:#333,stroke-width:1px
+    style M2 fill:#fff,stroke:#333,stroke-width:1px
+    style PullValue fill:#fdd,stroke:#333,stroke-width:2px
+    style Metrics fill:none,stroke:#333,stroke-dasharray: 5 5
+    style Values fill:none,stroke:#333,stroke-dasharray: 5 5
+```
+
 The `mo:promtracker/mixins/http` mixin exports the metrics in the Prometheus exposition format via HTTP.
 From the endpoint, normally `/metrics`, the metrics can be scraped by a Prometheus scraper.
 
@@ -315,6 +369,14 @@ persistent actor Main {
   };
 };
 
+```
+
+## Agent Skills
+
+If you are using an AI agent, you can install the `promtracker` skill to help it generate correct metrics integration code:
+
+```bash
+npx skills add research-ag/promtracker/agent-skills
 ```
 
 ## Default system metrics
