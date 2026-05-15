@@ -33,29 +33,29 @@ module {
 
   /// Adds a single label to the tracker.
   ///
-  /// Traps if `key` is an invalid label name.
+  /// Traps when `key` is an invalid label name.
   public func addLabel(self : Tracker, key : Text, value : Text) = self.addLabel(key, value);
 
   /// Creates and registers a new counter in this tracker.
   ///
-  /// Traps if `labels` contains invalid label names.
+  /// Traps when `labels` contains invalid label names.
   public func newCounter(self : Tracker, name : Text, labels : [Label.Label]) : Metrics.Counter.Counter = self.newCounter(name, labels);
 
   /// Creates and registers a new gauge in this tracker.
   ///
-  /// Traps if:
+  /// Traps when:
   /// - `labels` contains invalid label names,
-  /// - `limits` are not strictly increasing.
+  /// - `limits` are not strictly increasing and unique.
   public func newGauge(self : Tracker, prefix : Text, labels : [Label.Label], limits : [Nat]) : Metrics.Gauge.Gauge = self.newGauge(prefix, labels, limits);
 
   /// Creates and registers a new heatmap in this tracker.
   ///
-  /// Traps if `labels` contains invalid label names.
+  /// Traps when `labels` contains invalid label names.
   public func newHeatmap(self : Tracker, prefix : Text, labels : [Label.Label]) : Metrics.Heatmap.Heatmap = self.newHeatmap(prefix, labels);
 
   /// Creates and registers a new nested tracker.
   ///
-  /// Traps if `labels` contains invalid label names.
+  /// Traps when `labels` contains invalid label names.
   public func newTracker(self : Tracker, labels : [Label.Label]) : Tracker = self.newTracker(labels);
 
   /// Unregisters the tracker from its parent.

@@ -30,7 +30,8 @@ module {
   };
   /// Renders a metric to Prometheus exposition format.
   ///
-  /// Returns a string like `name{labels} value time\n`.
+  /// Returns a string like `name{labels} value time\n`. The `time` argument
+  /// should be a Unix timestamp in milliseconds.
   public func render(self : Metric, time : Text) : Text {
     let (name, labels, value) = self;
     name # "{" # labels # "} " # value.toText() # " " # time # "\n";
@@ -57,6 +58,8 @@ module {
   };
 
   /// Creates a new `Value` that calls a function to get its current value.
+  ///
+  /// Traps when `name` or any label key is an invalid Prometheus name.
   public func newPullValue(name : Text, labels : [Label.Label], getValue : () -> Nat) : Value {
     let labelsText = Label.renderLabels(labels);
     object {
@@ -69,6 +72,8 @@ module {
   /// Bundles multiple `Value` objects into a single `Value`.
   ///
   /// Common labels are prepended to all metrics produced by the bundled values.
+  ///
+  /// Traps when any label key in `commonLabels` is an invalid Prometheus name.
   public func bundle(self : [Value], commonLabels : [Label.Label]) : Value {
     let commonLabelsText = Label.renderLabels(commonLabels);
     object {
@@ -219,7 +224,7 @@ module {
 
     /// Creates a new gauge.
     ///
-    /// Traps if `limits` are not strictly increasing.
+    /// Traps when `limits` are not strictly increasing and unique.
     public func new(parent : Types.Tracker, prefix : Text, labels : Text, env : Env, limits : [Nat], id : Nat) : Gauge {
       for (i in Nat_.range(1, limits.size())) {
         if (limits[i] <= limits[i - 1]) {
@@ -242,7 +247,7 @@ module {
     };
     /// Returns the `Value` interface for sampling this gauge.
     ///
-    /// This includes the last value, sum, count, and watermarks.
+    /// The returned `Value` includes the last value, sum, count, and watermarks.
     /// If `limits` were provided, it also includes bucket metrics.
     public func value(self : Gauge) : Value = {
       read = func() {
