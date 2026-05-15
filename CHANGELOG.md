@@ -1,16 +1,20 @@
 # PromTracker changelog
 
-## [1.0.0]
+## 1.0.1
 
-### Changed
+- Update documentation
 
-- Updated `core` from `2.2.0` to `2.5.0`.
-- Updated `[requirements] moc` from `1.0.0` to `1.6.0`.
+## 1.0.0
 
-### Fixed
-
-- Improved `.gitignore` and added `.prettierrc`.
-- Added automated Prettier formatting to CI.
+- Redesign the interface completely
+- Static (no class) Tracker that can be declared stable
+- Provide extensive examples and documentation
+- Provide Mixins
+- Allow nested trackers
+- Provide AI skill file to use the package
+- Simplify adding system values
+- Export metrics also by candid
+- Serve openapi.json manifest
 
 ## 0.10.0
 

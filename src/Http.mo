@@ -11,24 +11,24 @@ import Text_ "mo:core/Text";
 
 module TinyHttp {
   /// An HTTP request.
+  /// `method`: HTTP method (e.g., "GET", "POST").
+  /// `url`: Request URL.
+  /// `headers`: List of HTTP headers.
+  /// `body`: Request body.
   public type Request = {
-    /// HTTP method (e.g., "GET", "POST").
     method : Text;
-    /// Request URL.
     url : Text;
-    /// List of HTTP headers.
     headers : [(Text, Text)];
-    /// Request body.
     body : Blob;
   };
 
   /// An HTTP response.
+  /// `status_code`: HTTP status code (e.g., 200, 404).
+  /// `headers`: List of HTTP headers.
+  /// `body`: Response body.
   public type Response = {
-    /// HTTP status code (e.g., 200, 404).
     status_code : Nat16;
-    /// List of HTTP headers.
     headers : [(Text, Text)];
-    /// Response body.
     body : Blob;
   };
 

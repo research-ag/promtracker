@@ -74,7 +74,12 @@ module {
 
   /// Renders a single label as a `key="value"` string.
   ///
-  /// Traps if `key` is not a valid Prometheus label name (see `isValidName`).
+  /// ```motoko include=import
+  /// let rendered = Label.renderLabel("env", "production");
+  /// // rendered == "env=\"production\""
+  /// ```
+  ///
+  /// Traps when `key` is not a valid Prometheus label name (see `isValidName`).
   public func renderLabel(key : Text, value : Text) : Text {
     assert isValidName(key);
     key # "=\"" # escapeLabelValue(value) # "\"";
@@ -82,7 +87,13 @@ module {
 
   /// Renders a list of labels as a single comma-separated string.
   ///
-  /// Traps if any label key in `labels` is not a valid Prometheus label name.
+  /// ```motoko include=import
+  /// let labels = [("env", "prod"), ("version", "1.0")];
+  /// let rendered = Label.renderLabels(labels);
+  /// // rendered == "env=\"prod\",version=\"1.0\""
+  /// ```
+  ///
+  /// Traps when any label key in `labels` is not a valid Prometheus label name.
   public func renderLabels(labels : [Label]) : Text {
     Array.foldLeft(
       labels,
@@ -95,7 +106,11 @@ module {
   ///
   /// Currently extracts the first component of the canister principal's text representation.
   ///
-  /// Traps if the canister ID cannot be extracted.
+  /// ```motoko include=import
+  /// let label = Label.canisterLabel(myActor);
+  /// ```
+  ///
+  /// Traps when the canister ID cannot be extracted from the actor's principal representation.
   public func canisterLabel(a : actor {}) : Label {
     let s = Principal.fromActor(a).toText();
     let ?name = s.split(#char '-').next() else Runtime.trap("");

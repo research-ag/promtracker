@@ -12,6 +12,8 @@ The library provides a two-layer approach to metric tracking:
 
 ### Component relationship
 
+If the following diagram does not render in your view then see it [here](https://github.com/research-ag/promtracker/tree/main) on GitHub.
+
 ```mermaid
 graph TD
 
