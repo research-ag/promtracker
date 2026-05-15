@@ -99,14 +99,14 @@ module {
 
     /// Adds a global label to the renderer.
     ///
-    /// Traps if `key` is an invalid label name.
+    /// Traps when `key` is an invalid label name.
     public func addLabel(key : Text, value : Text) {
       labels := Label.concat(labels, Label.renderLabel(key, value));
     };
 
     /// Adds a `canister="id"` label for the given actor.
     ///
-    /// Traps if the canister ID cannot be extracted from the actor's principal.
+    /// Traps when the canister ID cannot be extracted from the actor's principal.
     public func addCanisterLabel(a : actor {}) {
       addLabel(Label.canisterLabel(a));
     };

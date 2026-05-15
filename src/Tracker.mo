@@ -66,7 +66,7 @@ module {
   };
   /// Creates a new top-level tracker with specific labels and hold-down period.
   ///
-  /// Traps if `labels_` contains invalid label names.
+  /// Traps when `labels_` contains invalid label names.
   public func newWith(
     labels_ : [Label.Label],
     seconds : Nat,
@@ -88,13 +88,13 @@ module {
   };
   /// Sets the labels for the tracker.
   ///
-  /// Traps if `labels` contains invalid label names.
+  /// Traps when `labels` contains invalid label names.
   public func setLabels(self : Tracker, labels : [Label.Label]) {
     self.labels := Label.renderLabels(labels);
   };
   /// Adds a single label to the tracker.
   ///
-  /// Traps if `key` is an invalid label name.
+  /// Traps when `key` is an invalid label name.
   public func addLabel(self : Tracker, key : Text, value : Text) {
     self.labels := Label.concat(self.labels, Label.renderLabel(key, value));
   };
@@ -105,7 +105,7 @@ module {
   };
   /// Creates and registers a new counter in this tracker.
   ///
-  /// Traps if `labels` contains invalid label names.
+  /// Traps when `labels` contains invalid label names.
   public func newCounter(self : Tracker, name : Text, labels : [Label.Label]) : Metrics.Counter.Counter {
     let labelStr = Label.renderLabels(labels);
     let newCounter = Metrics.Counter.new(self, name, labelStr, self.nonce);
@@ -115,9 +115,9 @@ module {
   };
   /// Creates and registers a new gauge in this tracker.
   ///
-  /// Traps if:
+  /// Traps when:
   /// - `labels` contains invalid label names,
-  /// - `limits` are not strictly increasing.
+  /// - `limits` are not strictly increasing and unique.
   public func newGauge(self : Tracker, prefix : Text, labels : [Label.Label], limits : [Nat]) : Metrics.Gauge.Gauge {
     let labelStr = Label.renderLabels(labels);
     let newGauge = Metrics.Gauge.new(self, prefix, labelStr, self.env, limits, self.nonce);
@@ -127,7 +127,7 @@ module {
   };
   /// Creates and registers a new heatmap in this tracker.
   ///
-  /// Traps if `labels` contains invalid label names.
+  /// Traps when `labels` contains invalid label names.
   public func newHeatmap(self : Tracker, prefix : Text, labels : [Label.Label]) : Metrics.Heatmap.Heatmap {
     let labelStr = Label.renderLabels(labels);
     let newHeatmap = Metrics.Heatmap.new(self, prefix, labelStr, self.nonce);
@@ -137,7 +137,7 @@ module {
   };
   /// Creates and registers a new nested tracker.
   ///
-  /// Traps if `labels` contains invalid label names.
+  /// Traps when `labels` contains invalid label names.
   public func newTracker(self : Tracker, labels : [Label.Label]) : Tracker {
     let labelStr = Label.renderLabels(labels);
     let newTracker : Tracker = {

@@ -1,3 +1,9 @@
+/// Mixin that tracks canister uptime and provides an `uptime()` helper.
+///
+/// ```motoko name=import
+/// // This mixin is typically used within an actor
+/// ```
+
 import Int "mo:core/Int";
 import Time "mo:core/Time";
 
