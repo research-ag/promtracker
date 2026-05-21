@@ -20,10 +20,14 @@ This skill provides guidelines for agents to integrate and use `promtracker` in 
 
 ```motoko
 import PT "mo:promtracker";
+// Import only the modules you actually use to enable dot-notation
+import { Counter; Tracker } "mo:promtracker";
 import Http "mo:promtracker/mixins/http"; // For simple setup
 import Http_ "mo:promtracker/Http"; // For custom manual setup
 
 ```
+
+Importing `Counter`, `Gauge`, `Heatmap`, `Tracker` explicitly enables dot-notation like `ctr.add(1)` instead of `PT.Counter.add(ctr, 1)`. **Only import the modules that are actually used in your code.**
 
 ### 2. Initialize Renderer (and optionally Tracker)
 
@@ -55,7 +59,7 @@ Use this if you need stateful metrics (Counters, Gauges, Heatmaps). The `Tracker
 ```motoko
 persistent actor Main {
   // Tracker is persistent to maintain metric values across upgrades
-  let pt = PT.Tracker.new();
+  let pt = Tracker.new();
 
   // Renderer is transient and re-initialized on upgrade
   transient let renderer = PT.Renderer();
@@ -151,7 +155,7 @@ Use counters for values that only increase.
 
 ```motoko
 let requestCounter = pt.newCounter("requests_total", [("method", "GET")]);
-PT.Counter.add(requestCounter, 1);
+requestCounter.add(1);
 
 ```
 
@@ -162,7 +166,7 @@ Use gauges for values that can go up and down. Gauges in `promtracker` support w
 ```motoko
 // Gauge with limits for watermarks (optional)
 let memoryGauge = pt.newGauge("memory_usage_bytes", [], [1024, 1024 * 1024]);
-PT.Gauge.update(memoryGauge, 500000);
+memoryGauge.update(500000);
 
 ```
 
@@ -172,7 +176,7 @@ Use heatmaps to track distribution of values (e.g., latencies) using power-of-2 
 
 ```motoko
 let latencyHeatmap = pt.newHeatmap("request_latency_seconds", []);
-PT.Heatmap.add(latencyHeatmap, 120); // Adds value to corresponding bucket
+latencyHeatmap.add(120); // Adds value to corresponding bucket
 
 ```
 
@@ -193,3 +197,4 @@ renderer.addValue(PT.newValue("custom_metric", [], func() = 42));
 4. **Use Mixins**: Prefer using provided mixins (e.g., `mo:promtracker/mixins/http`) for simple cases. If you need multiple custom HTTP routes, implement `http_request` manually using `renderer.renderExposition()`.
 5. **Hierarchy**: Use `pt.newTracker([("subsystem", "api")])` to create nested trackers for better organization.
 6. **Exposition Format**: Prometheus expects metrics to be served as plain text. The `Http` mixin and `Http.renderPlainText` helper handle this automatically.
+7. **Selective Imports**: For dot-notation, only import the specific metric modules (`Counter`, `Gauge`, `Heatmap`, `Tracker`) that you actually use.
