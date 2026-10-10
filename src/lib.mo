@@ -145,7 +145,7 @@ module {
       let timeStr = (Prim.time() / 1_000_000).toText();
       read().map(
         func(metric) = metric.render(timeStr)
-      ).vals().join("");
+      ).values().join("");
     };
   };
 };

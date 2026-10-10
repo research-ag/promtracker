@@ -1,9 +1,9 @@
 [dependencies]
-core = "2.5.0"
-prng = "0.0.9"
+core = "2.6.2"
+prng = "0.2.0"
 promtracker = "../"
 # Replace with:
-# promtracker = "1.0.0"
+# promtracker = "1.0.2"
 
 [toolchain]
-moc = "1.7.0"
+moc = "2.0.0"

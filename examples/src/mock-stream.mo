@@ -1,5 +1,5 @@
-import T "../../src/TrackerAPI";
-import { Counter; Gauge } "../../src/lib";
+import T "mo:promtracker/TrackerAPI";
+import { Counter; Gauge } "mo:promtracker";
 
 module Stream {
   public type Stream = {

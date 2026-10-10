@@ -2,9 +2,9 @@ import PT "../src/lib";
 import Tracker "../src/Tracker";
 import { Counter; Gauge; Heatmap } "../src/Metrics";
 
-import Suite "mo:motoko-matchers/Suite";
-import T "mo:motoko-matchers/Testable";
-import M "mo:motoko-matchers/Matchers";
+import Suite "mo:matchers/Suite";
+import T "mo:matchers/Testable";
+import M "mo:matchers/Matchers";
 import Nat "mo:core/Nat";
 import Debug "mo:core/Debug";
 
@@ -17,7 +17,7 @@ renderer.addValue(pt.toValue());
 
 // Helper functions
 func find(metrics : [(Text, Text, Nat)], name : Text, labels : Text) : ?Nat {
-  for (m in metrics.vals()) {
+  for (m in metrics.values()) {
     if (m.0 == name and m.1 == labels) return ?m.2;
   };
   null;
@@ -28,7 +28,7 @@ func expect(metrics : [(Text, Text, Nat)], name : Text, labels : Text, value : N
       if (v == value) {
         true;
       } else {
-        Debug.print("Expect failed for metric '" # name # "': expected " # Nat.toText(value) # ", found " # Nat.toText(v));
+        Debug.print("Expect failed for metric '" # name # "': expected " # value.toText() # ", found " # v.toText());
         false;
       };
     };

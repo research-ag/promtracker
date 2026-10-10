@@ -23,7 +23,7 @@ jobs:
         uses: caffeinelabs/setup-mops@v1
 
       - name: Make sure moc is installed
-        run: mops toolchain init && mops toolchain bin moc
+        run: mops toolchain bin moc
 
       - name: Show versions
         run: |

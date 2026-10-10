@@ -1,7 +1,7 @@
-import PT "../../src/lib";
-import Http "../../src/mixins/http";
+import PT "mo:promtracker";
+import Http "mo:promtracker/mixins/http";
 
-persistent actor Main {
+actor Main {
   transient let renderer = PT.Renderer();
   include Http(renderer.renderExposition, "/metrics");
   renderer.addCanisterLabel(Main);

@@ -1,5 +1,12 @@
 # PromTracker changelog
 
+## 1.0.2
+
+- Bump `core` dependency from `2.5.0` to `2.6.2`
+- Replace deprecated `Text.fromChar` and `Nat64.fromNat` calls; use `.values()` instead of `.vals()`
+- Migrate examples to moc 2.0.0: annotate oneway `public func`s with `: ()` and import the package as `mo:promtracker`
+- Bump `prng` in examples from `0.0.9` to `0.2.0`
+
 ## 1.0.1
 
 - Update documentation
