@@ -38,7 +38,7 @@ The `Renderer` is always required to collect and render metrics. The `Tracker` i
 Use this if you only need system metrics or custom pull values. No `Tracker` is required.
 
 ```motoko
-persistent actor Main {
+actor Main {
   // Renderer is transient and re-initialized on upgrade
   transient let renderer = PT.Renderer();
 
@@ -57,7 +57,7 @@ persistent actor Main {
 Use this if you need stateful metrics (Counters, Gauges, Heatmaps). The `Tracker` should be persistent.
 
 ```motoko
-persistent actor Main {
+actor Main {
   // Tracker is persistent to maintain metric values across upgrades
   let pt = Tracker.new();
 
@@ -111,8 +111,9 @@ If you need to serve other custom routes alongside `/metrics`, you must implemen
 ```motoko
 import PT "mo:promtracker";
 import Http "mo:promtracker/Http";
+import Text "mo:core/Text";
 
-persistent actor Main {
+actor Main {
   transient let renderer = PT.Renderer();
 
   public query func http_request(req : Http.Request) : async Http.Response {

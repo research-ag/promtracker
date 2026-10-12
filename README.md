@@ -7,7 +7,7 @@
 
 The library provides a two-layer approach to metric tracking:
 
-1.  **Tracker**: A persistent state object that holds counters, gauges, and heatmaps. It is designed to be stored in a variable within a `persistent actor` (using Enhanced Orthogonal Persistence) so that its values survive canister upgrades.
+1.  **Tracker**: A persistent state object that holds counters, gauges, and heatmaps. It is designed to be stored in a non-`transient` variable of an actor (Enhanced Orthogonal Persistence) so that its values survive canister upgrades.
 2.  **Renderer**: A transient class that wraps around a `Tracker` (or multiple trackers/values) and manages global labels (like `canister="id"`). The `Renderer` is re-initialized after each upgrade.
 
 ### Component relationship
@@ -86,7 +86,7 @@ The value is calculated on the fly ("pulled") when the `/metrics` endpoint is be
 For example, the canister's system state such as cycle balance and memory size can be exposed through `PullValue`s.
 A `PullValue` means they are read at scraping time and returned.
 
-`Tracker` state (including its counters and gauges) can be persisted across canister upgrades by using a non-transient variable in a `persistent actor`.
+`Tracker` state (including its counters and gauges) can be persisted across canister upgrades by using a non-transient variable in an actor.
 
 ## Links
 
@@ -115,7 +115,7 @@ The minimal code to use `promtracker` is:
 import PT "mo:promtracker";
 import Http "mo:promtracker/mixins/http";
 
-persistent actor Main {
+actor Main {
   let pt = PT.Tracker.new();
   transient let renderer = PT.Renderer();
 
@@ -162,7 +162,7 @@ rts_logical_stable_memory_size{canister="tl4x7"} 0 1770400321653
 import PT "mo:promtracker";
 import Prim "mo:prim";
 
-persistent actor Main {
+actor Main {
   let pt = PT.Tracker.new();
   transient let renderer = PT.Renderer();
   renderer.addValue(pt.toValue());
@@ -209,13 +209,13 @@ my_pull{canister="tl4x7",env="prod",type="test"} 42 1770400321653
 
 ### Persistence
 
-When using a `persistent actor` (Enhanced Orthogonal Persistence), state stored in non-transient variables persists across upgrades.
+Under Enhanced Orthogonal Persistence, which moc 2.0.0 uses for every actor, state stored in non-transient variables persists across upgrades.
 
 - The `Tracker` and metrics created from it (counters, gauges, heatmaps) should be stored in non-transient variables to persist their values.
 - The `Renderer` is transient and should be re-initialized in the actor body. Since adding values and labels to it is cheap, there is no downside to this.
 
 ```motoko
-persistent actor Main {
+actor Main {
   // PERSISTENT: survive upgrades
   let pt = PT.Tracker.new();
   let heartbeats = pt.newCounter("heartbeats_total", []);
@@ -236,7 +236,7 @@ A `Counter` is an ever-increasing value.
 ```motoko
 let requests = pt.newCounter("requests_total", [("method", "get")]);
 
-public func handle_get() {
+public func handle_get() : () {
   requests.add(1);
 };
 
@@ -256,7 +256,7 @@ A `Gauge` represents a value that can go up and down. It automatically tracks hi
 // Gauge with buckets: [100, 200, 500]
 let processing_time = pt.newGauge("processing_time", [], [100, 200, 500]);
 
-public func process(duration : Nat) {
+public func process(duration : Nat) : () {
   processing_time.update(duration);
 };
 
@@ -289,8 +289,8 @@ A `Heatmap` is a specialized gauge that only tracks a histogram with power-of-2 
 ```motoko
 let latencies = pt.newHeatmap("request_latency", []);
 
-public func record(ms : Nat) {
-  latencies.update(ms);
+public func record(ms : Nat) : () {
+  latencies.add(ms);
 };
 
 ```
@@ -318,7 +318,7 @@ request_latency_sum{canister="tl4x7"} 120 1770400321653
 Multiple `Value` objects can be bundled into a single `Value`. This is useful for grouping related metrics and adding common labels to them.
 
 ```motoko
-let bundled = [
+transient let bundled = [
   PT.newValue("metric_a", [], func() = 10),
   PT.newValue("metric_b", [], func() = 20),
 ].bundle([("group", "example")]);
@@ -349,8 +349,9 @@ If you want to serve routes other than `/metrics` with your own code, you can de
 ```motoko
 import PT "mo:promtracker";
 import Http "mo:promtracker/Http";
+import Text "mo:core/Text";
 
-persistent actor Main {
+actor Main {
   let pt = PT.Tracker.new();
   transient let renderer = PT.Renderer();
   renderer.addValue(pt.toValue());
