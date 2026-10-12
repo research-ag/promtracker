@@ -105,7 +105,7 @@ For updates, help, questions, feedback and other requests related to this packag
 ### Executable examples
 
 The `examples/` directory contains executable examples.
-For instructions how to run them see: [examples/README.md](examples/README.md).
+For instructions how to run them see: [examples/README.md](https://github.com/research-ag/promtracker/blob/main/examples/README.md).
 
 ### Minimal code
 
