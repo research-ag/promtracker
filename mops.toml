@@ -11,7 +11,7 @@ files = [ "src/**/*.mo", "examples/**/*.{mo,toml,md}" ]
 core = "2.6.2"
 
 [dev-dependencies]
-matchers = "2.1.0"
+test = "2.1.2"
 
 [requirements]
 moc = "1.4.0"
