@@ -1,15 +1,13 @@
 {
   "version": 3,
-  "mopsTomlDepsHash": "2be48fd9a14da5fdeea90909c3bd8ab1a056e35eb20863879dabc4a0a7b73d23",
+  "mopsTomlDepsHash": "087b7bed2cba48bd1ebad70512e6b55038aef8024be7fab378166d6a50e793b3",
   "localDepsHash": "cb8495415f770f7c78387c861137193e7a0e83fc0bd546de9ffc5287c574625e",
   "deps": {
     "core": "2.6.2",
-    "prng": "0.2.0",
     "promtracker": "./.."
   },
   "graph": {
-    "core@2.6.2": {},
-    "prng@0.2.0": {}
+    "core@2.6.2": {}
   },
   "hashes": {
     "core@2.6.2": {
@@ -70,16 +68,6 @@
       "core@2.6.2/src/pure/Queue.mo": "6436a3c07dcaba9df113c04b289f4f1f75599cdccf8a34b266187212e37927ed",
       "core@2.6.2/src/pure/RealTimeQueue.mo": "1a80e071b0282c608ebaa26544dea6bd747915c8023d86b7da7614febf23c7a5",
       "core@2.6.2/src/pure/Set.mo": "a5317cfdf0b4aeaa19008d4d5dc3dc744cb631fc4de0d43f2d18360e56707e0a"
-    },
-    "prng@0.2.0": {
-      "prng@0.2.0/LICENSE": "652886b75c8039f29c63219360acac1493efeeb370299e9cf48e447c94253f2b",
-      "prng@0.2.0/NOTICE": "ea56023d730b4adf25e49affaa29a1233b877373bdd79392e7e6badc70cb2034",
-      "prng@0.2.0/README.md": "6852d9ab82d9a9c7b2ca49a384545a7f02a49292b4d0c39e73cc82d97d5abcfd",
-      "prng@0.2.0/mops.toml": "86f6a689505aae09a73b2bff1c5398c58f5a9749c8590d8904f35e8f944ac8bc",
-      "prng@0.2.0/src/SFC32.mo": "244b84b2c8597312d1616c797e1d5f0fc4335f6ab8d3b4a228d653674b2e7416",
-      "prng@0.2.0/src/SFC64.mo": "cd6dbc27f6dcc77bf8a4f094716c5a9eb04e92bc746fd3095b4bccda5e902840",
-      "prng@0.2.0/src/Seiran128.mo": "1c0dee86931f53edae6dfa642c4334ab51481a2c861cfdf804bd9b92beb3e727",
-      "prng@0.2.0/src/lib.mo": "dad9ce9307b136cfe76e6abba1349bf3be6aa99b9c3ad73206aea65b55bcd4a2"
     }
   }
 }
