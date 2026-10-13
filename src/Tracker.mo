@@ -15,6 +15,7 @@ import Nat64_ "mo:core/Nat64";
 import Text_ "mo:core/Text";
 import Prim "mo:prim";
 import Metrics "Metrics";
+import { Counter = _Counter; Gauge = _Gauge; Heatmap = _Heatmap } "Metrics";
 import Label "Label";
 import Types "internal/Types";
 
@@ -40,9 +41,9 @@ module {
   // Value variant type
   private func readValue(val : Types.TValue) : [Metrics.Metric] {
     switch val {
-      case (#counter ctr) { Metrics.Counter.value(ctr).read() };
-      case (#gauge g) { Metrics.Gauge.value(g).read() };
-      case (#heatmap h) { Metrics.Heatmap.value(h).read() };
+      case (#counter ctr) { ctr.value().read() };
+      case (#gauge g) { g.value().read() };
+      case (#heatmap h) { h.value().read() };
       case (#tracker t) { t.read() };
     };
   };
@@ -179,7 +180,7 @@ module {
     let timeStr = (Prim.time() / 1_000_000).toText();
     read(self).map(
       func(m) = m.render(timeStr)
-    ).vals().join("");
+    ).values().join("");
   };
 
   /// Returns a function that renders the tracker's exposition.

@@ -3,18 +3,18 @@
 
 // This mixin is recommended
 // will be "mo:promtracker/mixins/http"
-import Http "../../src/mixins/http";
+import Http "mo:promtracker/mixins/http";
 
 // This mixin is optional. It exposes metrics in candid form instead of raw Text.
 // will be "mo:promtracker/mixins/query"
-import Query "../../src/mixins/query";
+import Query "mo:promtracker/mixins/query";
 
 // This import is needed only in the files that _use_ the values,
 // i.e. that call for example `gauge.update(..)` or `Gauge.update(gauge, ..)`.
 // This may not be needed in the top-level actor file.
 // will be "mo:promtracker"
-import { Counter; Gauge } "../../src/lib";
-import Tracker "../../src/Tracker";
+import { Counter; Gauge } "mo:promtracker";
+import Tracker "mo:promtracker/Tracker";
 
 // Optional: only used in this particular demo code
 import Array "mo:core/Array";
@@ -27,7 +27,7 @@ import Array "mo:core/Array";
 // import { removeCtr2 } "migration";
 // (with migration = removeCtr2)
 
-persistent actor Main {
+actor Main {
   // Required 2 lines:
   //  - create static Tracker (must be declared stable)
   //  - include mixin
@@ -63,27 +63,27 @@ persistent actor Main {
   // Increment counters
   ctr1.add(1);
   ctr2.add(2);
-  public func inc() {
+  public func inc() : () {
     ctr1.add(1);
     ctr2.add(2);
   };
 
   // Set gauge values
-  public func set(x : Nat, y : Nat) {
+  public func set(x : Nat, y : Nat) : () {
     gauge1.update(x);
     gauge2.update(y);
   };
 
   // Dynamically change hold down period for all gauges
   // Use this if the scraping interval of the external scraper changes
-  public func setHoldDown(seconds : Nat) {
+  public func setHoldDown(seconds : Nat) : () {
     pt.setHoldDown(seconds);
   };
 
   // Demonstrate how to dynamically add values
   // This can happen inside a package but the Tracker (pt) needs to be passed down
   var gauges : [Tracker.Gauge] = [];
-  public func addGauge(name : Text, labels : [(Text, Text)]) {
+  public func addGauge(name : Text, labels : [(Text, Text)]) : () {
     gauges := gauges.concat([pt.newGauge(name, labels, [])]);
   };
 };

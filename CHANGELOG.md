@@ -1,5 +1,13 @@
 # PromTracker changelog
 
+## 1.0.2
+
+- Bump `core` dependency from `2.5.0` to `2.6.2`
+- Replace deprecated `Text.fromChar` and `Nat64.fromNat` calls; use `.values()` instead of `.vals()`
+- Migrate examples to moc 2.0.0: annotate oneway `public func`s with `: ()` and import the package as `mo:promtracker`
+- Remove the unused `prng` dependency from the examples
+- Update the README examples for moc 2.0.0 (no `persistent` keyword, oneway functions annotated with `: ()`) and fix the heatmap example to use `add`
+
 ## 1.0.1
 
 - Update documentation

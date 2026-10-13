@@ -11,7 +11,6 @@
 /// import TrackerAPI "mo:promtracker/TrackerAPI";
 /// ```
 
-import List "mo:core/pure/List";
 import Metrics "Metrics";
 import Label "Label";
 import Types "internal/Types";

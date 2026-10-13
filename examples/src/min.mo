@@ -31,21 +31,21 @@
 
 // This import is required
 // will be "mo:promtracker"
-import PT "../../src/lib";
+import PT "mo:promtracker";
 
 // This mixin is recommended
 // will be "mo:promtracker/mixins/http"
-import Http "../../src/mixins/http";
+import Http "mo:promtracker/mixins/http";
 
 // This mixin is optional. It exposes metrics in candid form instead of raw Text.
 // will be "mo:promtracker/mixins/query"
-import Query "../../src/mixins/query";
+import Query "mo:promtracker/mixins/query";
 
 // This import is needed only in the files that _use_ the values,
 // i.e. that call for example `gauge.update(..)` or `Gauge.update(gauge, ..)`.
 // This may not be needed in the top-level actor file.
 // will be "mo:promtracker"
-import { Counter; Gauge; Tracker } "../../src/lib";
+import { Counter; Gauge; Tracker } "mo:promtracker";
 
 // Optional: only used in this particular demo code
 import Array_ "mo:core/Array";
@@ -60,7 +60,7 @@ import Array_ "mo:core/Array";
 // import { removeCtr2 } "migration";
 // (with migration = removeCtr2)
 
-persistent actor Main {
+actor Main {
   // Required 3 lines:
   //  - create static Tracker (must be declared stable)
   //  - create Renderer class (must be declared transient)
@@ -135,27 +135,27 @@ persistent actor Main {
   ctr2.add(2);
   ctr21.add(3);
   ctr22.add(4);
-  public func inc() {
+  public func inc() : () {
     ctr1.add(1);
     ctr2.add(2);
   };
 
   // Set gauge values
-  public func set(x : Nat, y : Nat) {
+  public func set(x : Nat, y : Nat) : () {
     gauge1.update(x);
     gauge2.update(y);
   };
 
   // Dynamically change hold down period for all gauges
   // Use this if the scraping interval of the external scraper changes
-  public func setHoldDown(seconds : Nat) {
+  public func setHoldDown(seconds : Nat) : () {
     pt.setHoldDown(seconds);
   };
 
   // Demonstrate how to dynamically add values
   // This can happen inside a package but the Tracker (pt) needs to be passed down
   var gauges : [PT.Gauge] = [];
-  public func addGauge(name : Text, labels : [(Text, Text)]) {
+  public func addGauge(name : Text, labels : [(Text, Text)]) : () {
     gauges := gauges.concat([pt.newGauge(name, labels, [])]);
   };
 };

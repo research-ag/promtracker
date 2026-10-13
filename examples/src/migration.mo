@@ -1,4 +1,4 @@
-import { Counter } "../../src/lib";
+import { Counter } "mo:promtracker";
 
 module {
   public func removeCtr2(

@@ -308,13 +308,13 @@ module {
 
     func getBucketIndex(entry : Nat) : Nat {
       if (entry == 0) return 0;
-      let bits = Nat64_.bitcountLeadingZero(Nat64_.fromNat(entry - 1));
+      let bits = Nat64_.bitcountLeadingZero(Nat_.toNat64(entry - 1));
       65 - bits.toNat();
     };
 
     func getLimitText(bucket : Nat) : Text {
       if (bucket == 0) return "0";
-      let v : Nat64 = 1 << Nat64_.fromNat(bucket - 1);
+      let v : Nat64 = 1 << Nat_.toNat64(bucket - 1);
       v.toText();
     };
 

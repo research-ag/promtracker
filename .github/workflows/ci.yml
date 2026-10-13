@@ -23,7 +23,7 @@ jobs:
         uses: caffeinelabs/setup-mops@v1
 
       - name: Make sure moc is installed
-        run: mops toolchain init && mops toolchain bin moc
+        run: mops toolchain bin moc
 
       - name: Show versions
         run: |
@@ -31,17 +31,17 @@ jobs:
           $(mops toolchain bin moc) --version
 
       - name: Install dependencies
-        run: mops install
+        run: mops install --locked
 
       - name: Run tests
-        run: mops test
+        run: mops test --locked
 
       - name: Build examples
         run: |
           if [ -d "examples" ]; then
             cd examples
             if [ -f "mops.toml" ]; then
-              mops install
+              mops install --locked
             fi
             
             # Install icp-cli as it was used in previous CI

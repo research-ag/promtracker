@@ -1,8 +1,8 @@
-import PT "../../src/lib";
-import Http "../../src/mixins/http";
-import Uptime "../../src/mixins/uptime";
+import PT "mo:promtracker";
+import Http "mo:promtracker/mixins/http";
+import Uptime "mo:promtracker/mixins/uptime";
 
-persistent actor Main {
+actor Main {
   transient let renderer = PT.Renderer();
   include Http(renderer.renderExposition, "/metrics");
   include Uptime();

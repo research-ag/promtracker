@@ -8,6 +8,7 @@
 /// ```
 
 import Array "mo:core/Array";
+import Char "mo:core/Char";
 import Principal "mo:core/Principal";
 import Text "mo:core/Text";
 import Runtime "mo:core/Runtime";
@@ -51,7 +52,7 @@ module {
       case '\\' { return "\\\\" };
       case '\"' { return "\\\"" };
       case '\n' { return "\\n" };
-      case _ { return Text.fromChar(c) };
+      case _ { return c.toText() };
     };
   };
 
@@ -95,8 +96,7 @@ module {
   ///
   /// Traps when any label key in `labels` is not a valid Prometheus label name.
   public func renderLabels(labels : [Label]) : Text {
-    Array.foldLeft(
-      labels,
+    labels.foldLeft(
       "",
       func(t, (k, v)) = concat(t, renderLabel(k, v)),
     );
